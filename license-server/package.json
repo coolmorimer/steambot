@@ -1,0 +1,14 @@
+{
+  "name": "steambot-license-server",
+  "version": "1.0.0",
+  "description": "License validation server for Steam Poster Bot",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev":   "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.6.0",
+    "express":        "^4.21.0"
+  }
+}

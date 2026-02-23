@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1b2838;
+  color: #c7d5e0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Тонкий скроллбар в стиле Steam */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1b2838; }
+::-webkit-scrollbar-thumb { background: #2a475e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #66c0f4; }
+
+/* Убрать outline у кнопок (нарисуем свой focus) */
+button:focus-visible { outline: 2px solid #66c0f4; outline-offset: 2px; }
+
+/* Разрешить выделение и копирование текста в контентной области */
+main, .selectable { -webkit-user-select: text; user-select: text; cursor: auto; }
+main input, main textarea { -webkit-user-select: text; user-select: text; }

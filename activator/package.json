@@ -1,0 +1,12 @@
+{
+  "name": "steambot-activator",
+  "version": "1.0.0",
+  "description": "Admin tool for managing Steam Poster Bot licenses",
+  "main": "activator.js",
+  "scripts": {
+    "start": "node activator.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

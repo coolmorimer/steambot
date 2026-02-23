@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Steam Poster Bot</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --bg:         var(--tg-theme-bg-color, #1b2838);
+  --bg2:        var(--tg-theme-secondary-bg-color, #2a475e);
+  --text:       var(--tg-theme-text-color, #c7d5e0);
+  --hint:       var(--tg-theme-hint-color, #8fa5b5);
+  --link:       var(--tg-theme-link-color, #66c0f4);
+  --btn:        var(--tg-theme-button-color, #4db86e);
+  --btn-text:   var(--tg-theme-button-text-color, #fff);
+  --danger:     #e74c3c;
+  --success:    #4db86e;
+  --warn:       #f39c12;
+  --card-r:     14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Tabs ────────────────────────────────────── */
+.tabs {
+  display: flex;
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 4px;
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 13px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hint);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all .2s;
+}
+.tab.active {
+  color: var(--link);
+  border-bottom-color: var(--link);
+}
+
+/* ── Cards ───────────────────────────────────── */
+.page { display: none; padding: 12px; }
+.page.active { display: block; }
+.card {
+  background: var(--bg2);
+  border-radius: var(--card-r);
+  padding: 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* ── Status page ─────────────────────────────── */
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.stat-card {
+  background: var(--bg2);
+  border-radius: var(--card-r);
+  padding: 16px;
+  text-align: center;
+}
+.stat-icon { font-size: 28px; margin-bottom: 4px; }
+.stat-val { font-size: 22px; font-weight: 800; }
+.stat-label { font-size: 11px; color: var(--hint); margin-top: 2px; }
+
+.bot-toggle {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: var(--bg2);
+  border-radius: var(--card-r);
+}
+.bot-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 8px var(--danger);
+}
+.bot-dot.on { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.bot-status-text { font-weight: 700; font-size: 15px; }
+.bot-btn {
+  padding: 8px 22px;
+  border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  color: var(--btn-text);
+  background: var(--btn);
+  transition: opacity .2s;
+}
+.bot-btn:active { opacity: .7; }
+.bot-btn.stop { background: var(--danger); }
+
+/* ── Lists ───────────────────────────────────── */
+.list-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px;
+  background: var(--bg2);
+  border-radius: var(--card-r);
+  margin-bottom: 8px;
+}
+.list-item .dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.dot.green { background: var(--success); }
+.dot.red   { background: var(--danger); }
+.dot.gray  { background: var(--hint); }
+.list-item .name { flex: 1; font-weight: 600; font-size: 14px; }
+.list-item .sub  { font-size: 12px; color: var(--hint); }
+.icon-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  transition: background .2s;
+}
+.icon-btn:active { background: rgba(255,255,255,.12); }
+.icon-btn.danger { color: var(--danger); }
+
+/* ── Campaign detail ─────────────────────────── */
+.detail-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.detail-label { color: var(--hint); min-width: 80px; }
+.detail-val { font-weight: 600; }
+
+.times-row {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+}
+.time-chip {
+  background: rgba(102,192,244,.15);
+  color: var(--link);
+  font-size: 12px; font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+/* ── Action buttons row ──────────────────────── */
+.actions { display: flex; gap: 8px; margin-top: 12px; }
+.action-btn {
+  flex: 1;
+  padding: 10px;
+  border: none; border-radius: 10px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: opacity .2s;
+}
+.action-btn:active { opacity: .7; }
+.action-btn.primary { background: var(--btn); color: var(--btn-text); }
+.action-btn.secondary { background: rgba(255,255,255,.08); color: var(--text); }
+.action-btn.danger { background: rgba(231,76,60,.15); color: var(--danger); }
+
+/* ── Log ─────────────────────────────────────── */
+.log-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg2);
+  border-radius: var(--card-r);
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.log-icon { flex-shrink: 0; font-size: 16px; }
+.log-body { flex: 1; }
+.log-time { color: var(--hint); font-size: 11px; }
+.log-text { margin-top: 2px; }
+.log-error { color: var(--danger); font-size: 12px; margin-top: 2px; }
+
+/* ── Empty state ─────────────────────────────── */
+.empty {
+  text-align: center;
+  color: var(--hint);
+  padding: 40px 20px;
+  font-size: 14px;
+}
+.empty-icon { font-size: 40px; margin-bottom: 8px; }
+
+/* ── Add button ──────────────────────────────── */
+.fab {
+  position: fixed; bottom: 20px; right: 20px;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--btn); color: var(--btn-text);
+  border: none; font-size: 28px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  z-index: 90;
+  transition: transform .2s;
+}
+.fab:active { transform: scale(.9); }
+
+/* ── Modal / Wizard ──────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 200;
+  justify-content: center; align-items: flex-end;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px;
+  animation: slideUp .25s ease-out;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%) }
+  to   { transform: translateY(0) }
+}
+.modal h3 {
+  font-size: 17px; font-weight: 800;
+  margin-bottom: 16px;
+}
+.form-group { margin-bottom: 14px; }
+.form-label {
+  font-size: 12px; font-weight: 700;
+  color: var(--link); text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px; display: block;
+}
+.form-input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+.form-input:focus { border-color: var(--link); }
+textarea.form-input { min-height: 80px; resize: vertical; }
+.form-hint { font-size: 11px; color: var(--hint); margin-top: 4px; }
+
+.check-list { margin-bottom: 14px; }
+.check-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  cursor: pointer;
+}
+.check-box {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 2px solid var(--hint);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  transition: all .15s;
+}
+.check-item.selected .check-box {
+  background: var(--btn); border-color: var(--btn); color: #fff;
+}
+.check-item .check-name { font-weight: 600; font-size: 14px; }
+
+/* ── Loading ─────────────────────────────────── */
+.spinner {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.1);
+  border-top-color: var(--link);
+  animation: spin .6s linear infinite;
+  margin: 40px auto;
+}
+@keyframes spin { to { transform: rotate(360deg) } }
+
+.refresh-btn {
+  display: block; margin: 0 auto 12px;
+  background: none; border: none;
+  color: var(--link); font-size: 13px; font-weight: 600;
+  cursor: pointer; padding: 8px 16px;
+}
+</style>
+</head>
+<body>
+
+<!-- ── Tabs ──────────────────────────────────────────────── -->
+<div class="tabs">
+  <div class="tab active" data-tab="status">📊 Статус</div>
+  <div class="tab" data-tab="accounts">👤 Аккаунты</div>
+  <div class="tab" data-tab="campaigns">📋 Кампании</div>
+  <div class="tab" data-tab="logs">📜 Лог</div>
+</div>
+
+<!-- ── STATUS ────────────────────────────────────────────── -->
+<div class="page active" id="p-status">
+  <div class="bot-toggle" id="bot-toggle">
+    <div class="bot-dot" id="bot-dot"></div>
+    <span class="bot-status-text" id="bot-text">Загрузка…</span>
+    <button class="bot-btn" id="bot-btn" onclick="toggleBot()">…</button>
+  </div>
+  <div class="status-grid" id="status-grid"></div>
+</div>
+
+<!-- ── ACCOUNTS ──────────────────────────────────────────── -->
+<div class="page" id="p-accounts">
+  <div id="accounts-list"></div>
+  <button class="fab" onclick="openAddAccount()">+</button>
+</div>
+
+<!-- ── CAMPAIGNS ─────────────────────────────────────────── -->
+<div class="page" id="p-campaigns">
+  <div id="camps-list"></div>
+  <button class="fab" onclick="openCampWizard()">+</button>
+</div>
+
+<!-- ── LOGS ───────────────────────────────────────────────── -->
+<div class="page" id="p-logs">
+  <button class="refresh-btn" onclick="loadLogs()">🔄 Обновить</button>
+  <div id="logs-list"></div>
+</div>
+
+<!-- ── Modal ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+const API = '';  // same origin
+let _status = {}, _accounts = [], _campaigns = [], _jobs = [];
+
+// ═══════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('p-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'status')    loadStatus();
+    if (t.dataset.tab === 'accounts')  loadAccounts();
+    if (t.dataset.tab === 'campaigns') loadCampaigns();
+    if (t.dataset.tab === 'logs')      loadLogs();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  API helpers
+// ═══════════════════════════════════════════════════════════════
+
+async function api(path, method = 'GET', body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + '/api' + path, opts);
+  return r.json();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STATUS
+// ═══════════════════════════════════════════════════════════════
+
+async function loadStatus() {
+  const s = await api('/status');
+  _status = s;
+  const dot = document.getElementById('bot-dot');
+  const txt = document.getElementById('bot-text');
+  const btn = document.getElementById('bot-btn');
+  dot.className = 'bot-dot' + (s.botRunning ? ' on' : '');
+  txt.textContent = s.botRunning ? 'Бот работает' : 'Бот остановлен';
+  btn.textContent = s.botRunning ? '⏹ Стоп' : '▶️ Старт';
+  btn.className = 'bot-btn' + (s.botRunning ? ' stop' : '');
+
+  document.getElementById('status-grid').innerHTML = [
+    stat('👤', s.accountsActive, s.accountsTotal, 'Аккаунтов'),
+    stat('📋', s.campaignsActive, s.campaignsTotal, 'Кампаний'),
+    stat('📥', s.pendingJobs, null, 'В очереди'),
+    stat('✅', s.doneToday, null, 'Сегодня'),
+    stat('❌', s.failedToday, null, 'Ошибок'),
+    stat('🕐', new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}), null, 'Время'),
+  ].join('');
+}
+
+function stat(icon, val, total, label) {
+  const v = total != null ? `${val}/${total}` : val;
+  return `<div class="stat-card"><div class="stat-icon">${icon}</div><div class="stat-val">${v}</div><div class="stat-label">${label}</div></div>`;
+}
+
+async function toggleBot() {
+  if (_status.botRunning) await api('/bot/stop', 'POST');
+  else await api('/bot/start', 'POST');
+  setTimeout(loadStatus, 300);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ACCOUNTS
+// ═══════════════════════════════════════════════════════════════
+
+async function loadAccounts() {
+  _accounts = await api('/accounts');
+  const el = document.getElementById('accounts-list');
+  if (!_accounts.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">👤</div>Нет аккаунтов</div>'; return; }
+  el.innerHTML = _accounts.map(a => `
+    <div class="list-item">
+      <div class="dot ${a.is_active ? 'green' : 'red'}"></div>
+      <div style="flex:1">
+        <div class="name">${esc(a.name)}</div>
+        <div class="sub">${a.is_active ? 'Активен' : 'Неактивен'}</div>
+      </div>
+      <button class="icon-btn" onclick="toggleAccount('${a.id}',${a.is_active})">${a.is_active ? '⏸' : '▶️'}</button>
+      <button class="icon-btn danger" onclick="deleteAccount('${a.id}','${esc(a.name)}')">🗑</button>
+    </div>
+  `).join('');
+}
+
+async function toggleAccount(id, active) {
+  await api('/accounts/toggle', 'POST', { id, active: active ? 0 : 1 });
+  loadAccounts();
+}
+
+async function deleteAccount(id, name) {
+  if (!confirm(`Удалить аккаунт «${name}»?`)) return;
+  await api('/accounts/delete', 'POST', { id });
+  loadAccounts();
+}
+
+function openAddAccount() {
+  showModal(`
+    <h3>➕ Добавить аккаунт</h3>
+    <div class="form-group">
+      <label class="form-label">Имя аккаунта</label>
+      <input class="form-input" id="acc-name" placeholder="Например: My Account">
+    </div>
+    <div class="form-hint" style="margin-bottom:16px">
+      После нажатия «Добавить» на ПК откроется окно входа в Steam. Войдите в аккаунт.
+    </div>
+    <div class="actions">
+      <button class="action-btn secondary" onclick="hideModal()">Отмена</button>
+      <button class="action-btn primary" onclick="doAddAccount()">Добавить</button>
+    </div>
+  `);
+}
+
+async function doAddAccount() {
+  const name = document.getElementById('acc-name').value.trim();
+  if (!name) return;
+  document.getElementById('modal-body').innerHTML = '<div class="spinner"></div><p style="text-align:center;margin-top:12px">Ожидание входа в Steam…</p>';
+  const r = await api('/accounts/add', 'POST', { name });
+  if (r.ok) {
+    hideModal(); loadAccounts();
+    tg?.showPopup?.({ title: '✅ Успех', message: `Аккаунт «${name}» добавлен!`, buttons: [{ type: 'ok' }] });
+  } else {
+    document.getElementById('modal-body').innerHTML = `<h3>❌ Ошибка</h3><p>${esc(r.error)}</p><div class="actions"><button class="action-btn secondary" onclick="hideModal()">Закрыть</button></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CAMPAIGNS
+// ═══════════════════════════════════════════════════════════════
+
+async function loadCampaigns() {
+  _campaigns = await api('/campaigns');
+  _accounts  = await api('/accounts');
+  const el = document.getElementById('camps-list');
+  if (!_campaigns.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Нет кампаний</div>'; return; }
+  el.innerHTML = _campaigns.map(c => {
+    const times = (c.schedule_times && c.schedule_times.length)
+      ? c.schedule_times.map(t => `<span class="time-chip">🕐 ${t}</span>`).join('')
+      : `<span class="time-chip">каждые ${c.schedule_minutes||60} мин</span>`;
+    const profs = _accounts.filter(a => (c.profile_ids||[]).includes(a.id)).map(a=>a.name).join(', ') || '—';
+    return `
+      <div class="card" onclick="openCampDetail('${c.id}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dot ${c.is_active?'green':'gray'}"></div>
+          <div class="card-title" style="margin:0;flex:1">${esc(c.name)}</div>
+          <span style="font-size:12px;color:var(--hint)">${c.is_active?'Активна':'Пауза'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--hint);margin-top:6px">👤 ${esc(profs)}</div>
+        <div class="times-row">${times}</div>
+      </div>`;
+  }).join('');
+}
+
+function openCampDetail(id) {
+  const c = _campaigns.find(x=>x.id===id);
+  if (!c) return;
+  const profs = _accounts.filter(a => (c.profile_ids||[]).includes(a.id)).map(a=>a.name).join(', ') || '—';
+  const times = (c.schedule_times && c.schedule_times.length)
+    ? c.schedule_times.map(t=>`<span class="time-chip">🕐 ${t}</span>`).join(' ')
+    : `<span class="time-chip">каждые ${c.schedule_minutes||60} мин</span>`;
+
+  showModal(`
+    <h3>${esc(c.name)}</h3>
+    <div class="detail-row"><span class="detail-label">Статус</span><span class="detail-val">${c.is_active?'🟢 Активна':'⏸ Пауза'}</span></div>
+    <div class="detail-row"><span class="detail-label">Заголовок</span><span class="detail-val">${esc(c.title_template)}</span></div>
+    <div class="detail-row"><span class="detail-label">Текст</span><span class="detail-val">${esc((c.body_template||'').slice(0,200))}</span></div>
+    <div class="detail-row"><span class="detail-label">Аккаунты</span><span class="detail-val">${esc(profs)}</span></div>
+    <div class="detail-row"><span class="detail-label">Время</span><div class="times-row">${times}</div></div>
+    <div class="actions">
+      <button class="action-btn secondary" onclick="doCampToggle('${id}');hideModal()">${c.is_active?'⏸ Выкл':'▶️ Вкл'}</button>
+      <button class="action-btn primary" onclick="hideModal();openCampEdit('${id}')">✏️</button>
+      <button class="action-btn danger" onclick="doCampDelete('${id}','${esc(c.name)}')">🗑</button>
+    </div>
+    <button class="action-btn secondary" style="width:100%;margin-top:8px" onclick="hideModal()">Закрыть</button>
+  `);
+}
+
+async function doCampToggle(id) {
+  await api('/campaigns/toggle', 'POST', { id });
+  loadCampaigns();
+}
+
+async function doCampDelete(id, name) {
+  if (!confirm(`Удалить кампанию «${name}»?`)) return;
+  await api('/campaigns/delete', 'POST', { id });
+  hideModal(); loadCampaigns();
+}
+
+// ── Campaign Wizard ─────────────────────────────────────────
+
+let wizData = {};
+
+function openCampWizard(editId) {
+  const c = editId ? _campaigns.find(x=>x.id===editId) : null;
+  wizData = {
+    editId: editId || null,
+    name: c?.name || '',
+    title_template: c?.title_template || '',
+    body_template: c?.body_template || '',
+    profile_ids: c?.profile_ids ? [...c.profile_ids] : [],
+    schedule_times: c?.schedule_times ? [...c.schedule_times] : [],
+  };
+  wizStep1();
+}
+
+function openCampEdit(id) { openCampWizard(id); }
+
+function wizStep1() {
+  showModal(`
+    <h3>${wizData.editId?'✏️ Редактирование':'➕ Новая кампания'} — Шаг 1/5</h3>
+    <div class="form-group">
+      <label class="form-label">Название</label>
+      <input class="form-input" id="wiz-name" value="${esc(wizData.name)}" placeholder="Название кампании">
+    </div>
+    <div class="actions">
+      <button class="action-btn secondary" onclick="hideModal()">Отмена</button>
+      <button class="action-btn primary" onclick="wizData.name=document.getElementById('wiz-name').value.trim();if(!wizData.name)return;wizStep2()">Далее →</button>
+    </div>
+  `);
+}
+
+function wizStep2() {
+  showModal(`
+    <h3>📝 Шаг 2/5 — Заголовок</h3>
+    <div class="form-group">
+      <label class="form-label">Шаблон заголовка</label>
+      <input class="form-input" id="wiz-title" value="${esc(wizData.title_template)}" placeholder="Trade CS2 #{num}">
+      <div class="form-hint">Переменные: {num}, {date}, {account}</div>
+    </div>
+    <div class="actions">
+      <button class="action-btn secondary" onclick="wizStep1()">← Назад</button>
+      <button class="action-btn primary" onclick="wizData.title_template=document.getElementById('wiz-title').value.trim();if(!wizData.title_template)return;wizStep3()">Далее →</button>
+    </div>
+  `);
+}
+
+function wizStep3() {
+  showModal(`
+    <h3>📄 Шаг 3/5 — Текст</h3>
+    <div class="form-group">
+      <label class="form-label">Шаблон текста поста</label>
+      <textarea class="form-input" id="wiz-body" placeholder="Текст поста...">${esc(wizData.body_template)}</textarea>
+      <div class="form-hint">Переменные: {num}, {date}, {account}</div>
+    </div>
+    <div class="actions">
+      <button class="action-btn secondary" onclick="wizStep2()">← Назад</button>
+      <button class="action-btn primary" onclick="wizData.body_template=document.getElementById('wiz-body').value.trim();if(!wizData.body_template)return;wizStep4()">Далее →</button>
+    </div>
+  `);
+}
+
+function wizStep4() {
+  const accs = _accounts.filter(a=>a.is_active);
+  const items = accs.map(a => {
+    const sel = wizData.profile_ids.includes(a.id);
+    return `<div class="check-item ${sel?'selected':''}" onclick="wizToggleAcc('${a.id}',this)">
+      <div class="check-box">${sel?'✓':''}</div>
+      <span class="check-name">${esc(a.name)}</span>
+    </div>`;
+  }).join('');
+
+  showModal(`
+    <h3>👤 Шаг 4/5 — Аккаунты</h3>
+    <div class="check-list" id="wiz-accs">${items || '<div class="empty">Нет активных аккаунтов</div>'}</div>
+    <div class="actions">
+      <button class="action-btn secondary" onclick="wizStep3()">← Назад</button>
+      <button class="action-btn primary" onclick="if(!wizData.profile_ids.length){alert('Выберите хотя бы 1 аккаунт');return}wizStep5()">Далее →</button>
+    </div>
+  `);
+}
+
+function wizToggleAcc(id, el) {
+  const idx = wizData.profile_ids.indexOf(id);
+  if (idx >= 0) wizData.profile_ids.splice(idx, 1);
+  else wizData.profile_ids.push(id);
+  el.classList.toggle('selected');
+  el.querySelector('.check-box').textContent = el.classList.contains('selected') ? '✓' : '';
+}
+
+function wizStep5() {
+  const chips = wizData.schedule_times.map(t =>
+    `<span class="time-chip" style="cursor:pointer" onclick="wizDelTime('${t}')">${t} ✕</span>`
+  ).join(' ') || '<span style="color:var(--hint);font-size:13px">Не задано — будет каждые 60 мин</span>';
+
+  showModal(`
+    <h3>🕐 Шаг 5/5 — Расписание</h3>
+    <div class="form-group">
+      <label class="form-label">Добавить время</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="wiz-time" type="time" style="flex:1">
+        <button class="action-btn primary" style="width:auto;padding:10px 16px" onclick="wizAddTime()">+</button>
+      </div>
+    </div>
+    <div class="times-row" style="margin-bottom:14px" id="wiz-times-row">${chips}</div>
+    <div class="actions">
+      <button class="action-btn secondary" onclick="wizStep4()">← Назад</button>
+      <button class="action-btn primary" onclick="wizConfirm()">Сохранить ✓</button>
+    </div>
+  `);
+}
+
+function wizAddTime() {
+  const inp = document.getElementById('wiz-time');
+  const t = inp.value;
+  if (!t) return;
+  if (!wizData.schedule_times.includes(t)) {
+    wizData.schedule_times.push(t);
+    wizData.schedule_times.sort();
+  }
+  wizStep5();
+}
+
+function wizDelTime(t) {
+  wizData.schedule_times = wizData.schedule_times.filter(x => x !== t);
+  wizStep5();
+}
+
+async function wizConfirm() {
+  const payload = {
+    id: wizData.editId || undefined,
+    name: wizData.name,
+    title_template: wizData.title_template,
+    body_template: wizData.body_template,
+    schedule_minutes: wizData.schedule_times.length ? 0 : 60,
+    schedule_times: wizData.schedule_times.length ? wizData.schedule_times : null,
+    window_start: '00:00',
+    window_end: '23:59',
+    profile_ids: wizData.profile_ids,
+  };
+
+  document.getElementById('modal-body').innerHTML = '<div class="spinner"></div>';
+  const r = await api('/campaigns/save', 'POST', payload);
+  hideModal();
+  loadCampaigns();
+  if (r.ok) {
+    tg?.showPopup?.({ title: '✅', message: `Кампания «${wizData.name}» ${wizData.editId ? 'обновлена' : 'создана'}!`, buttons:[{type:'ok'}] });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOGS
+// ═══════════════════════════════════════════════════════════════
+
+async function loadLogs() {
+  _jobs = await api('/jobs');
+  const el = document.getElementById('logs-list');
+  const icons = { done:'✅', failed:'❌', running:'⏳', pending:'🕒', cancelled:'🚫' };
+  if (!_jobs.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>Нет записей</div>'; return; }
+  el.innerHTML = _jobs.slice(0,30).map(j => {
+    const ts = j.executed_at || j.scheduled_at;
+    const time = ts ? new Date(ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) : '——';
+    const errHtml = j.status==='failed' && j.error ? `<div class="log-error">⚠️ ${esc(j.error).slice(0,120)}</div>` : '';
+    return `
+      <div class="log-item">
+        <div class="log-icon">${icons[j.status]||'·'}</div>
+        <div class="log-body">
+          <div style="display:flex;justify-content:space-between"><span style="font-weight:600">${esc(j.profile_name||'?')}</span><span class="log-time">${time}</span></div>
+          <div class="log-text">${esc((j.title||'').slice(0,60))}</div>
+          ${errHtml}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════════════════════
+
+function showModal(html) {
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function hideModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+function closeModal(e) {
+  if (e.target.id === 'modal-overlay') hideModal();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Init ────────────────────────────────────────────────────
+
+loadStatus();
+</script>
+</body>
+</html>

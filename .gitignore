@@ -1,0 +1,8 @@
+node_modules/
+data/
+logs/
+dist/
+release/
+.env
+*.db
+config/config.json

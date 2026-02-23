@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steam Poster Bot — Активатор</title>
+  <style>
+    :root {
+      --bg:      #1b2838;
+      --panel:   #2a475e;
+      --panel2:  #1e3448;
+      --accent:  #66c0f4;
+      --green:   #4db86e;
+      --red:     #ef4444;
+      --text:    #c7d5e0;
+      --muted:   #8fa5b5;
+      --border:  #3d6070;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      background: var(--panel2);
+      border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 16px; font-weight: 600; color: var(--accent); }
+    .status-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: #555; margin-right: 6px;
+    }
+    .status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    #serverStatus { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 28px 20px; }
+
+    /* ── Настройки ────────────────────────────────────────── */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 13px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px; }
+    .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    label { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 200px; font-size: 12px; color: var(--muted); }
+    input[type=text], input[type=password], input[type=number] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    button {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    button:active { opacity: .7; }
+    .btn-accent { background: var(--accent); color: var(--bg); }
+    .btn-green  { background: var(--green);  color: var(--bg); }
+    .btn-red    { background: var(--red);    color: #fff; }
+    .btn-muted  { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+
+    /* ── Таблица ────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      text-align: left; padding: 8px 10px;
+      font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--panel2); }
+    tbody tr:hover { background: var(--panel2); }
+    tbody td { padding: 9px 10px; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 99px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-green  { background: #4db86e22; color: var(--green); }
+    .badge-red    { background: #ef444422; color: var(--red); }
+    .badge-muted  { background: #8fa5b511; color: var(--muted); }
+    .badge-yellow { background: #f59e0b22; color: #f59e0b; }
+
+    .key-text {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      letter-spacing: .05em;
+      color: var(--accent);
+      cursor: pointer;
+    }
+    .key-text:hover { text-decoration: underline; }
+
+    /* ── Пресеты срока ───────────────────────────── */
+    .duration-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .dur-btn {
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      transition: all .15s;
+    }
+    .dur-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .dur-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+    }
+    .dur-btn.lifetime {
+      border-color: #4db86e44;
+      color: var(--green);
+    }
+    .dur-btn.lifetime:hover, .dur-btn.lifetime.selected {
+      background: var(--green);
+      border-color: var(--green);
+      color: var(--bg);
+    }
+
+    .empty-state {
+      text-align: center; padding: 40px; color: var(--muted);
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+    /* ── Тост ───────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all .25s;
+      pointer-events: none;
+      z-index: 999;
+      max-width: 320px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.ok  { border-color: var(--green); color: var(--green); }
+    #toast.err { border-color: var(--red);   color: var(--red); }
+
+    /* ── Генератор ──────────────────────────────────────────── */
+    #generatedKey {
+      font-family: 'Courier New', monospace;
+      font-size: 22px; font-weight: 700;
+      color: var(--green);
+      letter-spacing: .08em;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      display: none;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    #generatedKey:hover { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎮 Steam Poster Bot — Панель активации</h1>
+    <div id="serverStatus">
+      <span class="status-dot" id="dot"></span>
+      <span id="statusText">Проверка...</span>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Настройки подключения -->
+    <div class="card">
+      <h2>⚙️ Подключение к серверу лицензий</h2>
+      <div class="row">
+        <label>
+          URL сервера
+          <input type="text" id="cfgUrl" placeholder="http://localhost:3847" />
+        </label>
+        <label>
+          Admin Token
+          <input type="password" id="cfgToken" placeholder="CHANGE_ME_ADMIN_SECRET" />
+        </label>
+        <button class="btn-accent" onclick="saveConfig()">Сохранить</button>
+        <button class="btn-muted" onclick="checkHealth()">Проверить</button>
+      </div>
+    </div>
+
+    <!-- Генерация нового ключа -->
+    <div class="card">
+      <h2>🔑 Создать новый ключ</h2>
+
+      <!-- Срок действия -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">
+          Срок действия
+        </div>
+        <div class="duration-grid" id="durGrid">
+          <button class="dur-btn" onclick="selectDur(this,1)"   >1 день</button>
+          <button class="dur-btn" onclick="selectDur(this,7)"   >1 неделя</button>
+          <button class="dur-btn" onclick="selectDur(this,30)"  >1 месяц</button>
+          <button class="dur-btn" onclick="selectDur(this,90)"  >3 месяца</button>
+          <button class="dur-btn" onclick="selectDur(this,180)" >6 месяцев</button>
+          <button class="dur-btn" onclick="selectDur(this,365)" >1 год</button>
+        </div>
+      </div>
+
+      <!-- Тариф -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">
+          Тариф (макс. аккаунтов)
+        </div>
+        <div class="duration-grid" id="tarGrid">
+          <button class="dur-btn" onclick="selectTariff(this,5)"  >🤖 5 ботов</button>
+          <button class="dur-btn" onclick="selectTariff(this,15)" >🤖 15 ботов</button>
+          <button class="dur-btn" onclick="selectTariff(this,30)" >🤖 30 ботов</button>
+          <button class="dur-btn" onclick="selectTariff(this,100)">🤖 100 ботов</button>
+        </div>
+      </div>
+
+      <!-- Комментарий + кнопка -->
+      <div class="row" style="margin-bottom:14px">
+        <label>
+          Комментарий (покупатель / заметка)
+          <input type="text" id="genNote" placeholder="Иван Иванов, telegram @ivan" />
+        </label>
+        <button class="btn-green" onclick="generateKey()">+ Сгенерировать</button>
+      </div>
+
+      <div id="generatedKey" onclick="copyKey()" title="Нажмите, чтобы скопировать"></div>
+    </div>
+
+    <!-- Список ключей -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <h2 style="margin:0">📋 Все лицензии</h2>
+        <button class="btn-muted" onclick="loadKeys()">↻ Обновить</button>
+      </div>
+      <div id="tableWrap">
+        <div class="empty-state">
+          <div class="icon">⏳</div>
+          <div>Загрузка...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    let keys = [];    let selectedDays = null; // null = не выбран
+
+    function selectDur(btn, days) {
+      selectedDays = days;
+      document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+    // ─── Инициализация ────────────────────────────────────────
+    async function init() {
+      const cfg = await fetch('/api/config').then(r => r.json());
+      document.getElementById('cfgUrl').value   = cfg.serverUrl || '';
+      document.getElementById('cfgToken').value = '';
+      await checkHealth();
+      await loadKeys();
+    }
+
+    // ─── Здоровье сервера ─────────────────────────────────────
+    async function checkHealth() {
+      const dot        = document.getElementById('dot');
+      const statusText = document.getElementById('statusText');
+      dot.className    = 'status-dot';
+      statusText.textContent = 'Проверка...';
+      try {
+        const r = await fetch('/api/health').then(r => r.json());
+        if (r.ok) {
+          dot.classList.add('green');
+          statusText.textContent = 'Сервер доступен';
+        } else {
+          dot.classList.add('red');
+          statusText.textContent = 'Ошибка: ' + (r.error || 'неизвестно');
+        }
+      } catch {
+        dot.classList.add('red');
+        statusText.textContent = 'Сервер недоступен';
+      }
+    }
+
+    // ─── Сохранить конфиг ─────────────────────────────────────
+    async function saveConfig() {
+      const serverUrl  = document.getElementById('cfgUrl').value.trim();
+      const adminToken = document.getElementById('cfgToken').value.trim();
+      const r = await fetch('/api/config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverUrl, adminToken }),
+      }).then(r => r.json());
+      if (r.ok) {
+        toast('Настройки сохранены', 'ok');
+        await checkHealth();
+      } else {
+        toast('Ошибка сохранения', 'err');
+      }
+    }
+
+    // ─── Сгенерировать ключ ───────────────────────────────────
+    async function generateKey() {
+      if (selectedDays === null) {
+        toast('Выберите срок действия лицензии.', 'err');
+        return;
+      }
+      const note = document.getElementById('genNote').value.trim();
+
+      // Определяем текст срока для заметки
+      const durLabels = { 0:'Бессрочно', 1:'1 день', 7:'1 неделя', 30:'1 месяц',
+                          90:'3 месяца', 180:'6 месяцев', 365:'1 год' };
+      const durText   = durLabels[selectedDays] ?? selectedDays + 'д';
+      const fullNote  = note ? `${note} [${durText}]` : `[${durText}]`;
+
+      const r = await fetch('/api/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          days: selectedDays > 0 ? selectedDays : undefined,
+          note: fullNote,
+        }),
+      }).then(r => r.json());
+      if (r.ok) {
+        const el = document.getElementById('generatedKey');
+        el.textContent = r.key;
+        el.style.display = 'block';
+        const expStr = r.expires_at
+          ? new Date(r.expires_at * 1000).toLocaleDateString('ru-RU')
+          : 'бессрочно';
+        toast(`Ключ создан (${durText}, до ${expStr}). Нажмите для копирования.`, 'ok');
+        // Сбрасываем выбор срока и поле заметки
+        selectedDays = null;
+        document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('selected'));
+        document.getElementById('genNote').value = '';
+        await loadKeys();
+      } else {
+        toast('Ошибка: ' + (r.error || 'неизвестно'), 'err');
+      }
+    }
+
+    function copyKey() {
+      const el = document.getElementById('generatedKey');
+      navigator.clipboard.writeText(el.textContent).then(() => toast('Скопировано!', 'ok'));
+    }
+
+    // ─── Список ключей ────────────────────────────────────────
+    async function loadKeys() {
+      const r = await fetch('/api/keys').then(r => r.json());
+      if (!r.ok) {
+        document.getElementById('tableWrap').innerHTML =
+          `<div class="empty-state"><div class="icon">❌</div><div>Ошибка: ${r.error}</div></div>`;
+        return;
+      }
+      keys = r.keys;
+      renderTable();
+    }
+
+    function renderTable() {
+      if (!keys.length) {
+        document.getElementById('tableWrap').innerHTML =
+          `<div class="empty-state"><div class="icon">📭</div><div>Ключей ещё нет. Создайте первый.</div></div>`;
+        return;
+      }
+      const rows = keys.map(k => {
+        const active      = k.is_active === 1;
+        const activated   = k.hwid_hash != null;
+        const expiredTs   = k.expires_at && k.expires_at < Math.floor(Date.now() / 1000);
+        const expiresStr  = k.expires_at ? new Date(k.expires_at * 1000).toLocaleDateString('ru-RU') : '∞';
+        const createdStr  = new Date(k.created_at * 1000).toLocaleDateString('ru-RU');
+        const lastStr     = k.last_check ? new Date(k.last_check * 1000).toLocaleDateString('ru-RU') : '—';
+
+        let badge = '';
+        if (!active)        badge = `<span class="badge badge-red">Отозван</span>`;
+        else if (expiredTs) badge = `<span class="badge badge-muted">Истёк</span>`;
+        else if (!activated)badge = `<span class="badge badge-yellow">Не активирован</span>`;
+        else                badge = `<span class="badge badge-green">Активен</span>`;
+
+        const btnToggle = active
+          ? `<button class="btn-red" style="padding:4px 12px;font-size:11px" onclick="revokeKey('${k.key}')">Отозвать</button>`
+          : `<button class="btn-green" style="padding:4px 12px;font-size:11px" onclick="restoreKey('${k.key}')">Восстановить</button>`;
+
+        return `<tr>
+          <td><span class="key-text" onclick="copyText('${k.key}')" title="Копировать">${k.key}</span></td>
+          <td>${badge}</td>
+          <td>${k.note || '<span style="color:var(--muted)">—</span>'}</td>
+          <td><span style="font-weight:700;color:var(--accent)">${k.max_bots ?? 5}</span></td>
+          <td>${k.hwid_hash ? k.hwid_hash : '<span style="color:var(--muted)">—</span>'}</td>
+          <td>${expiresStr}</td>
+          <td>${createdStr}</td>
+          <td>${lastStr}</td>
+          <td>${btnToggle}</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('tableWrap').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Ключ</th>
+              <th>Статус</th>
+              <th>Комментарий</th>
+              <th>Тариф</th>
+              <th>HWID</th>
+              <th>Истекает</th>
+              <th>Создан</th>
+              <th>Посл. проверка</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    async function revokeKey(key) {
+      if (!confirm(`Отозвать ключ ${key}?`)) return;
+      const r = await fetch('/api/revoke', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      }).then(r => r.json());
+      if (r.ok) { toast('Ключ отозван', 'ok'); await loadKeys(); }
+      else toast('Ошибка: ' + r.error, 'err');
+    }
+
+    async function restoreKey(key) {
+      const r = await fetch('/api/restore', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      }).then(r => r.json());
+      if (r.ok) { toast('Ключ восстановлен', 'ok'); await loadKeys(); }
+      else toast('Ошибка: ' + r.error, 'err');
+    }
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => toast('Скопировано!', 'ok'));
+    }
+
+    // ─── Тост ────────────────────────────────────────────────
+    let toastTimer;
+    function toast(msg, type = 'ok') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className   = 'show ' + type;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+    }
+
+    init();
+  </script>
+</body>
+</html>

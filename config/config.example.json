@@ -1,0 +1,12 @@
+{
+  "headless": true,
+  "slowMo": 100,
+  "postDelay": [3000, 8000],
+  "retries": 2,
+  "timezone": "Europe/Moscow",
+  "openaiKey": "",
+  "openaiBaseUrl": "https://openrouter.ai/api",
+  "openaiModel": "openai/gpt-oss-20b:free",
+  "ollamaUrl": "http://localhost:11434",
+  "ollamaModel": "llama3"
+}

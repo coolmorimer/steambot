@@ -1,0 +1,34 @@
+{
+  "appId": "com.steambot.poster.service",
+  "productName": "Steam Poster Bot Service",
+  "asar": true,
+  "asarUnpack": [
+    "**/better-sqlite3/**",
+    "**/better_sqlite3.node"
+  ],
+  "extraResources": [
+    { "from": "build/icon.ico", "to": "tray.ico" }
+  ],
+  "extraMetadata": {
+    "main": "electron/main-service.js"
+  },
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**",
+    "electron/**",
+    "bot.js",
+    "poster.js",
+    "db.js",
+    "scheduler.js",
+    "logger.js",
+    "config/**",
+    "node_modules/**"
+  ],
+  "win": {
+    "target": "portable",
+    "icon": "build/icon.ico",
+    "artifactName": "Steam Poster Bot Service.exe"
+  }
+}
