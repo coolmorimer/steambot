@@ -237,9 +237,21 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay }) {
       throw new Error(`Тема не создана — нет редиректа. URL: ${page.url()}`);
     }
     const topicUrl = page.url();
-    logger.info(`[${profile.name}] Тема успешно создана: ${topicUrl}`);
 
-    return topicUrl;
+    // Найти ID конкретного поста (OP) на странице — Steam ставит id="c_XXXXXXXXXX"
+    let postUrl = topicUrl;
+    try {
+      await page.waitForSelector('[id^="c_"]', { timeout: 5000 });
+      const opId = await page.locator('[id^="c_"]').first().getAttribute('id');
+      if (opId) {
+        postUrl = topicUrl.replace(/\/?$/, '') + '/#' + opId;
+      }
+    } catch (_) {
+      // Не нашли якорь — используем URL темы
+    }
+    logger.info(`[${profile.name}] Пост создан: ${postUrl}`);
+
+    return postUrl;
   } finally {
     await browser.close();
   }

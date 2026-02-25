@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Steam Poster Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      var(--tg-theme-bg-color, #1a1a2e);
+      --bg2:     var(--tg-theme-secondary-bg-color, #16213e);
+      --text:    var(--tg-theme-text-color, #eaeaea);
+      --hint:    var(--tg-theme-hint-color, #7a8194);
+      --link:    var(--tg-theme-link-color, #6c9ef4);
+      --btn:     var(--tg-theme-button-color, #3b82f6);
+      --btn-txt: var(--tg-theme-button-text-color, #ffffff);
+      --radius:  12px;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    .header { padding: 16px 16px 8px; }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .header p  { color: var(--hint); font-size: 13px; margin-top: 2px; }
+    .tabs {
+      display: flex; border-bottom: 1px solid rgba(255,255,255,.1);
+      padding: 0 16px; gap: 4px; overflow-x: auto; scrollbar-width: none;
+    }
+    .tab {
+      padding: 10px 14px; font-size: 14px; font-weight: 500;
+      border-bottom: 2px solid transparent; color: var(--hint);
+      cursor: pointer; white-space: nowrap; background: none; border: none;
+      border-bottom: 2px solid transparent; color: var(--hint);
+    }
+    .tab.active { color: var(--btn); border-bottom-color: var(--btn); }
+    .page { display: none; padding: 12px 16px; }
+    .page.active { display: block; }
+    .card {
+      background: var(--bg2); border-radius: var(--radius);
+      padding: 12px 14px; margin-bottom: 10px;
+    }
+    .card-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .card-sub   { font-size: 13px; color: var(--hint); }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+    }
+    .badge-green  { background: rgba(34,197,94,.15);  color: #4ade80; }
+    .badge-red    { background: rgba(239,68,68,.15);   color: #f87171; }
+    .badge-yellow { background: rgba(234,179,8,.15);   color: #facc15; }
+    .badge-blue   { background: rgba(59,130,246,.15);  color: #93c5fd; }
+    .badge-gray   { background: rgba(107,114,128,.2);  color: #9ca3af; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .row:last-child { border-bottom: none; }
+    .btn {
+      background: var(--btn); color: var(--btn-txt);
+      border: none; border-radius: var(--radius); padding: 12px 20px;
+      font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 8px;
+    }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-ghost {
+      background: rgba(255,255,255,.07); color: var(--text);
+      border: none; border-radius: 8px; padding: 8px 14px;
+      font-size: 13px; cursor: pointer;
+    }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card {
+      background: var(--bg2); border-radius: var(--radius); padding: 14px;
+      text-align: center;
+    }
+    .stat-val  { font-size: 26px; font-weight: 700; }
+    .stat-lbl  { font-size: 12px; color: var(--hint); margin-top: 2px; }
+    .empty { text-align: center; padding: 40px 20px; color: var(--hint); }
+    .empty-icon { font-size: 40px; margin-bottom: 10px; }
+    .spinner { display: flex; justify-content: center; padding: 30px; }
+    .spinner::after {
+      content: ''; width: 28px; height: 28px;
+      border: 2px solid rgba(255,255,255,.2); border-top-color: var(--btn);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .input {
+      width: 100%; background: var(--bg2); border: 1px solid rgba(255,255,255,.1);
+      color: var(--text); border-radius: 10px; padding: 11px 14px; font-size: 15px;
+      margin-top: 6px; margin-bottom: 4px; outline: none;
+    }
+    .input:focus { border-color: var(--btn); }
+    label { font-size: 13px; color: var(--hint); }
+    .toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: #1f2937; border: 1px solid rgba(255,255,255,.1);
+      color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px;
+      z-index: 999; animation: fadeIn .2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎮 Steam Poster Bot</h1>
+  <p id="user-greeting">Загрузка...</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPage('overview')">Обзор</button>
+  <button class="tab" onclick="showPage('accounts')">Аккаунты</button>
+  <button class="tab" onclick="showPage('campaigns')">Кампании</button>
+  <button class="tab" onclick="showPage('jobs')">Задания</button>
+</div>
+
+<!-- OVERVIEW -->
+<div id="page-overview" class="page active">
+  <div id="overview-loading" class="spinner"></div>
+  <div id="overview-content" style="display:none">
+    <br/>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val" id="stat-accounts">–</div><div class="stat-lbl">Аккаунты</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-campaigns">–</div><div class="stat-lbl">Кампании</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-jobs-today">–</div><div class="stat-lbl">Постов сегодня</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-plan">–</div><div class="stat-lbl">Тариф</div></div>
+    </div>
+
+    <br/>
+    <div class="card">
+      <div class="card-title">Последние задания</div>
+      <div id="recent-jobs"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNTS -->
+<div id="page-accounts" class="page">
+  <div id="accounts-loading" class="spinner"></div>
+  <div id="accounts-list"></div>
+</div>
+
+<!-- CAMPAIGNS -->
+<div id="page-campaigns" class="page">
+  <div id="campaigns-loading" class="spinner"></div>
+  <div id="campaigns-list"></div>
+</div>
+
+<!-- JOBS -->
+<div id="page-jobs" class="page">
+  <div id="jobs-loading" class="spinner"></div>
+  <div id="jobs-list"></div>
+</div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+tg?.expand();
+tg?.ready();
+
+const BASE_URL = window.location.origin;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let token = null;
+let me    = null;
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function apiReq(path, opts = {}) {
+  const res = await fetch(BASE_URL + '/api' + path, {
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || res.statusText);
+  }
+  return res.json();
+}
+
+// ── Auth via Telegram initData ────────────────────────────────────────────────
+async function authInit() {
+  const initData = tg?.initData;
+  if (!initData) {
+    document.getElementById('user-greeting').textContent = '⚠️ Откройте через Telegram бота';
+    return false;
+  }
+  try {
+    const data = await apiReq('/bot/miniapp/auth', {
+      method: 'POST',
+      body: { init_data: initData },
+    });
+    token = data.access_token;
+    me    = data.user;
+    document.getElementById('user-greeting').textContent =
+      `Привет, ${me.name || me.email?.split('@')[0]}! Тариф: ${data.subscription?.plan_name || 'Free'}`;
+    return true;
+  } catch (e) {
+    document.getElementById('user-greeting').textContent = '⚠️ Ошибка авторизации';
+    return false;
+  }
+}
+
+// ── Pages ─────────────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event?.target?.classList.add('active');
+  loadPage(name);
+}
+
+async function loadPage(name) {
+  if (!token) return;
+  if (name === 'overview')  loadOverview();
+  if (name === 'accounts')  loadAccounts();
+  if (name === 'campaigns') loadCampaigns();
+  if (name === 'jobs')      loadJobs();
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  show('overview-loading'); hide('overview-content');
+  try {
+    const [profiles, campaigns, jobsData] = await Promise.all([
+      apiReq('/profiles'), apiReq('/campaigns'), apiReq('/jobs?limit=5'),
+    ]);
+    const jobs = jobsData.jobs || [];
+    const today = jobs.filter(j => new Date(j.created_at).toDateString() === new Date().toDateString()).length;
+
+    set('stat-accounts',  profiles.length);
+    set('stat-campaigns', campaigns.length);
+    set('stat-jobs-today', today);
+    set('stat-plan',       me?.subscription?.plan_name || 'Free');
+
+    const sub = me?.subscription;
+    if (sub) set('stat-plan', sub.plan_name || 'Free');
+
+    const el = document.getElementById('recent-jobs');
+    if (jobs.length === 0) {
+      el.innerHTML = '<div class="empty" style="padding:20px 0"><div>Заданий пока нет</div></div>';
+    } else {
+      el.innerHTML = jobs.map(j => jobRow(j)).join('');
+    }
+    hide('overview-loading'); show('overview-content');
+  } catch(e) { showToast('Ошибка: ' + e.message); }
+}
+
+// ── Accounts ──────────────────────────────────────────────────────────────────
+async function loadAccounts() {
+  show('accounts-loading'); set('accounts-list', '');
+  try {
+    const profiles = await apiReq('/profiles');
+    const el = document.getElementById('accounts-list');
+    el.innerHTML = '';
+    if (!profiles.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">👤</div><div>Аккаунтов нет</div></div>';
+    } else {
+      profiles.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <div class="row" style="padding:0;border:none;margin-bottom:4px">
+            <div class="card-title">${escHtml(p.name)}</div>
+            <span class="badge ${p.status === 'active' ? 'badge-green' : p.status === 'invalid' ? 'badge-red' : 'badge-gray'}">
+              ${statusLabel(p.status)}
+            </span>
+          </div>
+          <div class="card-sub">${p.target_url ? `<a href="${escHtml(p.target_url)}" style="color:var(--link)">Открыть профиль</a>` : 'URL не указан'}</div>
+        `;
+        el.appendChild(div);
+      });
+    }
+    hide('accounts-loading');
+  } catch(e) { showToast('Ошибка: ' + e.message); hide('accounts-loading'); }
+}
+
+// ── Campaigns ─────────────────────────────────────────────────────────────────
+async function loadCampaigns() {
+  show('campaigns-loading'); set('campaigns-list', '');
+  try {
+    const campaigns = await apiReq('/campaigns');
+    const el = document.getElementById('campaigns-list');
+    el.innerHTML = '';
+    if (!campaigns.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">📢</div><div>Кампаний нет</div></div>';
+    } else {
+      campaigns.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <div class="row" style="padding:0;border:none;margin-bottom:4px">
+            <div class="card-title">${escHtml(c.name)}</div>
+            <span class="badge ${c.is_active ? 'badge-green' : 'badge-gray'}">${c.is_active ? 'Активна' : 'Пауза'}</span>
+          </div>
+          <div class="card-sub" style="margin-bottom:8px">${escHtml(c.title_template)}</div>
+          <button class="btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active}, this)">
+            ${c.is_active ? '⏸ Поставить на паузу' : '▶ Запустить'}
+          </button>
+        `;
+        el.appendChild(div);
+      });
+    }
+    hide('campaigns-loading');
+  } catch(e) { showToast('Ошибка: ' + e.message); hide('campaigns-loading'); }
+}
+
+async function toggleCampaign(id, active, btn) {
+  btn.disabled = true;
+  try {
+    await apiReq('/campaigns/' + id, { method: 'PATCH', body: { is_active: active } });
+    showToast(active ? 'Кампания запущена' : 'Кампания на паузе');
+    loadCampaigns();
+  } catch(e) { showToast('Ошибка: ' + e.message); btn.disabled = false; }
+}
+
+// ── Jobs ──────────────────────────────────────────────────────────────────────
+async function loadJobs() {
+  show('jobs-loading'); set('jobs-list', '');
+  try {
+    const { jobs, total } = await apiReq('/jobs?limit=30');
+    const el = document.getElementById('jobs-list');
+    el.innerHTML = '';
+    if (!jobs?.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div>Заданий нет</div></div>';
+    } else {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<div class="card-sub" style="margin-bottom:8px">Всего: ${total}</div>` +
+        jobs.map(j => jobRow(j)).join('');
+      el.appendChild(card);
+    }
+    hide('jobs-loading');
+  } catch(e) { showToast('Ошибка: ' + e.message); hide('jobs-loading'); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function jobRow(j) {
+  const icons = { done: '✅', failed: '❌', pending: '⏳', running: '🔄' };
+  const labels = { done: 'Готово', failed: 'Ошибка', pending: 'Ждёт', running: 'Идёт' };
+  const badges = { done: 'badge-green', failed: 'badge-red', pending: 'badge-yellow', running: 'badge-blue' };
+  const time = new Date(j.created_at).toLocaleString('ru', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  return `
+    <div class="row">
+      <div>
+        <div style="font-size:14px">${icons[j.status]||'⏳'} ${escHtml(j.campaign_name || 'Кампания')}</div>
+        <div style="font-size:12px;color:var(--hint)">${escHtml(j.profile_name || '')} · ${time}</div>
+        ${j.error_message ? `<div style="font-size:11px;color:#f87171;margin-top:2px">${escHtml(j.error_message)}</div>` : ''}
+      </div>
+      <span class="badge ${badges[j.status]||'badge-gray'}">${labels[j.status]||j.status}</span>
+    </div>`;
+}
+
+function statusLabel(s) {
+  return { active: 'Активен', invalid: 'Невалид', checking: 'Проверка', unknown: 'Неизвестно' }[s] || s;
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function show(id) { const el = document.getElementById(id); if(el) el.style.display = ''; }
+function hide(id) { const el = document.getElementById(id); if(el) el.style.display = 'none'; }
+function set(id, val) { const el = document.getElementById(id); if(el) el.innerHTML = val; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  const ok = await authInit();
+  if (ok) {
+    await loadOverview();
+  }
+})();
+</script>
+</body>
+</html>

@@ -4,5 +4,26 @@ logs/
 dist/
 release/
 .env
+server/.env
 *.db
 config/config.json
+
+# Build artifacts
+server/dashboard/dist/
+build/
+*.blockmap
+*.exe
+*.dmg
+*.AppImage
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+
+# Playwright
+playwright-report/
+test-results/
+
+# PM2
+.pm2/

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: steambot-config
+  namespace: steambot
+data:
+  NODE_ENV: "production"
+  PORT: "4000"
+  DB_TYPE: "postgresql"
+  DB_HOST: "steambot-postgres"
+  DB_PORT: "5432"
+  DB_NAME: "steambot"
+  DB_USER: "steambot"
+  DB_POOL_MAX: "10"
+  DB_SSL: "false"
+  APP_URL: "https://your-domain.com"
+  TRIAL_DAYS: "14"
+  STRIPE_ENABLED: "false"
+  TZ: "Europe/Moscow"

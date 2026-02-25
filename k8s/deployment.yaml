@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steambot-server
+  namespace: steambot
+  labels:
+    app: steambot-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: steambot-server
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: steambot-server
+    spec:
+      terminationGracePeriodSeconds: 30
+      initContainers:
+        # Wait for PostgreSQL to be ready before starting the server
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do
+                echo "Waiting for postgres...";
+                sleep 2;
+              done
+          envFrom:
+            - configMapRef:
+                name: steambot-config
+            - secretRef:
+                name: steambot-secrets
+        # Run database migrations automatically on deploy
+        - name: run-migrations
+          image: morcool02/steambot-server:latest
+          command: ["node", "db/migrate.js"]
+          workingDir: /app/server
+          envFrom:
+            - configMapRef:
+                name: steambot-config
+            - secretRef:
+                name: steambot-secrets
+      containers:
+        - name: steambot-server
+          image: morcool02/steambot-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: steambot-config
+            - secretRef:
+                name: steambot-secrets
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 5
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          volumeMounts:
+            - name: data
+              mountPath: /app/server/data
+            - name: logs
+              mountPath: /app/server/logs
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: steambot-data-pvc
+        - name: logs
+          emptyDir: {}
+      # imagePullSecrets не нужны для публичного Docker Hub образа
+
+---
+# PVC for server data (uploaded files, etc.)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: steambot-data-pvc
+  namespace: steambot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-path
