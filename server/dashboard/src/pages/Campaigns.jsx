@@ -393,14 +393,15 @@ export default function Campaigns() {
   };
 
   const limit  = sub?.limits?.max_campaigns ?? 1;
-  const canAdd = campaigns.length < limit;
+  const isUnlimited = limit === -1;
+  const canAdd = isUnlimited || campaigns.length < limit;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Кампании</h1>
-          <p className="text-gray-500 text-sm">{campaigns.length} / {limit}</p>
+          <p className="text-gray-500 text-sm">{campaigns.length} / {isUnlimited ? '∞' : limit}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="btn-ghost"><RefreshCw className="w-4 h-4" /></button>

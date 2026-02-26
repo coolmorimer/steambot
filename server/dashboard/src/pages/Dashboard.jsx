@@ -44,7 +44,7 @@ export default function Dashboard() {
         return d.toDateString() === new Date().toDateString();
       }).length, limit: sub?.limits?.max_jobs_per_day, to: '/activity', color: 'green' },
     { icon: Send, label: 'Telegram бот',
-      value: sub?.features?.has_telegram_bot ? 'Активен' : 'Недоступен',
+      value: (sub?.limits?.max_telegram_bots || 0) > 0 ? 'Доступен' : 'Недоступен',
       to: '/telegram', color: 'cyan' },
   ];
 
@@ -85,7 +85,7 @@ export default function Dashboard() {
               </div>
             </div>
             <p className="text-2xl font-bold text-white">{value}</p>
-            <p className="text-xs text-gray-500 mt-1">{label}{limit ? ` / ${limit}` : ''}</p>
+            <p className="text-xs text-gray-500 mt-1">{label}{limit ? ` / ${limit === -1 ? '∞' : limit}` : ''}</p>
           </Link>
         ))}
       </div>

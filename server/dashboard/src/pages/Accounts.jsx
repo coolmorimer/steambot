@@ -55,7 +55,8 @@ export default function Accounts() {
   };
 
   const limit  = sub?.limits?.max_steam_accounts ?? 1;
-  const canAdd = profiles.length < limit;
+  const isUnlimited = limit === -1;
+  const canAdd = isUnlimited || profiles.length < limit;
 
   return (
     <div className="space-y-4">
@@ -63,7 +64,7 @@ export default function Accounts() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Steam аккаунты</h1>
-          <p className="text-gray-500 text-sm">{profiles.length} / {limit}</p>
+          <p className="text-gray-500 text-sm">{profiles.length} / {isUnlimited ? '∞' : limit}</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
           <button onClick={load} className="btn-ghost" title="Обновить">

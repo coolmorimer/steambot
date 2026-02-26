@@ -10,7 +10,7 @@ const SteamBotManager       = require('../services/SteamBotManager');
 const router = express.Router();
 const ALL    = [requireAuth, requireActiveUser];
 
-router.get('/', ALL, ...checkLimit.telegramBot, async (req, res, next) => {
+router.get('/', ALL, async (req, res, next) => {
   try {
     const bot = await db.getTelegramBot(req.userId);
     if (!bot) return res.json(null);
