@@ -39,9 +39,9 @@ async function sendToAll(bot, chatIds, text, opts = {}) {
 
 const REPLY_KB = {
   keyboard: [
+    ['� Статус',    '🔄 Обновить'],
     ['👤 Аккаунты',  '📋 Кампании'],
-    ['📜 Задачи',    '📊 Статус'],
-    ['⚙️ Меню'],
+    ['📜 Задачи',    '📈 Статистика'],
   ],
   resize_keyboard: true,
   persistent: true,
@@ -109,10 +109,11 @@ async function start(userId, config, { suppressNotify = false } = {}) {
       if (text === '📋 Кампании')            return await sendCampaignsList(tgBot, cid, config);
       if (text === '📜 Задачи')              return await sendJobsList(tgBot, cid, config);
       if (text === '📊 Статус')             return await sendStatusMsg(tgBot, cid, config);
-      if (text === '⚙️ Меню')               return await sendMainMenu(tgBot, cid, config);
+      if (text === '📈 Статистика')          return await sendJobsStats(tgBot, cid, config);
+      if (text === '🔄 Обновить')            return await sendMainMenu(tgBot, cid, config);
       if (!text.startsWith('/')) {
         await tgBot.sendMessage(cid,
-          'Используйте кнопки меню или /menu для управления ботом.',
+          'Используйте кнопки меню ⬇️',
           { reply_markup: REPLY_KB }
         );
       }
@@ -243,52 +244,31 @@ async function sendMainMenu(bot, chatId, config) {
   const text = [
     '🎮 <b>Steam Poster Bot</b>',
     '',
-    running ? '🟢 <b>Бот работает</b>' : '🔴 <b>Бот остановлен</b>',
+    running ? '🟢 Статус: <b>Работает</b>' : '🔴 Статус: <b>Остановлен</b>',
     '',
-    `👤 Аккаунтов: <b>${(accounts || []).length}</b>   📋 Кампаний: <b>${activeCampaigns}</b>`,
-    `✅ Выполнено: <b>${doneJobs}</b>   ❌ Ошибок: <b>${failedJobs}</b>   🕐 Очередь: <b>${pendingJobs}</b>`,
+    `👤 Аккаунтов: <b>${(accounts || []).length}</b>`,
+    `📋 Активных кампаний: <b>${activeCampaigns}</b>`,
+    '',
+    `✅ Выполнено: <b>${doneJobs}</b>`,
+    `❌ Ошибок: <b>${failedJobs}</b>`,
+    `🕐 В очереди: <b>${pendingJobs}</b>`,
   ].join('\n');
 
-  const keyboard = {
-    inline_keyboard: [
-      [
-        { text: running ? '⏹ Остановить бота' : '▶️ Запустить бота',
-          callback_data: running ? 'bot:stop' : 'bot:start' },
-        { text: '🔄 Обновить', callback_data: 'menu:refresh' },
-      ],
-      [
-        { text: '👤 Аккаунты',   callback_data: 'accounts:list' },
-        { text: '📋 Кампании',   callback_data: 'campaigns:list' },
-      ],
-      [
-        { text: '📜 Задачи',     callback_data: 'jobs:list' },
-        { text: '📊 Статистика', callback_data: 'jobs:stats' },
-      ],
-      ...(config.webAppUrl ? [[
-        { text: '🌐 Открыть Dashboard', web_app: { url: config.webAppUrl } },
-      ]] : []),
-    ],
-  };
-
-  await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: keyboard });
+  await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: REPLY_KB });
 }
 
 async function sendHelp(bot, chatId) {
   const text = [
-    '📖 <b>Справка Steam Poster Bot</b>',
+    '📖 <b>Справка</b>',
     '',
-    '<b>Команды:</b>',
-    '/menu — главное меню',
-    '/help — эта справка',
-    '',
-    '<b>Кнопки нижнего меню:</b>',
+    '📊 Статус — сводка по боту',
+    '🔄 Обновить — обновить данные',
     '👤 Аккаунты — список Steam аккаунтов',
     '📋 Кампании — список кампаний',
-    '📜 Задачи — последние 10 задач',
-    '📊 Статус — текущий статус бота',
-    '⚙️ Меню — открыть главное меню',
+    '📜 Задачи — последние задачи',
+    '📈 Статистика — счётчики по задачам',
     '',
-    '<b>Уведомления</b> настраиваются в Dashboard → Telegram.',
+    'Управление через <b>Dashboard</b>.',
   ].join('\n');
   await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: REPLY_KB });
 }
@@ -296,116 +276,103 @@ async function sendHelp(bot, chatId) {
 async function sendStatusMsg(bot, chatId, config) {
   const status  = await Promise.resolve(config.getStatus?.()).catch(() => ({})) || {};
   const running = status.running;
-  const text = running
-    ? '🟢 <b>Бот работает</b>'
-    : '🔴 <b>Бот остановлен</b>\n\nЗапустите через /menu → ▶️ Запустить бота';
-  await bot.sendMessage(chatId, text, {
-    parse_mode: 'HTML',
-    reply_markup: { inline_keyboard: [[
-      { text: running ? '⏹ Остановить' : '▶️ Запустить',
-        callback_data: running ? 'bot:stop' : 'bot:start' },
-      { text: '« Меню', callback_data: 'menu:main' },
-    ]] },
-  });
+
+  const lines = [
+    running ? '🟢 <b>Steam Poster Bot работает</b>' : '🔴 <b>Steam Poster Bot остановлен</b>',
+  ];
+
+  if (status.active_jobs !== undefined) {
+    lines.push('', `⏳ Активных задач: <b>${status.active_jobs}</b>`);
+  }
+  if (status.last_activity) {
+    const d = new Date(status.last_activity);
+    lines.push(`🕐 Последняя активность: <b>${d.toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}</b>`);
+  }
+
+  await bot.sendMessage(chatId, lines.join('\n'), { parse_mode: 'HTML', reply_markup: REPLY_KB });
 }
 
 async function sendAccountsList(bot, chatId, config) {
   const accounts = await Promise.resolve(config.getAccounts?.() || []).catch(() => []);
   if (!(accounts || []).length) {
-    return bot.sendMessage(chatId, '👤 Аккаунты не добавлены.\nДобавьте через Dashboard.',
-      { reply_markup: { inline_keyboard: [[{ text: '« Меню', callback_data: 'menu:main' }]] } }
+    return bot.sendMessage(chatId,
+      '👤 <b>Аккаунты</b>\n\nНет добавленных аккаунтов.\nДобавьте через Dashboard.',
+      { parse_mode: 'HTML', reply_markup: REPLY_KB }
     );
   }
-  const lines = ['👤 <b>Steam аккаунты:</b>', ''];
+  const lines = [`👤 <b>Steam аккаунты</b> (${accounts.length})`, ''];
   for (const [i, a] of (accounts || []).entries()) {
-    lines.push(`${i + 1}. ${a.is_active ? '🟢' : '🔴'} <b>${escHtml(a.name)}</b>`);
+    const status = a.is_active ? '🟢' : '🔴';
+    lines.push(`${status} ${escHtml(a.name)}`);
   }
-  await bot.sendMessage(chatId, lines.join('\n'), {
-    parse_mode: 'HTML',
-    reply_markup: { inline_keyboard: [[{ text: '« Меню', callback_data: 'menu:main' }]] },
-  });
+  await bot.sendMessage(chatId, lines.join('\n'), { parse_mode: 'HTML', reply_markup: REPLY_KB });
 }
 
 async function sendCampaignsList(bot, chatId, config) {
   const campaigns = await Promise.resolve(config.getCampaigns?.() || []).catch(() => []);
   if (!(campaigns || []).length) {
-    return bot.sendMessage(chatId, '📋 Кампании не созданы.\nСоздайте через Dashboard.',
-      { reply_markup: { inline_keyboard: [[{ text: '« Меню', callback_data: 'menu:main' }]] } }
+    return bot.sendMessage(chatId,
+      '📋 <b>Кампании</b>\n\nНет созданных кампаний.\nСоздайте через Dashboard.',
+      { parse_mode: 'HTML', reply_markup: REPLY_KB }
     );
   }
-  const lines = ['📋 <b>Кампании:</b>', ''];
-  for (const [i, c] of (campaigns || []).entries()) {
+  const lines = [`📋 <b>Кампании</b> (${campaigns.length})`, ''];
+  for (const c of campaigns) {
+    const status = c.is_active ? '🟢' : '⏸';
     const times = Array.isArray(c.schedule_times) && c.schedule_times.length
       ? c.schedule_times.join(', ') : '—';
-    lines.push(`${i + 1}. ${c.is_active ? '🟢' : '🔴'} <b>${escHtml(c.name)}</b>`);
-    lines.push(`   🕐 ${times}`);
+    lines.push(`${status} <b>${escHtml(c.name)}</b>`);
+    lines.push(`    🕐 ${times}`);
   }
-  await bot.sendMessage(chatId, lines.join('\n'), {
-    parse_mode: 'HTML',
-    reply_markup: { inline_keyboard: [[{ text: '« Меню', callback_data: 'menu:main' }]] },
-  });
+  await bot.sendMessage(chatId, lines.join('\n'), { parse_mode: 'HTML', reply_markup: REPLY_KB });
 }
 
 async function sendJobsList(bot, chatId, config) {
   const jobs   = await Promise.resolve(config.getRecentJobs?.() || []).catch(() => []);
   const recent = (jobs || []).slice(0, 10);
   if (!recent.length) {
-    return bot.sendMessage(chatId, '📜 Задач пока нет.',
-      { reply_markup: { inline_keyboard: [[{ text: '« Меню', callback_data: 'menu:main' }]] } }
+    return bot.sendMessage(chatId,
+      '📜 <b>Задачи</b>\n\nЗадач пока нет.',
+      { parse_mode: 'HTML', reply_markup: REPLY_KB }
     );
   }
   const icons = { done: '✅', failed: '❌', running: '⏳', pending: '🕐', cancelled: '🚫' };
-  const lines = ['📜 <b>Последние задачи:</b>', ''];
+  const lines = ['📜 <b>Последние задачи</b>', ''];
   for (const j of recent) {
     const t  = new Date(j.scheduled_at || j.created_at);
     const ts = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
     lines.push(
       `${icons[j.status] || '•'} <b>${escHtml((j.title || '—').slice(0, 40))}</b>`,
-      `   <i>${escHtml(j.profile_name || '?')}</i> · ${ts}`,
+      `    ${escHtml(j.profile_name || '?')} · ${ts}`,
     );
   }
-  await bot.sendMessage(chatId, lines.join('\n'), {
-    parse_mode: 'HTML',
-    reply_markup: { inline_keyboard: [[
-      { text: '🔄 Обновить', callback_data: 'jobs:list' },
-      { text: '« Меню', callback_data: 'menu:main' },
-    ]] },
-  });
+  await bot.sendMessage(chatId, lines.join('\n'), { parse_mode: 'HTML', reply_markup: REPLY_KB });
 }
 
+async function sendJobsStats(bot, chatId, config) {
+  const jobs  = await Promise.resolve(config.getRecentJobs?.() || []).catch(() => []);
+  const stats = { done: 0, failed: 0, pending: 0, running: 0, cancelled: 0 };
+  for (const j of (jobs || [])) stats[j.status] = (stats[j.status] || 0) + 1;
+
+  const total = Object.values(stats).reduce((a, b) => a + b, 0);
+  const text = [
+    `📈 <b>Статистика</b> (последние ${total})`,
+    '',
+    `✅ Выполнено: <b>${stats.done}</b>`,
+    `❌ Ошибок: <b>${stats.failed}</b>`,
+    `🕐 В очереди: <b>${stats.pending}</b>`,
+    `⏳ Выполняются: <b>${stats.running}</b>`,
+    `🚫 Отменено: <b>${stats.cancelled}</b>`,
+  ].join('\n');
+
+  await bot.sendMessage(chatId, text, { parse_mode: 'HTML', reply_markup: REPLY_KB });
+}
+
+// ── Inline Callbacks (legacy, больше не используются) ─────────────────────
+
 async function handleCallback(bot, data, chatId, config) {
-  if (data === 'menu:refresh' || data === 'menu:main') return sendMainMenu(bot, chatId, config);
-
-  if (data === 'bot:start') {
-    config.startBot?.();
-    return bot.sendMessage(chatId, '▶️ <b>Бот запущен.</b>', { parse_mode: 'HTML' });
-  }
-  if (data === 'bot:stop') {
-    config.stopBot?.();
-    return bot.sendMessage(chatId, '⏹ <b>Бот остановлен.</b>', { parse_mode: 'HTML' });
-  }
-
-  if (data === 'accounts:list')  return sendAccountsList(bot, chatId, config);
-  if (data === 'campaigns:list') return sendCampaignsList(bot, chatId, config);
-  if (data === 'jobs:list')      return sendJobsList(bot, chatId, config);
-
-  if (data === 'jobs:stats') {
-    const jobs  = await Promise.resolve(config.getRecentJobs?.() || []).catch(() => []);
-    const stats = { done: 0, failed: 0, pending: 0, running: 0, cancelled: 0 };
-    for (const j of (jobs || [])) stats[j.status] = (stats[j.status] || 0) + 1;
-    const text = [
-      '📊 <b>Статистика задач (последние 20):</b>', '',
-      `✅ Выполнено: <b>${stats.done}</b>`,
-      `❌ Ошибки:    <b>${stats.failed}</b>`,
-      `🕐 В очереди: <b>${stats.pending}</b>`,
-      `⏳ Работают:  <b>${stats.running}</b>`,
-      `🚫 Отменено:  <b>${stats.cancelled}</b>`,
-    ].join('\n');
-    return bot.sendMessage(chatId, text, {
-      parse_mode: 'HTML',
-      reply_markup: { inline_keyboard: [[{ text: '« Меню', callback_data: 'menu:main' }]] },
-    });
-  }
+  // Оставляем для совместимости, просто шлём меню
+  return sendMainMenu(bot, chatId, config);
 }
 
 module.exports = {
