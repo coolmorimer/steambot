@@ -16,6 +16,16 @@ async function activatePlan(userId, planId, billingPeriod = 'monthly') {
   const plan = await db.getPlan(planId);
   if (!plan || !plan.is_active) throw new Error('План не найден');
 
+  // Деактивируем текущую подписку (если есть)
+  const oldSub = await db.getActiveSubscription(userId);
+  if (oldSub) {
+    await db.updateSubscription(oldSub.id, {
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      cancel_reason: `Обновление на план ${planId}`,
+    });
+  }
+
   const daysMap = { monthly: 30, yearly: 365 };
   const days    = daysMap[billingPeriod] || 30;
   const expiresAt = new Date(Date.now() + days * 86400000).toISOString();

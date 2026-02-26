@@ -59,6 +59,20 @@ const PASSWORD_SEL  = 'input[type="password"], input[autocomplete="current-passw
 const SUBMIT_SEL    = 'button[type="submit"], button:has-text("Войти"), button:has-text("Sign in"), .btn_blue_steamui';
 const GUARD_SEL     = 'input[maxlength="5"], input[maxlength="6"], input[autocomplete="one-time-code"], [class*="twofactor" i] input, [class*="guard" i] input';
 
+// Кнопки/ссылки для переключения между QR и credentials на Steam Login
+const CREDENTIALS_TAB_SEL = [
+  'button:has-text("Sign in with Account Name")',
+  'button:has-text("Войти с помощью аккаунта")',
+  'button:has-text("Use account name")',
+  'a:has-text("Sign in with Account Name")',
+  'a:has-text("Войти с помощью имени")',
+  '[class*="SignIn"] button', '[class*="signin"] button',
+  '[data-panel="login"] button',
+  // Кнопки/табы переключения
+  '[class*="Tab"]:has-text("Sign In")',
+  '[class*="Tab"]:has-text("Войти")',
+];
+
 // ── Внутренние функции ───────────────────────────────────────────────────────
 
 async function _tryClickQR(page) {
@@ -70,6 +84,51 @@ async function _tryClickQR(page) {
       return true;
     } catch { /* next */ }
   }
+  return false;
+}
+
+/**
+ * Переключиться на вкладку «Войти по логину/паролю» (Steam может показывать QR по умолчанию).
+ */
+async function _tryClickCredentialsTab(page) {
+  // Сначала проверяем — может поле ввода логина уже видно
+  try {
+    const loginInput = page.locator(USERNAME_SEL).first();
+    const visible = await loginInput.isVisible({ timeout: 2000 }).catch(() => false);
+    if (visible) {
+      logger.info('SteamLoginManager: credentials form already visible');
+      return true;
+    }
+  } catch { /* ignore */ }
+
+  // Ищем кнопку переключения на режим логин/пароль
+  for (const sel of CREDENTIALS_TAB_SEL) {
+    try {
+      await page.click(sel, { timeout: 1500 });
+      logger.info('SteamLoginManager: credentials tab clicked', { sel });
+      await page.waitForTimeout(1500);
+      return true;
+    } catch { /* next */ }
+  }
+
+  // Fallback: кликнуть любую кнопку, которая не относится к QR
+  try {
+    const buttons = page.locator('button');
+    const count = await buttons.count();
+    for (let i = 0; i < count; i++) {
+      const btn = buttons.nth(i);
+      const text = (await btn.textContent().catch(() => '')) || '';
+      const lower = text.toLowerCase().trim();
+      if (lower.includes('sign in') || lower.includes('войти') || lower.includes('account name') || lower.includes('имен')) {
+        await btn.click({ timeout: 2000 });
+        logger.info('SteamLoginManager: found credentials button via text scan', { text: lower });
+        await page.waitForTimeout(1500);
+        return true;
+      }
+    }
+  } catch { /* ignore */ }
+
+  logger.warn('SteamLoginManager: could not find credentials tab, proceeding anyway');
   return false;
 }
 
@@ -90,6 +149,8 @@ async function _runSession(session) {
       await _tryClickQR(page);
       session.status = 'waiting';
     } else {
+      // Переключаемся на вкладку с логином/паролем (если Steam показывает QR по умолчанию)
+      await _tryClickCredentialsTab(page);
       session.status = 'waiting_credentials';
     }
 

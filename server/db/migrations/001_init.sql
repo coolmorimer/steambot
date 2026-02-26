@@ -225,3 +225,15 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_user_id   ON audit_log (user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_action    ON audit_log (action);
 CREATE INDEX IF NOT EXISTS idx_audit_created   ON audit_log (created_at);
+
+-- ═══════════════════════════════════════════════════════
+--  email_verifications
+-- ═══════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id          TEXT        PRIMARY KEY,
+  user_id     TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token       TEXT        NOT NULL UNIQUE,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  used        BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

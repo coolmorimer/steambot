@@ -114,6 +114,9 @@ function BotCard({ bot, busy, onStart, onStop, onDelete, onEdit }) {
         </div>
         <div className="flex-1">
           <p className="font-semibold text-white">{bot.label || 'Telegram бот'}</p>
+          {bot.bot_username && (
+            <p className="text-xs text-gray-500 mt-0.5">@{bot.bot_username}</p>
+          )}
           <div className="flex items-center gap-2 mt-0.5">
             <span className={isRunning ? 'badge-green' : 'badge-gray'}>
               {isRunning ? '● Работает' : '○ Остановлен'}
@@ -141,8 +144,8 @@ function BotCard({ bot, busy, onStart, onStop, onDelete, onEdit }) {
         <div className="rounded-lg bg-gray-800 px-3 py-2">
           <p className="text-gray-500 text-xs mb-1">Bot Token</p>
           <div className="flex items-center gap-2">
-            <code className="text-gray-300 text-xs">{bot.bot_token_masked || '••••••••••:•••••••••••'}</code>
-            <button onClick={() => navigator.clipboard.writeText(bot.bot_token_masked || '')} className="text-gray-600 hover:text-gray-300">
+            <code className="text-gray-300 text-xs">{bot.bot_token || '••••••••••:•••••••••••'}</code>
+            <button onClick={() => navigator.clipboard.writeText(bot.bot_token || '')} className="text-gray-600 hover:text-gray-300">
               <Copy className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -177,7 +180,7 @@ function BotCard({ bot, busy, onStart, onStop, onDelete, onEdit }) {
 function TelegramForm({ initial, onSaved, onClose }) {
   const [form, setForm] = useState({
     label:               initial?.label || '',
-    bot_token:           initial?.bot_token || '',
+    bot_token:           '',  // токен всегда вводится заново (сервер отдаёт маскированный)
     authorized_chat_ids: (initial?.authorized_chat_ids || []).join('\n'),
     notify_errors:       initial?.notify_errors ?? true,
     notify_success:      initial?.notify_success ?? true,
@@ -195,6 +198,8 @@ function TelegramForm({ initial, onSaved, onClose }) {
         ...form,
         authorized_chat_ids: form.authorized_chat_ids.split('\n').map(s => s.trim()).filter(Boolean),
       };
+      // При редактировании — если токен не введён заново, не отправляем его
+      if (initial && !payload.bot_token) delete payload.bot_token;
       // Всегда PUT — upsert на сервере (создаёт или обновляет)
       await api.put('/telegram', payload);
       // Загрузить актуальный объект бота после сохранения

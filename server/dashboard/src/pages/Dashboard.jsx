@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -68,6 +69,11 @@ export default function Dashboard() {
           </Link>
         )}
       </div>
+
+      {/* Email verification banner */}
+      {user && !user.email_verified && (
+        <EmailVerificationBanner />
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -158,6 +164,37 @@ function PageSkeleton() {
         ))}
       </div>
       <div className="card h-64 bg-gray-800" />
+    </div>
+  );
+}
+
+function EmailVerificationBanner() {
+  const [sending, setSending] = useState(false);
+
+  const resend = async () => {
+    setSending(true);
+    try {
+      await api.post('/auth/resend-verification');
+      toast.success('Письмо для подтверждения отправлено!');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Ошибка отправки');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-yellow-600/30 bg-yellow-900/10 px-4 py-3 flex items-center gap-3">
+      <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0" />
+      <div className="flex-1">
+        <p className="text-sm text-yellow-300 font-medium">Email не подтверждён</p>
+        <p className="text-xs text-yellow-500 mt-0.5">
+          Проверьте почту и перейдите по ссылке для подтверждения.
+        </p>
+      </div>
+      <button onClick={resend} disabled={sending} className="btn-ghost text-yellow-400 text-sm shrink-0">
+        {sending ? 'Отправка...' : 'Отправить повторно'}
+      </button>
     </div>
   );
 }

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1b2838"/>
+      <stop offset="100%" style="stop-color:#171a21"/>
+    </linearGradient>
+    <linearGradient id="steam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#66c0f4"/>
+      <stop offset="100%" style="stop-color:#1a9fff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- Steam-style circle -->
+  <circle cx="32" cy="28" r="11" fill="none" stroke="url(#steam)" stroke-width="3"/>
+  <circle cx="32" cy="28" r="4" fill="url(#steam)"/>
+  <!-- Crosshair lines -->
+  <line x1="32" y1="15" x2="32" y2="21" stroke="url(#steam)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="35" x2="32" y2="41" stroke="url(#steam)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="19" y1="28" x2="25" y2="28" stroke="url(#steam)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="39" y1="28" x2="45" y2="28" stroke="url(#steam)" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Bot text -->
+  <text x="32" y="55" text-anchor="middle" fill="#66c0f4" font-family="Arial,sans-serif" font-size="10" font-weight="bold">BOT</text>
+</svg>

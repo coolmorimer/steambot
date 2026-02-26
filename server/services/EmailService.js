@@ -105,4 +105,47 @@ function subscriptionEmail(name, planName, expiresAt) {
   };
 }
 
-module.exports = { send, welcomeEmail, passwordResetEmail, subscriptionEmail };
+// ── Обёртки для отправки ─────────────────────────────────────────────────────
+
+async function sendWelcomeEmail(to, name) {
+  const tpl = welcomeEmail(name, config.appUrl);
+  return send({ to, ...tpl });
+}
+
+async function sendPasswordResetEmail(to, resetUrl) {
+  const tpl = passwordResetEmail(to, resetUrl);
+  return send({ to, ...tpl });
+}
+
+async function sendSubscriptionEmail(to, name, planName, expiresAt) {
+  const tpl = subscriptionEmail(name, planName, expiresAt);
+  return send({ to, ...tpl });
+}
+
+function verificationEmail(name, verifyUrl) {
+  return {
+    subject: '📧 Подтвердите email — Steam Poster Bot',
+    html: `
+<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+  <h2 style="color:#66c0f4;">📧 Подтверждение email</h2>
+  <p>Привет, <b>${name || 'пользователь'}</b>!</p>
+  <p>Нажмите кнопку ниже для подтверждения вашего email-адреса. Ссылка действительна 24 часа.</p>
+  <a href="${verifyUrl}" style="display:inline-block;background:#66c0f4;color:#1b2838;
+     padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
+    Подтвердить email
+  </a>
+  <p style="color:#888;font-size:13px;">Если вы не регистрировались — проигнорируйте письмо.</p>
+</div>`,
+  };
+}
+
+async function sendVerificationEmail(to, name, verifyUrl) {
+  const tpl = verificationEmail(name, verifyUrl);
+  return send({ to, ...tpl });
+}
+
+module.exports = {
+  send,
+  welcomeEmail, passwordResetEmail, subscriptionEmail, verificationEmail,
+  sendWelcomeEmail, sendPasswordResetEmail, sendSubscriptionEmail, sendVerificationEmail,
+};

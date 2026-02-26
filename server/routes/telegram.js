@@ -36,10 +36,13 @@ router.put('/', ALL, ...checkLimit.telegramBot, async (req, res, next) => {
     const { label, bot_token, authorized_chat_ids, mini_app_url,
             notify_errors, notify_success, notify_expired, notify_bot_state } = req.body;
 
-    if (!bot_token) return res.status(400).json({ error: 'bot_token обязателен' });
+    // При обновлении существующего бота — bot_token необязателен (сохраняем старый)
+    const existing = await db.getTelegramBot(req.userId);
+    const finalToken = bot_token || existing?.bot_token;
+    if (!finalToken) return res.status(400).json({ error: 'bot_token обязателен' });
 
     const id = await db.upsertTelegramBot(req.userId, {
-      label, bot_token,
+      label, bot_token: finalToken,
       authorized_chat_ids: authorized_chat_ids || [],
       mini_app_url: mini_app_url || null,
       notify_errors, notify_success, notify_expired, notify_bot_state,

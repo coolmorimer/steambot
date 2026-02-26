@@ -47,6 +47,19 @@ router.post('/register', validate(schemas.register), async (req, res) => {
       logger.warn('Ошибка отправки welcome email', { err: err.message })
     );
 
+    // Отправить email для верификации
+    try {
+      const verifyToken = crypto.randomBytes(32).toString('hex');
+      const verifyExpiresAt = new Date(Date.now() + 24 * 3600000).toISOString(); // 24 ч
+      await db.createEmailVerification(userId, verifyToken, verifyExpiresAt);
+      const verifyUrl = `${config.appUrl}/verify-email?token=${verifyToken}`;
+      EmailService.sendVerificationEmail(email, name || email.split('@')[0], verifyUrl).catch(err =>
+        logger.warn('Ошибка отправки verification email', { err: err.message })
+      );
+    } catch (err) {
+      logger.warn('Email verification setup error', { err: err.message });
+    }
+
     logger.info('Новый пользователь', { userId, email });
     res.status(201).json({
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -204,6 +217,49 @@ router.post('/password/reset', validate(schemas.passwordReset), async (req, res)
 
     res.json({ ok: true, message: 'Пароль успешно изменён' });
   } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ── Подтверждение email ─────────────────────────────────────────────────────
+
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Токен обязателен' });
+
+    const record = await db.getEmailVerification(token);
+    if (!record) return res.status(400).json({ error: 'Токен недействителен или уже использован' });
+    if (new Date(record.expires_at) < new Date())
+      return res.status(400).json({ error: 'Ссылка для подтверждения истекла. Запросите новую.' });
+
+    await db.updateUser(record.user_id, { email_verified: true });
+    await db.markEmailVerificationUsed(record.id);
+
+    logger.info('Email подтверждён', { userId: record.user_id });
+    res.json({ ok: true, message: 'Email успешно подтверждён!' });
+  } catch (err) {
+    logger.error('verify-email error', { err: err.message });
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/resend-verification', requireAuth, async (req, res) => {
+  try {
+    const user = await db.getUserById(req.userId);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    if (user.email_verified) return res.json({ ok: true, message: 'Email уже подтверждён' });
+
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt   = new Date(Date.now() + 24 * 3600000).toISOString();
+    await db.createEmailVerification(user.id, verifyToken, expiresAt);
+
+    const verifyUrl = `${config.appUrl}/verify-email?token=${verifyToken}`;
+    await EmailService.sendVerificationEmail(user.email, user.name || user.email, verifyUrl);
+
+    res.json({ ok: true, message: 'Письмо для подтверждения отправлено' });
+  } catch (err) {
+    logger.error('resend-verification error', { err: err.message });
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

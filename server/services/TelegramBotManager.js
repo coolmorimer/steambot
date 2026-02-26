@@ -136,6 +136,16 @@ async function start(userId, config, { suppressNotify = false } = {}) {
   _bots.set(userId, { bot: tgBot, config, chatIds });
   console.log(`[TG Bot] Запущен для пользователя ${userId}`);
 
+  // Устанавливаем команды бота (кнопка «Меню» в Telegram)
+  try {
+    await tgBot.setMyCommands([
+      { command: 'menu',   description: 'Главное меню' },
+      { command: 'help',   description: 'Справка' },
+    ]);
+  } catch (e) {
+    console.error(`[TG Bot ${userId}] setMyCommands error:`, e.message);
+  }
+
   // Уведомление «запущен» — только при ручном старте (не авторестарте пода)
   if (!suppressNotify) {
     if (config.notify?.botState) {

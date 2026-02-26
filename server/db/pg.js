@@ -640,6 +640,25 @@ async function markPasswordResetUsed(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  EMAIL VERIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function createEmailVerification(userId, token, expiresAt) {
+  await query('DELETE FROM email_verifications WHERE user_id = $1', [userId]);
+  await query(`
+    INSERT INTO email_verifications (id,user_id,token,expires_at,created_at) VALUES ($1,$2,$3,$4,$5)
+  `, [uuidv4(), userId, token, expiresAt, now()]);
+}
+
+async function getEmailVerification(token) {
+  return getOne('SELECT * FROM email_verifications WHERE token = $1 AND used = FALSE', [token]);
+}
+
+async function markEmailVerificationUsed(id) {
+  await query('UPDATE email_verifications SET used = TRUE WHERE id = $1', [id]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  PAYMENT TRANSACTIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -741,6 +760,7 @@ module.exports = {
   createRefreshToken, getRefreshToken, deleteRefreshToken,
   deleteUserRefreshTokens, cleanExpiredTokens, expireTrialSubscriptions, expireActiveSubscriptions,
   createPasswordReset, getPasswordReset, markPasswordResetUsed,
+  createEmailVerification, getEmailVerification, markEmailVerificationUsed,
   createTransaction, getTransactions, updateTransactionStatus,
   getAdminStats, getAdminUserList, auditLog,
   pool, // expose for health-checks / migrations
