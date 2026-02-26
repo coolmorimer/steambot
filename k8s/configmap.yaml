@@ -17,5 +17,5 @@ data:
   TRIAL_DAYS: "14"
   STRIPE_ENABLED: "false"
   TZ: "Europe/Moscow"
-  EMAIL_FROM: "noreply@communityrig.ru"
-  SMTP_PORT: "587"
+  EMAIL_FROM: "steambot@communityrig.ru"
+  SMTP_PORT: "465"
