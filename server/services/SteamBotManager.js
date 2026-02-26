@@ -105,13 +105,13 @@ function stop(userId) {
 
 // ── Статус ────────────────────────────────────────────────────────────────────
 
-function getStatus(userId) {
+async function getStatus(userId) {
   const state = _bots.get(userId);
   if (!state) return { running: false };
 
-  const stats = db.getJobStats(userId);
+  const stats = await db.getJobStats(userId);
   const statsMap = {};
-  for (const r of stats) statsMap[r.status] = r.count;
+  for (const r of (stats || [])) statsMap[r.status] = r.count;
 
   return {
     running:      true,

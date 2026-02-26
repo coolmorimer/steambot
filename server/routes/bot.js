@@ -12,8 +12,8 @@ const db      = require('../db');
 const router = express.Router();
 const ALL    = [requireAuth, requireActiveUser, loadSubscription];
 
-router.get('/status', ALL, (req, res) => {
-  res.json(SteamBotManager.getStatus(req.userId));
+router.get('/status', ALL, async (req, res) => {
+  res.json(await SteamBotManager.getStatus(req.userId));
 });
 
 router.post('/start', ALL, (req, res) => {

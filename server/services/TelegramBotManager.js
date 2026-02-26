@@ -229,7 +229,7 @@ function stopAll() {
 // ════════════════════════════════════════════════════════════════════════════
 
 async function sendMainMenu(bot, chatId, config) {
-  const status    = config.getStatus?.() || {};
+  const status    = await Promise.resolve(config.getStatus?.()).catch(() => ({})) || {};
   const running   = status.running;
   const accounts  = await Promise.resolve(config.getAccounts?.()  || []).catch(() => []);
   const campaigns = await Promise.resolve(config.getCampaigns?.() || []).catch(() => []);
@@ -294,7 +294,8 @@ async function sendHelp(bot, chatId) {
 }
 
 async function sendStatusMsg(bot, chatId, config) {
-  const running = config.getStatus?.()?.running;
+  const status  = await Promise.resolve(config.getStatus?.()).catch(() => ({})) || {};
+  const running = status.running;
   const text = running
     ? '🟢 <b>Бот работает</b>'
     : '🔴 <b>Бот остановлен</b>\n\nЗапустите через /menu → ▶️ Запустить бота';
