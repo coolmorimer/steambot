@@ -32,7 +32,7 @@ export default function AdminPlans() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         <Link to="/admin" className="text-gray-500 hover:text-white text-sm">← Назад</Link>
         <span className="text-gray-700">/</span>
         <h1 className="text-xl font-bold text-white">Тарифы</h1>
@@ -136,7 +136,7 @@ function PlanForm({ plan, onSaved, onClose }) {
     <div className="card border-brand-700/40">
       <h2 className="font-semibold text-white mb-4">{isNew ? 'Новый тариф' : `Редактировать: ${form.name}`}</h2>
       <form onSubmit={submit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="label">ID (slug)</label>
             <input className="input" required disabled={!isNew} value={form.id} onChange={f('id')} placeholder="pro" />
@@ -152,7 +152,7 @@ function PlanForm({ plan, onSaved, onClose }) {
           {numField('max_jobs_per_day',   'Постов в день (-1=∞)')}
           {numField('max_telegram_bots',  'TG ботов', 0)}
         </div>
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           {[
             { key: 'has_mini_app',         label: 'Telegram Mini App' },
             { key: 'has_ai_templates',     label: 'AI шаблоны' },

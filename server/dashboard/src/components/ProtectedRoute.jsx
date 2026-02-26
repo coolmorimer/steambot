@@ -6,7 +6,7 @@ export function ProtectedRoute({ children }) {
   const location = useLocation();
 
   if (loading) return <div className="flex items-center justify-center h-screen"><Spinner /></div>;
-  if (!user)   return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!user)   return <Navigate to="/landing" state={{ from: location }} replace />;
   return children;
 }
 
@@ -15,7 +15,7 @@ export function AdminRoute({ children }) {
   const location = useLocation();
 
   if (loading)  return <div className="flex items-center justify-center h-screen"><Spinner /></div>;
-  if (!user)    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!user)    return <Navigate to="/landing" state={{ from: location }} replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
   return children;
 }

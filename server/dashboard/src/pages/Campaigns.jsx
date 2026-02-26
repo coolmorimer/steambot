@@ -299,7 +299,7 @@ function GeneratePanel({ profileIds, profiles, onApply }) {
         )}
 
         {meta && done && (
-          <div className="flex gap-3 text-xs text-gray-400">
+          <div className="flex flex-wrap gap-3 text-xs text-gray-400">
             <span>📦 {meta.items_count} скинов</span>
             {meta.knives_count > 0   && <span>🔪 {meta.knives_count} ножей</span>}
             {meta.stattrak_count > 0 && <span>📈 {meta.stattrak_count} StatTrak</span>}
@@ -328,7 +328,7 @@ function PostPresets({ onApply }) {
           <p className="text-xs text-gray-500 mb-2">
             Поля заполнятся переменными. Бот подставит данные при публикации.
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {POST_PRESETS.map(p => (
               <button key={p.label} type="button"
                 onClick={() => { onApply(p.title, p.body); setOpen(false); }}
@@ -398,7 +398,7 @@ export default function Campaigns() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-white">Кампании</h1>
           <p className="text-gray-500 text-sm">{campaigns.length} / {isUnlimited ? '∞' : limit}</p>
@@ -452,7 +452,7 @@ function CampaignCard({ campaign: c, onDelete, onToggle, onEdit }) {
 
   return (
     <div className="card">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium text-white truncate">{c.name}</p>
@@ -640,7 +640,7 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
           <label className="label">Окно активности
             <span className="text-gray-500 font-normal ml-1">(опционально)</span>
           </label>
-          <div className="flex gap-3 items-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <input type="time" className="input w-32" value={form.window_start} onChange={f('window_start')} />
             <span className="text-gray-500">–</span>
             <input type="time" className="input w-32" value={form.window_end} onChange={f('window_end')} />

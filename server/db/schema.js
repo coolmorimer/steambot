@@ -183,6 +183,17 @@ module.exports = function createSchema(db) {
   `);
 
   // ════════════════════════════════════════════════════════════════════════
+  //  SERVER SETTINGS (global key-value, no user_id)
+  // ════════════════════════════════════════════════════════════════════════
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS server_settings (
+      key         TEXT PRIMARY KEY,
+      value       TEXT NOT NULL DEFAULT '',
+      updated_at  TEXT NOT NULL
+    );
+  `);
+
+  // ════════════════════════════════════════════════════════════════════════
   //  PAYMENT TRANSACTIONS
   // ════════════════════════════════════════════════════════════════════════
   db.exec(`

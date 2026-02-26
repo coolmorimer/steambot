@@ -67,7 +67,7 @@ export default function Telegram() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-white">Telegram бот</h1>
         <div className="flex gap-2">
           <button onClick={load} className="btn-ghost"><RefreshCw className="w-4 h-4" /></button>
@@ -108,22 +108,24 @@ function BotCard({ bot, busy, onStart, onStop, onDelete, onEdit }) {
 
   return (
     <div className="card space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-cyan-900/40 flex items-center justify-center">
-          <Send className="w-6 h-6 text-cyan-400" />
-        </div>
-        <div className="flex-1">
-          <p className="font-semibold text-white">{bot.label || 'Telegram бот'}</p>
-          {bot.bot_username && (
-            <p className="text-xs text-gray-500 mt-0.5">@{bot.bot_username}</p>
-          )}
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className={isRunning ? 'badge-green' : 'badge-gray'}>
-              {isRunning ? '● Работает' : '○ Остановлен'}
-            </span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-cyan-900/40 flex items-center justify-center shrink-0">
+            <Send className="w-6 h-6 text-cyan-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-white">{bot.label || 'Telegram бот'}</p>
+            {bot.bot_username && (
+              <p className="text-xs text-gray-500 mt-0.5">@{bot.bot_username}</p>
+            )}
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={isRunning ? 'badge-green' : 'badge-gray'}>
+                {isRunning ? '● Работает' : '○ Остановлен'}
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 self-end sm:self-auto">
           {isRunning
             ? <button disabled={busy} onClick={onStop} className="btn-danger text-sm py-1.5 px-3">
                 <Square className="w-3.5 h-3.5" /> Стоп

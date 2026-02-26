@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   Trash2, RefreshCw, UploadCloud, Globe,
   AlertTriangle, QrCode, X, Loader2, CheckCircle2,
-  LogIn, Shield,
+  LogIn, Shield, Smartphone,
 } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -61,12 +61,12 @@ export default function Accounts() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-white">Steam аккаунты</h1>
           <p className="text-gray-500 text-sm">{profiles.length} / {isUnlimited ? '∞' : limit}</p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={load} className="btn-ghost" title="Обновить">
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -113,7 +113,7 @@ export default function Accounts() {
       )}
 
       {!canAdd && (
-        <div className="rounded-xl bg-yellow-900/20 border border-yellow-700/40 p-3 flex gap-2 items-center text-sm text-yellow-300">
+        <div className="rounded-xl bg-yellow-900/20 border border-yellow-700/40 p-3 flex gap-2 items-start sm:items-center text-sm text-yellow-300">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Достигнут лимит аккаунтов. Улучшите подписку.
         </div>
@@ -121,6 +121,56 @@ export default function Accounts() {
 
       {showModal && (
         <LoginModal onClose={() => setShowModal(false)} onSuccess={() => { setShowModal(false); load(); }} />
+      )}
+    </div>
+  );
+}
+
+// ── Компонент живого скриншота браузера ───────────────────────────────────────
+
+function DebugScreenshot({ sid }) {
+  const [img, setImg]       = useState(null);
+  const [expanded, setExp]  = useState(false);
+  const intervalRef         = useRef(null);
+
+  useEffect(() => {
+    if (!sid) return;
+    let cancelled = false;
+
+    const fetchShot = async () => {
+      try {
+        const { data } = await api.get(`/profiles/login/${sid}/screenshot`);
+        if (!cancelled && data.screenshot) setImg(data.screenshot);
+      } catch { /* ignore */ }
+    };
+
+    fetchShot(); // сразу
+    intervalRef.current = setInterval(fetchShot, 5_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalRef.current);
+    };
+  }, [sid]);
+
+  if (!img) return null;
+
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={() => setExp(e => !e)}
+        className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+      >
+        🖥️ {expanded ? 'Скрыть' : 'Показать'} экран браузера
+      </button>
+      {expanded && (
+        <div className="rounded-lg overflow-hidden border border-gray-700 bg-gray-950">
+          <img
+            src={`data:image/jpeg;base64,${img}`}
+            alt="Browser screenshot"
+            className="w-full"
+          />
+        </div>
       )}
     </div>
   );
@@ -207,6 +257,8 @@ function LoginModal({ onClose, onSuccess }) {
         } else if (status === 'waiting_guard') {
           // Guard может прийти и со стороны сервера
           setStep(prev => prev !== 'guard' ? 'guard' : 'guard');
+        } else if (status === 'waiting_mobile_confirm') {
+          setStep('mobile_confirm');
         }
         // loading / waiting / waiting_credentials / checking_* → ждём дальше
       } catch { /* ignore network glitches */ }
@@ -261,7 +313,8 @@ function LoginModal({ onClose, onSuccess }) {
     setBusy(true);
     try {
       const { data } = await api.post(`/profiles/login/${sessionId}/credentials`, { username: username.trim(), password });
-      if (data.needsGuard) setStep('guard');
+      if (data.needsMobileConfirm) setStep('mobile_confirm');
+      else if (data.needsGuard) setStep('guard');
       // Если Guard не нужен — statuspoll поймает done
     } catch (err) {
       toast.error(err.response?.data?.error || 'Ошибка входа');
@@ -420,30 +473,48 @@ function LoginModal({ onClose, onSuccess }) {
             </>
           )}
 
-          {/* ── Steam Guard / 2FA ── */}
-          {step === 'guard' && (
+          {/* ── Подтверждение входа (Guard / Mobile / Email — универсальный шаг) ── */}
+          {(step === 'guard' || step === 'mobile_confirm') && (
             <>
               <div className="text-center space-y-2">
-                <div className="w-14 h-14 mx-auto rounded-full bg-orange-500/20 flex items-center justify-center">
-                  <Shield className="w-7 h-7 text-orange-400" />
+                <div className="w-14 h-14 mx-auto rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <Shield className="w-7 h-7 text-blue-400" />
                 </div>
-                <p className="text-white font-semibold">Steam Guard</p>
+                <p className="text-white font-semibold">Подтвердите вход</p>
                 <p className="text-gray-500 text-sm">
-                  Введите код из приложения <strong className="text-gray-300">Steam Guard</strong><br />
-                  или из письма на электронную почту
+                  Введите код с <strong className="text-gray-300">почты</strong> / из <strong className="text-gray-300">Steam Guard</strong><br />
+                  или подтвердите в <strong className="text-gray-300">мобильном приложении</strong>
                 </p>
               </div>
+
+              {/* Live debug screenshot */}
+              <DebugScreenshot sid={sessionId} />
+
               <input
                 className="input w-full text-center text-2xl font-mono tracking-widest"
                 placeholder="XXXXX" maxLength={8}
                 value={guardCode}
                 onChange={e => setGuard(e.target.value.toUpperCase())}
-                onKeyDown={e => e.key === 'Enter' && handleGuard()}
+                onKeyDown={e => e.key === 'Enter' && guardCode.trim() && handleGuard()}
                 autoFocus
               />
               <button onClick={handleGuard} disabled={busy || !guardCode.trim()} className="btn-primary w-full">
-                {busy && <Loader2 className="w-4 h-4 animate-spin" />} Подтвердить
+                {busy && <Loader2 className="w-4 h-4 animate-spin" />} Отправить код
               </button>
+
+              <div className="flex items-center justify-center gap-3 py-1">
+                <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                <span className="text-gray-500 text-xs">или ожидаем подтверждения с телефона…</span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">
+                  {secondsLeft !== null ? `Истекает через ${fmtTime(secondsLeft)}` : ''}
+                </span>
+                <button onClick={handleRefresh} className="btn-ghost text-xs px-2 py-1">
+                  <RefreshCw className="w-3 h-3 mr-1 inline" /> Отмена
+                </button>
+              </div>
             </>
           )}
 
@@ -498,32 +569,39 @@ function ProfileCard({ profile, onDelete }) {
   };
 
   return (
-    <div className="card flex items-center gap-4">
-      <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 font-medium text-sm shrink-0">
-        {(profile.name || 'U')[0].toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-white truncate">{profile.name}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className={statusColor}>{statusLabels[profile.status] || profile.status}</span>
-          {profile.target_url && (
-            <a href={profile.target_url} target="_blank" rel="noreferrer"
-              className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
-              <Globe className="w-3 h-3" /> Открыть
-            </a>
-          )}
+    <div className="card flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 font-medium text-sm shrink-0">
+          {(profile.name || 'U')[0].toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-white truncate">{profile.name}</p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className={statusColor}>{statusLabels[profile.status] || profile.status}</span>
+            {profile.target_url && (
+              <a href={profile.target_url} target="_blank" rel="noreferrer"
+                className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
+                <Globe className="w-3 h-3" /> Открыть
+              </a>
+            )}
+          </div>
         </div>
       </div>
-      <p className="text-xs text-gray-600 hidden sm:block">
-        {new Date(profile.created_at).toLocaleDateString('ru')}
-      </p>
-      <div className="flex gap-1">
-        <button onClick={handleCheck} disabled={busy} className="btn-ghost text-xs px-2 py-1" title="Проверить">
-          <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
-        </button>
-        <button onClick={() => onDelete(profile.id)} className="btn-ghost text-xs px-2 py-1 hover:text-red-400" title="Удалить">
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+      <div className="flex items-center justify-between sm:justify-end gap-2">
+        <p className="text-xs text-gray-600 sm:hidden">
+          {new Date(profile.created_at).toLocaleDateString('ru')}
+        </p>
+        <p className="text-xs text-gray-600 hidden sm:block">
+          {new Date(profile.created_at).toLocaleDateString('ru')}
+        </p>
+        <div className="flex gap-1">
+          <button onClick={handleCheck} disabled={busy} className="btn-ghost text-xs px-2 py-1" title="Проверить">
+            <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
+          </button>
+          <button onClick={() => onDelete(profile.id)} className="btn-ghost text-xs px-2 py-1 hover:text-red-400" title="Удалить">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

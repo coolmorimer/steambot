@@ -534,6 +534,33 @@ function bulkSetSettings(userId, kvMap) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  SERVER SETTINGS (global key-value)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function getServerSetting(key, defaultValue = null) {
+  const row = _db.prepare('SELECT value FROM server_settings WHERE key = ?').get(key);
+  return row ? row.value : defaultValue;
+}
+
+function setServerSetting(key, value) {
+  const now = new Date().toISOString();
+  _db.prepare('INSERT OR REPLACE INTO server_settings (key, value, updated_at) VALUES (?, ?, ?)').run(key, value, now);
+}
+
+function getAllServerSettings() {
+  const rows = _db.prepare('SELECT key, value, updated_at FROM server_settings').all();
+  const result = {};
+  for (const r of rows) result[r.key] = r.value;
+  return result;
+}
+
+function bulkSetServerSettings(kvMap) {
+  const now = new Date().toISOString();
+  const stmt = _db.prepare('INSERT OR REPLACE INTO server_settings (key, value, updated_at) VALUES (?, ?, ?)');
+  _db.transaction(() => { for (const [k, v] of Object.entries(kvMap)) stmt.run(k, String(v), now); })();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  REFRESH TOKENS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -684,6 +711,7 @@ module.exports = {
   updateJobStatus, resetRunningJobs, cancelOverduePendingJobs, deleteJob,
   deletePendingJobsByCampaign, getLastJobForCampaignProfile, getPendingJobForCampaignProfile,
   getSetting, setSetting, getAllSettings, bulkSetSettings,
+  getServerSetting, setServerSetting, getAllServerSettings, bulkSetServerSettings,
   createRefreshToken, getRefreshToken, deleteRefreshToken,
   deleteUserRefreshTokens, cleanExpiredTokens, expireTrialSubscriptions, expireActiveSubscriptions,
   createPasswordReset, getPasswordReset, markPasswordResetUsed,

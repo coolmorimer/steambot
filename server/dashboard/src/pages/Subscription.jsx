@@ -121,10 +121,10 @@ function CurrentPlanCard({ sub, onCancel }) {
 
   return (
     <div className="card bg-brand-600/10 border-brand-700/40">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs text-gray-500 mb-1">Текущий тариф</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="text-lg font-bold text-white">{sub.plan_name}</p>
             <span className={statusColor[sub.status] || 'badge-gray'}>{statusLabels[sub.status] || sub.status}</span>
           </div>
@@ -158,7 +158,7 @@ function LimitList({ limits }) {
     { label: 'Заданий/день', value: limits.max_jobs_per_day },
   ];
   return (
-    <div className="hidden md:flex gap-4">
+    <div className="flex gap-4 flex-wrap">
       {items.map(({ label, value }) => (
         <div key={label} className="text-center">
           <p className="text-lg font-bold text-white">{value === -1 ? '∞' : value}</p>

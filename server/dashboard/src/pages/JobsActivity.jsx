@@ -102,8 +102,61 @@ export default function JobsActivity() {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="card p-0 overflow-hidden">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-2">
+        {loading && jobs.length === 0 ? (
+          <div className="card text-center py-8 text-gray-500">Загрузка...</div>
+        ) : jobs.length === 0 ? (
+          <div className="card text-center py-8 text-gray-500">Нет заданий</div>
+        ) : jobs.map(job => (
+          <div key={job.id} className="card space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {STATUS_ICONS[job.status] || STATUS_ICONS.pending}
+                <span className={STATUS_BADGE[job.status] || 'badge-gray'}>
+                  {STATUS_LABELS[job.status] || job.status}
+                </span>
+              </div>
+              <span className="text-xs text-gray-600">
+                {new Date(job.created_at).toLocaleString('ru', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-200 truncate">{job.campaign_name || '—'}</p>
+              <p className="text-xs text-gray-500">{job.profile_name || '—'}</p>
+            </div>
+            {(job.topic_url || job.error) && (
+              <div>
+                {job.topic_url ? (
+                  <a href={job.topic_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-brand-400 hover:text-brand-300 text-xs">
+                    <ExternalLink className="w-3 h-3" /> Открыть тему
+                  </a>
+                ) : (
+                  <p className="text-red-400 text-xs truncate" title={job.error}>{job.error}</p>
+                )}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-1 pt-1 border-t border-gray-800">
+              {job.status === 'pending' && (
+                <button onClick={() => handleCancel(job.id)} className="btn-ghost text-xs px-2 py-1 text-yellow-400">
+                  <XCircle className="w-3.5 h-3.5 mr-1 inline" /> Отменить
+                </button>
+              )}
+              {job.status !== 'running' && (
+                <button onClick={() => handleDelete(job.id)} disabled={deleting.has(job.id)}
+                  className="btn-ghost text-xs px-2 py-1 text-red-400 disabled:opacity-40">
+                  {deleting.has(job.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-1 inline" />}
+                  Удалить
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

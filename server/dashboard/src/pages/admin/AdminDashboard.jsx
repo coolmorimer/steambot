@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Users, CreditCard, Activity, TrendingUp, ShieldCheck } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
         <Link to="/admin"        className="badge-blue">Обзор</Link>
         <Link to="/admin/users"  className="badge-gray hover:bg-gray-600">Пользователи</Link>
         <Link to="/admin/plans"  className="badge-gray hover:bg-gray-600">Тарифы</Link>
+        <Link to="/admin/config" className="badge-gray hover:bg-gray-600">Конфигурация</Link>
       </div>
 
       {/* Stats */}
@@ -62,15 +64,15 @@ export default function AdminDashboard() {
           <div className="space-y-2">
             {stats.recent_users.map(u => (
               <div key={u.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50">
-                <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-medium text-gray-300">
+                <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-medium text-gray-300 shrink-0">
                   {(u.name || u.email)[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-200 truncate">{u.name || '—'}</p>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>
                 </div>
-                <span className={u.role === 'admin' ? 'badge-blue' : 'badge-gray'}>{u.role}</span>
-                <span className="text-xs text-gray-600">
+                <span className={clsx('shrink-0', u.role === 'admin' ? 'badge-blue' : 'badge-gray')}>{u.role}</span>
+                <span className="text-xs text-gray-600 hidden sm:inline">
                   {new Date(u.created_at).toLocaleDateString('ru')}
                 </span>
               </div>

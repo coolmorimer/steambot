@@ -71,6 +71,16 @@ router.post('/login/:sid/guard', ALL, async (req, res, next) => {
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
+router.get('/login/:sid/screenshot', ALL, async (req, res, next) => {
+  try {
+    const screenshot = await steamLogin.getScreenshot(req.params.sid);
+    const debug = steamLogin.getDebugScreenshot(req.params.sid);
+    const img = screenshot || debug;
+    if (!img) return res.status(404).json({ error: 'Скриншот не доступен' });
+    res.json({ ok: true, screenshot: img });
+  } catch (e) { next(e); }
+});
+
 router.get('/login/:sid/status', ALL, async (req, res, next) => {
   try {
     const sid  = req.params.sid;

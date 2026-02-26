@@ -57,13 +57,48 @@ export default function AdminUsers() {
         />
       </div>
 
-      <div className="card p-0 overflow-hidden">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <div className="card text-center py-8 text-gray-500">Загрузка...</div>
+        ) : users.length === 0 ? (
+          <div className="card text-center py-8 text-gray-500">Нет пользователей</div>
+        ) : users.map(u => (
+          <div key={u.id} className="card space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-200 font-medium truncate">{u.name || '—'}</p>
+                <p className="text-gray-500 text-xs truncate">{u.email}</p>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button onClick={() => toggleActive(u)} className="btn-ghost p-1.5 text-xs"
+                  title={u.is_active ? 'Заблокировать' : 'Разблокировать'}>
+                  {u.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                </button>
+                <button onClick={() => setSubModal(u)} className="btn-ghost p-1.5 text-xs" title="Подписка">
+                  <Key className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="badge-blue capitalize">{u.plan_id || 'free'}</span>
+              <span className={u.is_active ? 'badge-green' : 'badge-red'}>
+                {u.is_active ? 'Активен' : 'Заблокирован'}
+              </span>
+              <span className="text-xs text-gray-600">{new Date(u.created_at).toLocaleDateString('ru')}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-800 text-xs text-gray-500">
                 <th className="text-left px-4 py-3 font-medium">Пользователь</th>
-                <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Тариф</th>
+                <th className="text-left px-4 py-3 font-medium">Тариф</th>
                 <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Регистрация</th>
                 <th className="text-left px-4 py-3 font-medium">Статус</th>
                 <th className="text-right px-4 py-3 font-medium">Действия</th>
@@ -80,7 +115,7 @@ export default function AdminUsers() {
                     <p className="text-gray-200 font-medium">{u.name || '—'}</p>
                     <p className="text-gray-500 text-xs">{u.email}</p>
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-4 py-3">
                     <span className="badge-blue capitalize">{u.plan_id || 'free'}</span>
                   </td>
                   <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">

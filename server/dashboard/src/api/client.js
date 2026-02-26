@@ -58,7 +58,7 @@ api.interceptors.response.use(
       processQueue(e, null);
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
+      window.location.href = '/landing';
       return Promise.reject(e);
     } finally {
       isRefreshing = false;

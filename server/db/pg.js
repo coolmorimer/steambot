@@ -582,6 +582,48 @@ async function bulkSetSettings(userId, kvMap) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  SERVER SETTINGS (global key-value)
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function getServerSetting(key, defaultValue = null) {
+  const row = await getOne('SELECT value FROM server_settings WHERE key = $1', [key]);
+  return row ? row.value : defaultValue;
+}
+
+async function setServerSetting(key, value) {
+  await query(`
+    INSERT INTO server_settings (key, value, updated_at) VALUES ($1,$2,NOW())
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+  `, [key, String(value)]);
+}
+
+async function getAllServerSettings() {
+  const rows = await getAll('SELECT key, value, updated_at FROM server_settings');
+  const result = {};
+  for (const r of rows) result[r.key] = r.value;
+  return result;
+}
+
+async function bulkSetServerSettings(kvMap) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const [k, v] of Object.entries(kvMap)) {
+      await client.query(`
+        INSERT INTO server_settings (key, value, updated_at) VALUES ($1,$2,NOW())
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+      `, [k, String(v)]);
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  REFRESH TOKENS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -757,6 +799,7 @@ module.exports = {
   updateJobStatus, resetRunningJobs, cancelOverduePendingJobs, deleteJob,
   deletePendingJobsByCampaign, getLastJobForCampaignProfile, getPendingJobForCampaignProfile,
   getSetting, setSetting, getAllSettings, bulkSetSettings,
+  getServerSetting, setServerSetting, getAllServerSettings, bulkSetServerSettings,
   createRefreshToken, getRefreshToken, deleteRefreshToken,
   deleteUserRefreshTokens, cleanExpiredTokens, expireTrialSubscriptions, expireActiveSubscriptions,
   createPasswordReset, getPasswordReset, markPasswordResetUsed,

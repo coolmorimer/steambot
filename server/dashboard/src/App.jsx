@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
+import Landing        from './pages/Landing';
 import Login          from './pages/Login';
 import Register       from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -18,12 +19,14 @@ import Subscription   from './pages/Subscription';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers     from './pages/admin/AdminUsers';
 import AdminPlans     from './pages/admin/AdminPlans';
+import AdminConfig    from './pages/admin/AdminConfig';
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
         {/* Public */}
+        <Route path="/landing"        element={<Landing />} />
         <Route path="/login"          element={<Login />} />
         <Route path="/register"       element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -44,6 +47,7 @@ export default function App() {
           <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="admin/users"  element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="admin/plans"  element={<AdminRoute><AdminPlans /></AdminRoute>} />
+          <Route path="admin/config" element={<AdminRoute><AdminConfig /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

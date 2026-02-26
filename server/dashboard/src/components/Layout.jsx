@@ -28,7 +28,7 @@ export default function Layout() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/landing');
   };
 
   const items = isAdmin ? [...navItems, adminItem] : navItems;
