@@ -40,7 +40,7 @@ const _bots = new Map();
 
 // ── Запуск ────────────────────────────────────────────────────────────────────
 
-function start(userId) {
+function start(userId, { silent = false } = {}) {
   if (_bots.has(userId)) return; // уже запущен
 
   const state = {
@@ -76,13 +76,16 @@ function start(userId) {
   state.tasks = [checkTask, genTask];
   _bots.set(userId, state);
 
-  // Запомнить, что бот был запущен — для автовосстановления после рестарта
-  db.setSetting(userId, 'bot_running', '1');
+  // Сохраняем состояние в БД для синхронизации между репликами (подами K8s)
+  db.setSetting(userId, 'bot_running', '1').catch(err =>
+    console.error(`[SteamBot ${userId}] Ошибка сохранения bot_running:`, err.message)
+  );
 
-  console.log(`[SteamBot] Запущен для пользователя ${userId}`);
+  console.log(`[SteamBot] Запущен для пользователя ${userId}${silent ? ' (авто)' : ''}`);
 
-  // Уведомить TG-бот
-  TelegramBotManager.sendNotification(userId, '▶️ Steam Poster Bot запущен.');
+  if (!silent) {
+    TelegramBotManager.sendNotification(userId, '▶️ Steam Poster Bot запущен.');
+  }
 }
 
 // ── Остановка ─────────────────────────────────────────────────────────────────
@@ -107,7 +110,22 @@ function stop(userId) {
 
 async function getStatus(userId) {
   const state = _bots.get(userId);
-  if (!state) return { running: false };
+
+  // Если бот не в памяти этого пода — проверяем БД
+  // (K8s: бот может работать на другом поде)
+  const localRunning = !!state;
+  let isRunning = localRunning;
+
+  if (!localRunning) {
+    try {
+      const dbRunning = await db.getSetting(userId, 'bot_running');
+      isRunning = dbRunning === '1';
+    } catch (err) {
+      console.error(`[SteamBot ${userId}] Ошибка чтения bot_running:`, err.message);
+    }
+  }
+
+  if (!isRunning) return { running: false };
 
   const stats = await db.getJobStats(userId);
   const statsMap = {};
@@ -115,8 +133,8 @@ async function getStatus(userId) {
 
   return {
     running:      true,
-    active_jobs:  state.busyJobs.size,
-    last_activity:state.lastActivity,
+    active_jobs:  state ? state.busyJobs.size : 0,
+    last_activity:state ? state.lastActivity : null,
     stats:        statsMap,
   };
 }
@@ -124,8 +142,10 @@ async function getStatus(userId) {
 // ── Триггер пересчёта очереди ─────────────────────────────────────────────────
 
 function notifyNewCampaign(userId) {
-  // Генерировать джобы всегда — они видны в очереди сразу после создания кампании.
-  // Выполнять их будет processQueue только когда бот запущен.
+  // Автоматически запустить обработку если ещё не запущена
+  if (!_bots.has(userId)) {
+    start(userId, { silent: true });
+  }
   generatePendingJobs(userId).catch(err =>
     console.error(`[SteamBot ${userId}] generatePendingJobs error:`, err.message)
   );
@@ -250,7 +270,7 @@ async function runJob(userId, job, poster, state) {
     return;
   }
 
-  await db.updateJobStatus(job.id, userId, 'running');
+  // Статус 'running' уже установлен атомарно в getDueJobs
 
   // Резолвим инвентарь-переменные, если они есть в шаблоне
   let jobTitle = job.title;
@@ -272,6 +292,15 @@ async function runJob(userId, job, poster, state) {
 
   const posterConfig = config.playwright;
 
+  // Загрузить target_url из кампании (приоритет над profile.target_url)
+  let campaignTargetUrl = null;
+  if (job.campaign_id) {
+    try {
+      const campaign = await db.getCampaign(job.campaign_id, userId);
+      if (campaign?.target_url) campaignTargetUrl = campaign.target_url;
+    } catch (_) { /* игнорируем — используем profile.target_url */ }
+  }
+
   try {
     // createForumPost(profile, title, body, options) — возвращает URL темы (строку)
     const topicUrl = await poster.createForumPost(
@@ -279,9 +308,10 @@ async function runJob(userId, job, poster, state) {
       jobTitle,
       jobBody,
       {
-        headless: posterConfig.headless !== false,
-        slowMo:   posterConfig.slowMo   ?? 100,
-        retries:  posterConfig.retries  ?? 2,
+        headless:  posterConfig.headless !== false,
+        slowMo:    posterConfig.slowMo   ?? 100,
+        retries:   posterConfig.retries  ?? 2,
+        targetUrl: campaignTargetUrl,
       },
     );
 

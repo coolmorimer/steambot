@@ -35,7 +35,8 @@ export default function AdminDashboard() {
         <Link to="/admin"        className="badge-blue">Обзор</Link>
         <Link to="/admin/users"  className="badge-gray hover:bg-gray-600">Пользователи</Link>
         <Link to="/admin/plans"  className="badge-gray hover:bg-gray-600">Тарифы</Link>
-        <Link to="/admin/config" className="badge-gray hover:bg-gray-600">Конфигурация</Link>
+        <Link to="/admin/config"   className="badge-gray hover:bg-gray-600">Конфигурация</Link>
+        <Link to="/admin/support" className="badge-gray hover:bg-gray-600">Поддержка</Link>
       </div>
 
       {/* Stats */}

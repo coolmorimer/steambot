@@ -41,7 +41,7 @@ module.exports = {
   appUrl: process.env.APP_URL || 'http://localhost:4000',
 
   // ── Trial ───────────────────────────────────────────────────────────────
-  trialDays: parseInt(process.env.TRIAL_DAYS || '7'),
+  trialDays: parseInt(process.env.TRIAL_DAYS || '3'),
 
   // ── Stripe (optional) ────────────────────────────────────────────────────
   stripe: {

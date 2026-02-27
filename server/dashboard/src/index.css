@@ -42,3 +42,54 @@
   .badge-blue   { @apply badge bg-blue-900/50   text-blue-400; }
   .badge-gray   { @apply badge bg-gray-700      text-gray-300; }
 }
+
+/* ══ Aurora orb animations (inspired by calculatorrobotail.ru) ══ */
+@keyframes aurora-1 {
+  0%   { filter: blur(50px) hue-rotate(0deg);   transform: translate(0, 0) scale(1); }
+  20%  { filter: blur(55px) hue-rotate(70deg);  transform: translate(110px, -75px) scale(1.16); }
+  40%  { filter: blur(48px) hue-rotate(145deg); transform: translate(-60px, 120px) scale(0.87); }
+  60%  { filter: blur(53px) hue-rotate(220deg); transform: translate(130px, 55px) scale(1.12); }
+  80%  { filter: blur(50px) hue-rotate(295deg); transform: translate(-35px, -55px) scale(0.92); }
+  100% { filter: blur(50px) hue-rotate(360deg); transform: translate(0, 0) scale(1); }
+}
+@keyframes aurora-2 {
+  0%   { filter: blur(60px) hue-rotate(0deg);   transform: translate(0, 0) scale(1); }
+  25%  { filter: blur(65px) hue-rotate(90deg);  transform: translate(-130px, 85px) scale(1.2); }
+  50%  { filter: blur(58px) hue-rotate(180deg); transform: translate(75px, -120px) scale(0.8); }
+  75%  { filter: blur(62px) hue-rotate(270deg); transform: translate(-85px, -35px) scale(1.12); }
+  100% { filter: blur(60px) hue-rotate(360deg); transform: translate(0, 0) scale(1); }
+}
+@keyframes aurora-3 {
+  0%   { filter: blur(65px) hue-rotate(120deg); opacity: 0.8; transform: translate(0, 0) scale(1); }
+  35%  { filter: blur(70px) hue-rotate(230deg); opacity: 1;   transform: translate(85px, -95px) scale(1.22); }
+  70%  { filter: blur(62px) hue-rotate(330deg); opacity: 0.65; transform: translate(-70px, 65px) scale(0.78); }
+  100% { filter: blur(65px) hue-rotate(480deg); opacity: 0.8; transform: translate(0, 0) scale(1); }
+}
+/* ══ CTA section helpers ══ */
+@keyframes orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(80px, -60px) scale(1.15); }
+  50% { transform: translate(-40px, -100px) scale(0.95); }
+  75% { transform: translate(50px, 40px) scale(1.08); }
+}
+@keyframes orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-70px, 50px) scale(0.9); }
+  50% { transform: translate(60px, 80px) scale(1.12); }
+  75% { transform: translate(-30px, -40px) scale(0.97); }
+}
+@keyframes orb-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(40px, 70px) scale(1.1); }
+  50% { transform: translate(-80px, 20px) scale(0.88); }
+  75% { transform: translate(20px, -60px) scale(1.05); }
+}
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-200%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

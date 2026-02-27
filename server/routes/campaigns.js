@@ -26,7 +26,7 @@ router.post('/', ALL, ...checkLimit.campaigns, async (req, res, next) => {
   try {
     const { name, title_template, body_template,
             schedule_minutes, schedule_times,
-            window_start, window_end, profile_ids } = req.body;
+            window_start, window_end, profile_ids, target_url } = req.body;
 
     if (!name)           return res.status(400).json({ error: 'name обязателен' });
     if (!title_template) return res.status(400).json({ error: 'title_template обязателен' });
@@ -43,6 +43,7 @@ router.post('/', ALL, ...checkLimit.campaigns, async (req, res, next) => {
       name, titleTemplate: title_template, bodyTemplate: body_template,
       scheduleMinutes: schedule_minutes, scheduleTimes: schedule_times,
       windowStart: window_start, windowEnd: window_end, profileIds: profile_ids,
+      targetUrl: target_url,
     });
 
     SteamBotManager.notifyNewCampaign(req.userId);
@@ -57,7 +58,7 @@ router.patch('/:id', ALL, async (req, res, next) => {
     if (!c) return res.status(404).json({ error: 'Кампания не найдена' });
 
     const { name, title_template, body_template, schedule_minutes,
-            schedule_times, window_start, window_end, profile_ids, is_active } = req.body;
+            schedule_times, window_start, window_end, profile_ids, is_active, target_url } = req.body;
 
     const updates = {};
     if (name             !== undefined) updates.name             = name;
@@ -69,6 +70,7 @@ router.patch('/:id', ALL, async (req, res, next) => {
     if (window_end       !== undefined) updates.window_end       = window_end;
     if (profile_ids      !== undefined) updates.profile_ids      = profile_ids;
     if (is_active        !== undefined) updates.is_active        = is_active ? 1 : 0;
+    if (target_url       !== undefined) updates.target_url       = target_url;
 
     await db.updateCampaign(req.params.id, req.userId, updates);
     await db.deletePendingJobsByCampaign(req.params.id, req.userId);

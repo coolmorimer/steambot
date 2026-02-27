@@ -38,6 +38,9 @@ const subscriptionsRoutes = require('./routes/subscriptions');
 const paymentsRoutes      = require('./routes/payments');
 const botRoutes           = require('./routes/bot');
 const adminRoutes         = require('./routes/admin');
+const supportRoutes       = require('./routes/support');
+const apikeysRoutes       = require('./routes/apikeys');
+const publicApiRoutes     = require('./routes/publicApi');
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Express app
@@ -89,7 +92,7 @@ if (!config.isDev) {
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
@@ -115,6 +118,15 @@ const authLimiter = rateLimit({
 });
 
 app.use('/api/', generalLimiter);
+
+// ── No-cache для API (Telegram WebView агрессивно кэширует) ──────────────────
+app.use('/api/', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 app.use('/api/auth/login',          authLimiter);
 app.use('/api/auth/register',       authLimiter);
 app.use('/api/auth/password/forgot',authLimiter);
@@ -133,6 +145,9 @@ app.use('/api/subscriptions', subscriptionsRoutes);
 app.use('/api/payments',      paymentsRoutes);
 app.use('/api/bot',           botRoutes);
 app.use('/api/admin',         adminRoutes);
+app.use('/api/support',       supportRoutes);
+app.use('/api/apikeys',       apikeysRoutes);
+app.use('/api/v1',            publicApiRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -157,7 +172,14 @@ const fs = require('fs');
 
 // Telegram Mini App (открывается из TG) — на пути /miniapp
 if (fs.existsSync(miniAppDir)) {
-  app.use('/miniapp', express.static(miniAppDir, { maxAge: '10m' }));
+  app.use('/miniapp', express.static(miniAppDir, {
+    maxAge: 0,
+    etag: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    },
+  }));
 }
 
 if (fs.existsSync(dashboardDist)) {
@@ -236,20 +258,21 @@ async function autoRestoreBots() {
     });
   }
 
-  // Находим пользователей, у которых бот был запущен (через user_settings)
+  // Бот постинга работает ВСЕГДА для пользователей с активными кампаниями
   const allUsers = await db.getAllUsers();
-  let steamRestored = 0;
+  let steamStarted = 0;
   for (const user of allUsers) {
     if (!user.is_active) continue;
-    const wasRunning = await db.getSetting(user.id, 'bot_running', '0');
-    if (wasRunning === '1') {
-      SteamBotManager.start(user.id);
-      steamRestored++;
-      console.log(`[Server] Steam bot авто-восстановлен для пользователя ${user.id}`);
+    const campaigns = await db.getCampaigns(user.id);
+    const hasActive = campaigns.some(c => c.is_active);
+    if (hasActive) {
+      SteamBotManager.start(user.id, { silent: true });
+      steamStarted++;
+      console.log(`[Server] Steam бот автозапущен для ${user.name || user.id} (${campaigns.filter(c => c.is_active).length} кампаний)`);
     }
   }
-  if (steamRestored > 0) {
-    console.log(`[Server] Steam-ботов восстановлено: ${steamRestored}`);
+  if (steamStarted > 0) {
+    console.log(`[Server] Steam-ботов запущено: ${steamStarted}`);
   }
 }
 

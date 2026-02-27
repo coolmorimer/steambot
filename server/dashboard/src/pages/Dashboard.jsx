@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Megaphone, Activity, Send,
@@ -22,7 +22,7 @@ export default function Dashboard() {
     Promise.all([
       api.get('/profiles').then(r => r.data),
       api.get('/campaigns').then(r => r.data),
-      api.get('/jobs?limit=10').then(r => r.data),
+      api.get('/jobs?limit=100').then(r => r.data),
     ]).then(([profiles, campaigns, jobsData]) => {
       setStats({ profiles: profiles.length, campaigns: campaigns.length });
       setJobs(jobsData.jobs || []);
@@ -33,6 +33,24 @@ export default function Dashboard() {
   const greeting = hour < 12 ? 'Доброе утро' : hour < 17 ? 'Добрый день' : 'Добрый вечер';
 
   if (loading) return <PageSkeleton />;
+
+  const chartData = (() => {
+    const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toDateString();
+      const total = jobs.filter(j => new Date(j.created_at).toDateString() === dateStr).length;
+      const done = jobs.filter(j => new Date(j.created_at).toDateString() === dateStr && j.status === 'done').length;
+      days.push({ day: dayNames[d.getDay()], total, done });
+    }
+    return days;
+  })();
+
+  const successRate = jobs.length > 0 ? Math.round(jobs.filter(j => j.status === 'done').length / jobs.length * 100) : 0;
+  const failedCount = jobs.filter(j => j.status === 'failed').length;
+  const pendingCount = jobs.filter(j => j.status === 'pending').length;
 
   const statCards = [
     { icon: Users,    label: 'Steam аккаунты', value: stats?.profiles ?? '–',
@@ -56,7 +74,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white">
-            {greeting}, {user?.name || user?.email?.split('@')[0]}! 👋
+            {greeting}, {user?.name || user?.email?.split('@')[0]}!
           </h1>
           <p className="text-gray-500 text-sm mt-1">
             Тариф: <span className="text-brand-400 font-medium">{sub?.plan_name || 'Free'}</span>
@@ -78,9 +96,9 @@ export default function Dashboard() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(({ icon: Icon, label, value, limit, to, color }) => (
-          <Link key={label} to={to} className="card hover:border-gray-600 transition-colors group">
+          <Link key={label} to={to} className="card hover:border-gray-600 hover:-translate-y-1 transition-all duration-300 group hover:shadow-lg">
             <div className="flex items-center justify-between mb-3">
-              <div className={`w-9 h-9 rounded-lg bg-${color === 'blue' ? 'brand-600' : color + '-600'}/20 flex items-center justify-center`}>
+              <div className={`w-10 h-10 rounded-xl bg-${color === 'blue' ? 'brand-600' : color + '-600'}/20 flex items-center justify-center transition-transform group-hover:scale-110`}>
                 <Icon className={`w-5 h-5 text-${color === 'blue' ? 'brand-400' : color + '-400'}`} />
               </div>
             </div>
@@ -88,6 +106,67 @@ export default function Dashboard() {
             <p className="text-xs text-gray-500 mt-1">{label}{limit ? ` / ${limit === -1 ? '∞' : limit}` : ''}</p>
           </Link>
         ))}
+      </div>
+
+      {/* Chart + Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 card">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-white">Активность за неделю</h2>
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-green-400" />
+              <span className="text-sm text-green-400 font-medium">{successRate}% успех</span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorPosts" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="day" tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={{ stroke: '#374151' }} tickLine={false} />
+              <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px', fontSize: '12px' }}
+                labelStyle={{ color: '#9ca3af' }}
+                itemStyle={{ color: '#818cf8' }}
+              />
+              <Area type="monotone" dataKey="total" name="Всего" stroke="#6366f1" fill="url(#colorPosts)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#818cf8' }} />
+              <Area type="monotone" dataKey="done" name="Успешно" stroke="#22c55e" fill="transparent" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card flex flex-col">
+          <h2 className="font-semibold text-white mb-4">Сводка</h2>
+          <div className="space-y-4 flex-1">
+            <div>
+              <div className="flex items-center justify-between text-sm mb-1.5">
+                <span className="text-gray-400">Успешность</span>
+                <span className="text-green-400 font-medium">{successRate}%</span>
+              </div>
+              <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all" style={{ width: `${successRate}%` }} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+                <p className="text-lg font-bold text-red-400">{failedCount}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Ошибок</p>
+              </div>
+              <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+                <p className="text-lg font-bold text-yellow-400">{pendingCount}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">В очереди</p>
+              </div>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+              <p className="text-lg font-bold text-white">{jobs.length}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Всего заданий</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Recent jobs */}

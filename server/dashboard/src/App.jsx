@@ -16,10 +16,12 @@ import JobsActivity   from './pages/JobsActivity';
 import Telegram       from './pages/Telegram';
 import Settings       from './pages/Settings';
 import Subscription   from './pages/Subscription';
+import ApiKeys        from './pages/ApiKeys';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers     from './pages/admin/AdminUsers';
 import AdminPlans     from './pages/admin/AdminPlans';
 import AdminConfig    from './pages/admin/AdminConfig';
+import AdminSupport   from './pages/admin/AdminSupport';
 
 export default function App() {
   return (
@@ -42,12 +44,14 @@ export default function App() {
           <Route path="telegram"   element={<Telegram />} />
           <Route path="settings"   element={<Settings />} />
           <Route path="subscription" element={<Subscription />} />
+          <Route path="api"          element={<ApiKeys />} />
 
           {/* Admin */}
           <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="admin/users"  element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="admin/plans"  element={<AdminRoute><AdminPlans /></AdminRoute>} />
-          <Route path="admin/config" element={<AdminRoute><AdminConfig /></AdminRoute>} />
+          <Route path="admin/config"   element={<AdminRoute><AdminConfig /></AdminRoute>} />
+          <Route path="admin/support" element={<AdminRoute><AdminSupport /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

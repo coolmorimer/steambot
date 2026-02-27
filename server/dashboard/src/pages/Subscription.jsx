@@ -2,29 +2,27 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 import toast from 'react-hot-toast';
-import { Check, Zap, Crown, Building2, CreditCard } from 'lucide-react';
+import {
+  Check, Zap, Crown, Building2, CreditCard, AlertTriangle,
+  Clock, Shield, Wrench, ArrowRight, Lock,
+} from 'lucide-react';
 import clsx from 'clsx';
 
-const PLAN_ICONS = { free: '🆓', starter: '⚡', pro: '👑', enterprise: '🏢' };
+const PLAN_ICONS = { free: Zap, starter: Zap, pro: Crown, enterprise: Building2 };
 const PLAN_COLORS = {
-  free:       'border-gray-700',
-  starter:    'border-blue-600',
-  pro:        'border-purple-600 ring-2 ring-purple-600/30',
-  enterprise: 'border-yellow-600',
-};
-const PLAN_BTN = {
-  free:       'bg-gray-700 hover:bg-gray-600 text-white',
-  starter:    'bg-blue-600 hover:bg-blue-700 text-white',
-  pro:        'bg-purple-600 hover:bg-purple-700 text-white',
-  enterprise: 'bg-yellow-500 hover:bg-yellow-400 text-gray-900',
+  free:       { border: 'border-gray-700', icon: 'bg-gray-600/20 text-gray-400', btn: 'bg-gray-700 hover:bg-gray-600 text-white' },
+  starter:    { border: 'border-blue-600/40', icon: 'bg-blue-600/20 text-blue-400', btn: 'bg-blue-600 hover:bg-blue-700 text-white' },
+  pro:        { border: 'border-purple-600/40 ring-2 ring-purple-600/20', icon: 'bg-purple-600/20 text-purple-400', btn: 'bg-purple-600 hover:bg-purple-700 text-white' },
+  enterprise: { border: 'border-yellow-600/40', icon: 'bg-yellow-600/20 text-yellow-400', btn: 'bg-yellow-500 hover:bg-yellow-400 text-gray-900' },
 };
 
 export default function Subscription() {
   const { user, sub, fetchMe } = useAuth();
-  const [plans, setPlans]   = useState([]);
-  const [period, setPeriod] = useState('monthly');
+  const [plans, setPlans]     = useState([]);
+  const [period, setPeriod]   = useState('monthly');
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     api.get('/subscriptions/plans')
@@ -33,19 +31,36 @@ export default function Subscription() {
       .finally(() => setLoading(false));
   }, []);
 
+  const isTrialActive = sub?.status === 'trial' && sub?.trial_ends_at && new Date(sub.trial_ends_at) > new Date();
+  const isExpired = !sub || sub.status === 'expired' || sub.status === 'cancelled'
+    || (sub.status === 'trial' && sub.trial_ends_at && new Date(sub.trial_ends_at) <= new Date());
+  const isActive = sub?.status === 'active';
+
+  const trialDaysLeft = isTrialActive
+    ? Math.max(0, Math.ceil((new Date(sub.trial_ends_at) - Date.now()) / 86400000))
+    : 0;
+
   const handleUpgrade = async (planId) => {
-    if (planId === sub?.plan_id) return toast('Это ваш текущий тариф');
-    setUpgrading(planId);
+    if (planId === sub?.plan_id && !isExpired) return toast('Это ваш текущий тариф');
+    setShowPaymentModal(true);
+    return;
     try {
       const { data } = await api.post('/subscriptions/upgrade', { plan_id: planId, billing_period: period });
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
+      } else if (data.code === 'PAYMENT_REQUIRED') {
+        toast.error(data.error);
       } else {
         await fetchMe();
         toast.success(`Тариф "${planId}" активирован`);
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Ошибка');
+      const code = err.response?.data?.code;
+      if (code === 'PAYMENT_REQUIRED') {
+        toast.error(err.response.data.error);
+      } else {
+        toast.error(err.response?.data?.error || 'Ошибка');
+      }
     } finally {
       setUpgrading('');
     }
@@ -69,9 +84,34 @@ export default function Subscription() {
       </div>
 
       {/* Current plan banner */}
-      {sub && (
-        <CurrentPlanCard sub={sub} onCancel={handleCancel} />
+      {sub && <CurrentPlanCard sub={sub} isTrialActive={isTrialActive} trialDaysLeft={trialDaysLeft} onCancel={handleCancel} />}
+
+      {/* ═══ EXPIRED — Payment placeholder ═══ */}
+      {isExpired && (
+        <div className="card border-yellow-600/30 bg-gradient-to-b from-yellow-900/10 to-transparent">
+          <div className="text-center py-8">
+            <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
+              <Wrench className="w-8 h-8 text-yellow-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Оплата пока недоступна</h2>
+            <p className="text-gray-400 text-sm max-w-md mx-auto mb-4">
+              Система оплаты находится в разработке. Для продления подписки обратитесь к администратору через чат поддержки.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Shield className="w-4 h-4" />
+                <span>Безопасные платежи скоро</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <CreditCard className="w-4 h-4" />
+                <span>Stripe, банковские карты</span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
+
+
 
       {/* Billing toggle */}
       <div className="flex items-center justify-center gap-3">
@@ -106,36 +146,89 @@ export default function Subscription() {
               plan={plan}
               period={period}
               isCurrent={sub?.plan_id === plan.id}
+              isTrialActive={isTrialActive}
+              isExpired={isExpired}
+              isActive={isActive}
               onUpgrade={handleUpgrade}
               upgrading={upgrading === plan.id}
             />
           ))}
         </div>
       )}
+
+      {/* ═══ Payment modal ═══ */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowPaymentModal(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-yellow-600/30 bg-gray-900 p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
+                <Wrench className="w-8 h-8 text-yellow-400" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Оплата в разработке</h2>
+              <p className="text-gray-400 text-sm mb-6">
+                Система оплаты находится в разработке. Для смены тарифа или продления подписки обратитесь к администратору через чат поддержки.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Shield className="w-4 h-4" />
+                  <span>Безопасные платежи скоро</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Stripe, банковские карты</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="btn bg-gray-700 hover:bg-gray-600 text-white px-6"
+              >
+                Понятно
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function CurrentPlanCard({ sub, onCancel }) {
-  const statusColor = { active: 'badge-green', trial: 'badge-yellow', expired: 'badge-red', cancelled: 'badge-gray' };
+function CurrentPlanCard({ sub, isTrialActive, trialDaysLeft, onCancel }) {
+  const statusMap = {
+    active: { label: 'Активна', badge: 'badge-green' },
+    trial: { label: 'Пробный период', badge: 'badge-yellow' },
+    expired: { label: 'Истекла', badge: 'badge-red' },
+    cancelled: { label: 'Отменена', badge: 'badge-gray' },
+  };
+  const s = statusMap[sub.status] || { label: sub.status, badge: 'badge-gray' };
 
   return (
-    <div className="card bg-brand-600/10 border-brand-700/40">
+    <div className={clsx('card', sub.status === 'expired' ? 'bg-red-900/10 border-red-700/30' : 'bg-brand-600/10 border-brand-700/40')}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-xs text-gray-500 mb-1">Текущий тариф</p>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-lg font-bold text-white">{sub.plan_name}</p>
-            <span className={statusColor[sub.status] || 'badge-gray'}>{statusLabels[sub.status] || sub.status}</span>
+            <span className={s.badge}>{s.label}</span>
           </div>
-          {sub.trial_ends_at && (
-            <p className="text-xs text-yellow-400 mt-1">
-              Пробный период до {new Date(sub.trial_ends_at).toLocaleDateString('ru')}
-            </p>
+          {isTrialActive && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <Clock className="w-3.5 h-3.5 text-yellow-400" />
+              <p className="text-xs text-yellow-400">
+                Пробный период — осталось {trialDaysLeft} дн. (до {new Date(sub.trial_ends_at).toLocaleDateString('ru')})
+              </p>
+            </div>
           )}
-          {sub.expires_at && (
+          {sub.status === 'expired' && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+              <p className="text-xs text-red-400">
+                Подписка истекла. Оплатите тариф или обратитесь к администратору.
+              </p>
+            </div>
+          )}
+          {sub.expires_at && sub.status === 'active' && (
             <p className="text-xs text-gray-500 mt-1">
-              Следующее списание: {new Date(sub.expires_at).toLocaleDateString('ru')}
+              Действует до: {new Date(sub.expires_at).toLocaleDateString('ru')}
             </p>
           )}
         </div>
@@ -169,14 +262,29 @@ function LimitList({ limits }) {
   );
 }
 
-function PlanCard({ plan, period, isCurrent, onUpgrade, upgrading }) {
+function PlanCard({ plan, period, isCurrent, isTrialActive, isExpired, isActive, onUpgrade, upgrading }) {
   const price = period === 'yearly' ? plan.price_yearly : plan.price_monthly;
   const features = buildFeatures(plan);
+  const colors = PLAN_COLORS[plan.id] || PLAN_COLORS.free;
+  const IconComp = PLAN_ICONS[plan.id] || Zap;
+
+  // Кнопка: все не-текущие планы показывают «Оплатить» (модалка)
+  const showPaymentNeeded = !isCurrent || isExpired;
+
+  let btnLabel = 'Оплатить';
+  let btnDisabled = false;
+
+  if (isCurrent && !isExpired) {
+    btnLabel = 'Текущий тариф';
+    btnDisabled = true;
+  }
 
   return (
-    <div className={clsx('card flex flex-col', PLAN_COLORS[plan.id] || 'border-gray-700')}>
+    <div className={clsx('card flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group', colors.border)}>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-2xl">{PLAN_ICONS[plan.id] || '📦'}</span>
+        <div className={clsx('w-9 h-9 rounded-lg flex items-center justify-center', colors.icon)}>
+          <IconComp className="w-5 h-5" />
+        </div>
         <h3 className="font-bold text-white text-lg">{plan.name}</h3>
         {plan.id === 'pro' && <span className="badge-blue text-xs">Популярный</span>}
       </div>
@@ -200,11 +308,20 @@ function PlanCard({ plan, period, isCurrent, onUpgrade, upgrading }) {
       </ul>
 
       <button
-        disabled={isCurrent || upgrading}
+        disabled={btnDisabled || upgrading}
         onClick={() => onUpgrade(plan.id)}
-        className={clsx('btn w-full text-sm', isCurrent ? 'opacity-50 cursor-default bg-gray-700' : PLAN_BTN[plan.id])}
+        className={clsx(
+          'btn w-full text-sm transition-all',
+          btnDisabled ? 'opacity-50 cursor-default bg-gray-700 text-gray-400' : colors.btn,
+          showPaymentNeeded && 'flex items-center justify-center gap-1.5',
+        )}
       >
-        {upgrading ? 'Подождите...' : isCurrent ? 'Текущий тариф' : plan.price_monthly === 0 ? 'Выбрать' : 'Перейти'}
+        {upgrading ? 'Подождите...' : (
+          <>
+            {showPaymentNeeded && <Lock className="w-3.5 h-3.5" />}
+            {btnLabel}
+          </>
+        )}
       </button>
     </div>
   );
@@ -212,8 +329,8 @@ function PlanCard({ plan, period, isCurrent, onUpgrade, upgrading }) {
 
 function buildFeatures(plan) {
   const f = [];
-  f.push(`${plan.max_steam_accounts === -1 ? 'Неограниченно' : plan.max_steam_accounts} Steam аккаунта`);
-  f.push(`${plan.max_campaigns === -1 ? 'Неограниченно' : plan.max_campaigns} кампании`);
+  f.push(`${plan.max_steam_accounts === -1 ? 'Неограниченно' : plan.max_steam_accounts} Steam аккаунтов`);
+  f.push(`${plan.max_campaigns === -1 ? 'Неограниченно' : plan.max_campaigns} кампаний`);
   f.push(`${plan.max_jobs_per_day === -1 ? 'Неограниченно' : plan.max_jobs_per_day} постов в день`);
   if (plan.max_telegram_bots > 0) f.push('Telegram бот');
   if (plan.has_mini_app)         f.push('Telegram Mini App');
@@ -223,5 +340,3 @@ function buildFeatures(plan) {
   if (plan.has_priority_support) f.push('Приоритетная поддержка');
   return f;
 }
-
-const statusLabels = { active: 'Активна', trial: 'Пробный', expired: 'Истекла', cancelled: 'Отменена' };

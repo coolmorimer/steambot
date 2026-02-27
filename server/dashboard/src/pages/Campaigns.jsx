@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Play, Pause, RefreshCw, ChevronDown, ChevronUp, Pencil, Clock, X, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Play, Pause, RefreshCw, ChevronDown, ChevronUp, Pencil, Clock, X, Sparkles, Loader2, CheckCircle2, Globe, Search, ExternalLink } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { EmptyState } from './Accounts';
@@ -33,6 +33,219 @@ const SECTION_VARS = [
   { label: '{agents_section}',      hint: 'секция агентов' },
   { label: '{other_section}',       hint: 'секция "Другое"' },
 ];
+
+// ─── Steam-игры и их разделы форума ────────────────────────────────────────────
+const STEAM_GAMES = [
+  {
+    appId: 730, name: 'Counter-Strike 2', short: 'CS2', emoji: '🎯',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/730/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/app/730/discussions/0/' },
+    ],
+  },
+  {
+    appId: 570, name: 'Dota 2', short: 'Dota 2', emoji: '⚔️',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/570/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/app/570/discussions/0/' },
+    ],
+  },
+  {
+    appId: 440, name: 'Team Fortress 2', short: 'TF2', emoji: '🎩',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/440/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/app/440/discussions/0/' },
+    ],
+  },
+  {
+    appId: 252490, name: 'Rust', short: 'Rust', emoji: '🔧',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/252490/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/app/252490/discussions/0/' },
+    ],
+  },
+  {
+    appId: 578080, name: 'PUBG: Battlegrounds', short: 'PUBG', emoji: '🪖',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/578080/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/app/578080/discussions/0/' },
+    ],
+  },
+  {
+    appId: 753, name: 'Steam', short: 'Steam', emoji: '🎮',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/753/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/discussions/forum/0/' },
+    ],
+  },
+  {
+    appId: 304930, name: 'Unturned', short: 'Unturned', emoji: '🧟',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/304930/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/app/304930/discussions/0/' },
+    ],
+  },
+  {
+    appId: 322330, name: 'Don\'t Starve Together', short: 'DST', emoji: '🔥',
+    forums: [
+      { name: 'Trading Forum',       url: 'https://steamcommunity.com/app/322330/tradingforum/' },
+      { name: 'General Discussions',  url: 'https://steamcommunity.com/app/322330/discussions/0/' },
+    ],
+  },
+];
+
+// ─── ForumPicker — выбор раздела Steam-форума ──────────────────────────────────
+function ForumPicker({ value, onChange }) {
+  const [mode, setMode]         = useState(value ? 'selected' : 'pick');  // pick | custom | selected
+  const [search, setSearch]     = useState('');
+  const [selectedGame, setGame] = useState(null);
+
+  // Если пришёл value и мы ещё не выбрали — определяем игру
+  useEffect(() => {
+    if (value && mode === 'selected') {
+      const g = STEAM_GAMES.find(g => g.forums.some(f => f.url === value));
+      if (g) setGame(g);
+    }
+  }, []);
+
+  const filtered = search
+    ? STEAM_GAMES.filter(g =>
+        g.name.toLowerCase().includes(search.toLowerCase()) ||
+        g.short.toLowerCase().includes(search.toLowerCase()))
+    : STEAM_GAMES;
+
+  const handleSelect = (url) => {
+    onChange(url);
+    setMode('selected');
+  };
+
+  const handleClear = () => {
+    onChange('');
+    setGame(null);
+    setMode('pick');
+  };
+
+  // Выбранный вариант
+  if (mode === 'selected' && value) {
+    const game = STEAM_GAMES.find(g => g.forums.some(f => f.url === value));
+    const forum = game?.forums.find(f => f.url === value);
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-brand-600/10 border border-brand-600/30">
+          <div className="w-10 h-10 rounded-lg bg-brand-600/20 flex items-center justify-center text-lg shrink-0">
+            {game?.emoji || '🌐'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">
+              {game?.name || 'Кастомный URL'}
+              {forum && <span className="text-brand-400 ml-1.5">→ {forum.name}</span>}
+            </p>
+            <p className="text-xs text-gray-400 truncate font-mono">{value}</p>
+          </div>
+          <div className="flex gap-1.5 shrink-0">
+            <a href={value} target="_blank" rel="noopener noreferrer"
+              className="p-1.5 rounded-lg hover:bg-gray-700/50 text-gray-400 hover:text-white transition-colors"
+              title="Открыть форум">
+              <ExternalLink className="w-4 h-4" />
+            </a>
+            <button type="button" onClick={handleClear}
+              className="p-1.5 rounded-lg hover:bg-red-900/30 text-gray-400 hover:text-red-400 transition-colors"
+              title="Изменить">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Кастомный URL
+  if (mode === 'custom') {
+    return (
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <input
+            className="input flex-1 font-mono text-sm"
+            placeholder="https://steamcommunity.com/app/730/tradingforum/"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+          />
+          <button type="button" onClick={() => value && setMode('selected')}
+            disabled={!value}
+            className="btn-primary px-3 text-sm">
+            OK
+          </button>
+        </div>
+        <button type="button" onClick={() => setMode('pick')}
+          className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+          ← Выбрать из списка
+        </button>
+      </div>
+    );
+  }
+
+  // Если выбрана игра — показать разделы
+  if (selectedGame) {
+    return (
+      <div className="space-y-2">
+        <button type="button" onClick={() => setGame(null)}
+          className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors">
+          ← Все игры
+        </button>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-lg">{selectedGame.emoji}</span>
+          <span className="text-sm font-semibold text-white">{selectedGame.name}</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {selectedGame.forums.map(f => (
+            <button key={f.url} type="button" onClick={() => handleSelect(f.url)}
+              className="text-left p-3 rounded-lg bg-gray-800/60 hover:bg-gray-800 border border-gray-700/50 hover:border-brand-600/40 transition-all group">
+              <p className="text-sm font-medium text-white group-hover:text-brand-400 transition-colors">
+                {f.name}
+              </p>
+              <p className="text-xs text-gray-500 font-mono truncate mt-0.5">{f.url.replace('https://steamcommunity.com', '')}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Список игр
+  return (
+    <div className="space-y-2">
+      {/* Поиск */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <input
+          className="input pl-9 text-sm"
+          placeholder="Поиск игры..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Сетка игр */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {filtered.map(g => (
+          <button key={g.appId} type="button" onClick={() => setGame(g)}
+            className="text-left p-3 rounded-lg bg-gray-800/60 hover:bg-gray-800 border border-gray-700/50 hover:border-brand-600/40 transition-all group">
+            <div className="text-xl mb-1">{g.emoji}</div>
+            <p className="text-sm font-medium text-white group-hover:text-brand-400 transition-colors truncate">{g.short}</p>
+            <p className="text-xs text-gray-500">{g.forums.length} разд.</p>
+          </button>
+        ))}
+      </div>
+
+      {/* Кнопка кастомного URL */}
+      <button type="button" onClick={() => setMode('custom')}
+        className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors pt-1">
+        <Globe className="w-3.5 h-3.5" />
+        Указать URL вручную
+      </button>
+    </div>
+  );
+}
 
 // ─── Готовые шаблоны (title + body) ───────────────────────────────────────────
 const POST_PRESETS = [
@@ -493,6 +706,16 @@ function CampaignCard({ campaign: c, onDelete, onToggle, onEdit }) {
               <p>{c.window_start} – {c.window_end}</p>
             </div>
           )}
+          {c.target_url && (
+            <div className="col-span-2">
+              <p className="text-gray-600 mb-1">Раздел форума</p>
+              <a href={c.target_url} target="_blank" rel="noopener noreferrer"
+                className="text-brand-400 hover:text-brand-300 flex items-center gap-1 truncate">
+                <Globe className="w-3 h-3 shrink-0" />
+                {c.target_url.replace('https://steamcommunity.com', '')}
+              </a>
+            </div>
+          )}
           {c.body_template && (
             <div className="col-span-2">
               <p className="text-gray-600 mb-1">Тело публикации</p>
@@ -525,6 +748,7 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
     window_start:    initial?.window_start    ?? '',
     window_end:      initial?.window_end      ?? '',
     profile_ids:     initial?.profile_ids     ?? [],
+    target_url:      initial?.target_url      ?? '',
   });
   const [saving, setSaving]   = useState(false);
   const titleRef              = useRef(null);
@@ -556,6 +780,7 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
         window_start:   form.window_start || null,
         window_end:     form.window_end   || null,
         profile_ids:    form.profile_ids,
+        target_url:     form.target_url || null,
       };
 
       let saved;
@@ -587,6 +812,23 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
         {isEdit ? `Редактировать: ${initial.name}` : 'Новая кампания'}
       </h2>
       <form onSubmit={submit} className="space-y-4">
+
+        {/* ── Куда постить (раздел Steam-форума) ── */}
+        <div>
+          <label className="label flex items-center gap-2">
+            <Globe className="w-4 h-4 text-brand-400" />
+            Раздел форума Steam
+          </label>
+          <ForumPicker
+            value={form.target_url}
+            onChange={url => setForm(p => ({ ...p, target_url: url }))}
+          />
+          {!form.target_url && (
+            <p className="text-xs text-gray-500 mt-1.5">
+              Если не выбрано — будет использоваться раздел из настроек аккаунта (по умолчанию CS2 Trading)
+            </p>
+          )}
+        </div>
 
         {/* ── Генерация из инвентаря ── */}
         <GeneratePanel

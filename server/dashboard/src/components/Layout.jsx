@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Users, Megaphone, Activity,
   Send, Settings, CreditCard, LogOut, ChevronLeft,
-  ChevronRight, ShieldCheck, Menu, X,
+  ChevronRight, ShieldCheck, Menu, X, Code2,
 } from 'lucide-react';
 import clsx from 'clsx';
+import SupportWidget from './SupportWidget';
 
 const navItems = [
   { to: '/',            icon: LayoutDashboard, label: 'Обзор' },
@@ -14,6 +15,7 @@ const navItems = [
   { to: '/campaigns',   icon: Megaphone,       label: 'Кампании' },
   { to: '/activity',    icon: Activity,        label: 'Активность' },
   { to: '/telegram',    icon: Send,            label: 'Telegram бот' },
+  { to: '/api',          icon: Code2,           label: 'API' },
   { to: '/settings',    icon: Settings,        label: 'Настройки' },
   { to: '/subscription',icon: CreditCard,      label: 'Подписка' },
 ];
@@ -134,6 +136,9 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Плавающий виджет поддержки */}
+      <SupportWidget />
     </div>
   );
 }

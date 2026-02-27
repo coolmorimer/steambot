@@ -365,18 +365,20 @@ async function countProfiles(userId) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function addCampaign(userId, { name, titleTemplate, bodyTemplate, scheduleMinutes,
-                                     scheduleTimes, windowStart, windowEnd, profileIds }) {
+                                     scheduleTimes, windowStart, windowEnd, profileIds,
+                                     targetUrl }) {
   const id   = uuidv4();
   const mins = (scheduleTimes && scheduleTimes.length > 0) ? 0 : (scheduleMinutes || 60);
   await query(`
     INSERT INTO campaigns
       (id,user_id,name,title_template,body_template,schedule_minutes,
-       schedule_times,window_start,window_end,profile_ids,is_active,created_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,$11)
+       schedule_times,window_start,window_end,profile_ids,is_active,created_at,target_url)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,$11,$12)
   `, [id, userId, name, titleTemplate, bodyTemplate, mins,
     scheduleTimes ? JSON.stringify(scheduleTimes) : null,
     windowStart || '00:00', windowEnd || '23:59',
-    JSON.stringify(profileIds || []), now()]);
+    JSON.stringify(profileIds || []), now(),
+    targetUrl || null]);
   return id;
 }
 
@@ -392,7 +394,7 @@ async function getCampaign(id, userId) {
 
 async function updateCampaign(id, userId, fields) {
   const allowed = ['name','title_template','body_template','schedule_minutes',
-                   'schedule_times','window_start','window_end','profile_ids','is_active'];
+                   'schedule_times','window_start','window_end','profile_ids','is_active','target_url'];
   const updates = [], values = [];
   let i = 1;
   for (const [k, v] of Object.entries(fields)) {
@@ -431,18 +433,28 @@ function parseCampaign(row) {
 
 async function addJob(userId, { campaignId, profileId, scheduledAt, title, body }) {
   const id = uuidv4();
-  await query(`
+  // ON CONFLICT DO NOTHING — уникальный partial index idx_jobs_unique_pending
+  // предотвращает дубликаты pending-джобов (для K8s multi-replica)
+  const result = await query(`
     INSERT INTO jobs (id,user_id,campaign_id,profile_id,scheduled_at,status,title,body,created_at)
     VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8)
+    ON CONFLICT DO NOTHING
   `, [id, userId, campaignId, profileId, scheduledAt, title, body, now()]);
-  return id;
+  return result.rowCount > 0 ? id : null;
 }
 
 async function getDueJobs(userId) {
+  // Атомарный захват: UPDATE SET status='running' ... RETURNING
+  // Предотвращает двойную обработку при K8s multi-replica
   return getAll(`
-    SELECT * FROM jobs
-    WHERE user_id = $1 AND status = 'pending' AND scheduled_at <= $2
-    ORDER BY scheduled_at LIMIT 50
+    UPDATE jobs SET status = 'running', executed_at = $2
+    WHERE id IN (
+      SELECT id FROM jobs
+      WHERE user_id = $1 AND status = 'pending' AND scheduled_at <= $2
+      ORDER BY scheduled_at LIMIT 50
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING *
   `, [userId, now()]);
 }
 
@@ -766,11 +778,55 @@ async function getAdminUserList({ limit = 50, offset = 0, search = '' } = {}) {
       (SELECT COUNT(*) FROM campaigns c  WHERE c.user_id  = u.id) as campaigns_count,
       (SELECT COUNT(*) FROM jobs j WHERE j.user_id = u.id AND j.status = 'done') as jobs_done
     FROM users u
-    LEFT JOIN user_subscriptions s ON s.user_id = u.id AND s.status IN ('trial','active')
+    LEFT JOIN LATERAL (
+      SELECT * FROM user_subscriptions
+      WHERE user_id = u.id AND status IN ('trial','active')
+      ORDER BY created_at DESC LIMIT 1
+    ) s ON true
     LEFT JOIN subscription_plans p ON p.id = s.plan_id
     WHERE u.name ILIKE $1 OR u.email ILIKE $2
     ORDER BY u.created_at DESC LIMIT $3 OFFSET $4
   `, [like, like, limit, offset]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  API KEYS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function createApiKey({ userId, name, keyHash, keyPrefix, permissions, expiresAt }) {
+  const id = uuidv4();
+  await query(`
+    INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, permissions, expires_at, created_at, updated_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+  `, [id, userId, name || 'Default', keyHash, keyPrefix,
+    JSON.stringify(permissions || ['read']),
+    expiresAt || null, now(), now()]);
+  return id;
+}
+
+async function getApiKeys(userId) {
+  return getAll('SELECT id, user_id, name, key_prefix, permissions, last_used_at, expires_at, is_active, created_at FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+}
+
+async function getApiKeyByHash(keyHash) {
+  return getOne('SELECT * FROM api_keys WHERE key_hash = $1 AND is_active = TRUE', [keyHash]);
+}
+
+async function updateApiKeyLastUsed(id) {
+  await query('UPDATE api_keys SET last_used_at = $1 WHERE id = $2', [now(), id]);
+}
+
+async function deleteApiKey(id, userId) {
+  await query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [id, userId]);
+}
+
+async function deactivateApiKey(id, userId) {
+  await query('UPDATE api_keys SET is_active = FALSE, updated_at = $1 WHERE id = $2 AND user_id = $3', [now(), id, userId]);
+}
+
+async function countApiKeys(userId) {
+  const row = await getOne('SELECT COUNT(*)::int AS count FROM api_keys WHERE user_id = $1 AND is_active = TRUE', [userId]);
+  return row?.count || 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -786,6 +842,7 @@ async function auditLog(userId, action, resourceType, resourceId, details, ip) {
 }
 
 module.exports = {
+  query, getOne,
   getPlans, getPlan, upsertPlan,
   createUser, getUserById, getUserByEmail, getAllUsers, countUsers,
   updateUser, updateLastLogin, deleteUser,
@@ -806,5 +863,7 @@ module.exports = {
   createEmailVerification, getEmailVerification, markEmailVerificationUsed,
   createTransaction, getTransactions, updateTransactionStatus,
   getAdminStats, getAdminUserList, auditLog,
+  createApiKey, getApiKeys, getApiKeyByHash, updateApiKeyLastUsed,
+  deleteApiKey, deactivateApiKey, countApiKeys,
   pool, // expose for health-checks / migrations
 };

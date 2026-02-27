@@ -656,16 +656,16 @@ async function fillGuardCode(sessionId, code) {
   const OP = 10_000;
 
   try {
-    // Пробуем конкретные ID + общие селекторы
+    await _takeDebugScreenshot(session);
+    logger.info('SteamLogin: fillGuardCode start', { sessionId, url: page.url() });
+
+    // ── 1. Сначала пробуем конкретные видимые селекторы ──────────
     const guardSelectors = [
       '#twofactorcode_entry',
       '#authcode',
       'input[maxlength="5"]',
       'input[maxlength="6"]',
       'input[autocomplete="one-time-code"]',
-      '[class*="twofactor" i] input',
-      '[class*="guard" i] input',
-      '[class*="authcode" i] input',
       'input[type="tel"]',
     ];
 
@@ -673,35 +673,143 @@ async function fillGuardCode(sessionId, code) {
     for (const sel of guardSelectors) {
       try {
         const loc = page.locator(sel).first();
-        const vis = await loc.isVisible({ timeout: 1500 }).catch(() => false);
+        const vis = await loc.isVisible({ timeout: 1000 }).catch(() => false);
         if (vis) {
           guardInput = loc;
-          logger.info('SteamLogin: guard input found', { sessionId, sel });
+          logger.info('SteamLogin: guard input found by selector', { sessionId, sel });
           break;
         }
       } catch { /* next */ }
     }
 
+    // ── 2. Если конкретные селекторы не нашли → DOM-анализ ───────
+    //    Ищем видимый текстовый input, который НЕ является полем
+    //    логина/пароля/поиска. На guard-странице Steam это единственный
+    //    видимый input для кода.
+    if (!guardInput) {
+      logger.info('SteamLogin: guard selectors failed, trying DOM analysis', { sessionId });
+
+      const guardHandle = await page.evaluateHandle(() => {
+        // Все input'ы на странице
+        const inputs = document.querySelectorAll('input');
+        const candidates = [];
+
+        for (const inp of inputs) {
+          // Пропускаем скрытые
+          const rect = inp.getBoundingClientRect();
+          const style = window.getComputedStyle(inp);
+          if (rect.width < 10 || rect.height < 10) continue;
+          if (style.display === 'none' || style.visibility === 'hidden') continue;
+          if (inp.offsetParent === null && style.position !== 'fixed') continue;
+
+          // Пропускаем submit/hidden/checkbox/radio
+          const t = (inp.type || '').toLowerCase();
+          if (['submit', 'hidden', 'checkbox', 'radio', 'button', 'image', 'file', 'reset'].includes(t)) continue;
+
+          // Пропускаем поле поиска
+          if (inp.name === 'term') continue;
+
+          // Пропускаем password
+          if (t === 'password') continue;
+
+          // Определяем — это поле login/username или guard-код?
+          // Логин/username обычно рядом с password-полем в том же form
+          const form = inp.closest('form');
+          const hasPwdSibling = form && form.querySelector('input[type="password"]');
+
+          // Если в форме нет пароля — это НЕ login-форма, скорее guard
+          // Или если input имеет признаки кода:
+          const ml = inp.maxLength;
+          const isShort = ml > 0 && ml <= 10;
+          const hasCodePlaceholder = /код|code/i.test(inp.placeholder || '');
+
+          candidates.push({
+            el: inp,
+            // Приоритет: чем больше — тем лучше
+            score: 0
+              + (isShort ? 10 : 0)
+              + (hasCodePlaceholder ? 10 : 0)
+              + (!hasPwdSibling ? 5 : 0)
+              + (t === 'tel' || t === 'number' ? 3 : 0)
+          });
+        }
+
+        if (!candidates.length) return null;
+
+        // Сортируем по score (desc), берём лучший
+        candidates.sort((a, b) => b.score - a.score);
+
+        // Если лучший кандидат из login-формы (hasPwdSibling) и у него score=0
+        // — это скорее всего поле логина, а не guard. Но если это единственный
+        // кандидат — всё равно попробуем.
+        return candidates[0].el;
+      });
+
+      const guardEl = guardHandle?.asElement();
+      if (guardEl) {
+        guardInput = guardEl;
+        logger.info('SteamLogin: guard input found via DOM analysis', { sessionId });
+      }
+    }
+
     if (!guardInput) {
       await _takeDebugScreenshot(session);
+
+      // Дополнительная диагностика
+      const diag = await page.evaluate(() => {
+        const inputs = document.querySelectorAll('input');
+        const info = [];
+        for (const inp of inputs) {
+          const rect = inp.getBoundingClientRect();
+          const style = window.getComputedStyle(inp);
+          info.push({
+            type: inp.type, id: inp.id, name: inp.name,
+            class: inp.className.substring(0, 40),
+            w: Math.round(rect.width), h: Math.round(rect.height),
+            display: style.display, visibility: style.visibility,
+            offsetParent: !!inp.offsetParent,
+            placeholder: (inp.placeholder || '').substring(0, 30),
+          });
+        }
+        return info;
+      }).catch(() => []);
+      logger.error('SteamLogin: no guard input found, page inputs:', { sessionId, diag });
+
       throw new Error('Не найдено поле для ввода кода Guard');
     }
 
-    // Заполняем код
+    // ── 3. Заполняем код ─────────────────────────────────────────
+    //    Steam использует React-компоненты и/или посимвольные инпуты,
+    //    fill() не работает — вводит только 1 символ.
+    //    Вместо fill() кликаем, очищаем (Ctrl+A, Delete) и печатаем посимвольно.
+    const cleanCode = code.trim().toUpperCase();
     await guardInput.click({ force: true, timeout: OP });
-    await guardInput.fill('', { force: true, timeout: OP });
-    await guardInput.fill(code.trim(), { force: true, timeout: OP });
-    logger.info('SteamLogin: guard code filled', { sessionId });
+    await page.waitForTimeout(200);
+
+    // Очищаем если что-то было
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Delete');
+    await page.waitForTimeout(100);
+
+    // Печатаем посимвольно — совместимо с React и посимвольными полями
+    await page.keyboard.type(cleanCode, { delay: 80 });
+    logger.info('SteamLogin: guard code typed', { sessionId, codeLen: cleanCode.length });
 
     await page.waitForTimeout(500);
+    await _takeDebugScreenshot(session);
 
-    // Отправить
-    const submitBtn = page.locator('button[type="submit"], button:has-text("Войти"), button:has-text("Sign in"), button:has-text("Submit"), button:has-text("Подтвердить")').first();
+    // ── 4. Отправить ─────────────────────────────────────────────
+    const submitBtn = page.locator(
+      'button[type="submit"], button:has-text("Войти"), button:has-text("Sign in"), ' +
+      'button:has-text("Submit"), button:has-text("Подтвердить"), button:has-text("Отправить")'
+    ).first();
     const submitVis = await submitBtn.isVisible({ timeout: 3000 }).catch(() => false);
     if (submitVis) {
       await submitBtn.click({ force: true, timeout: OP });
+      logger.info('SteamLogin: guard submit button clicked', { sessionId });
     } else {
       await page.keyboard.press('Enter');
+      logger.info('SteamLogin: guard submitted via Enter', { sessionId });
     }
 
     session.status = 'checking_guard';

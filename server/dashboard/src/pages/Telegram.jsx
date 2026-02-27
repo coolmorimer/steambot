@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Send, Play, Square, Trash2, RefreshCw, AlertTriangle, Copy } from 'lucide-react';
+import { Send, Play, Square, Trash2, RefreshCw, AlertTriangle, Copy, Smartphone, ChevronDown, ChevronUp, ExternalLink, ClipboardCopy, BookOpen, CheckCircle2 } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { EmptyState } from './Accounts';
@@ -175,6 +175,147 @@ function BotCard({ bot, busy, onStart, onStop, onDelete, onEdit }) {
           ))}
         </div>
       </div>
+
+      {/* Mini App Setup */}
+      <MiniAppGuide />
+    </div>
+  );
+}
+
+function MiniAppGuide() {
+  const [open, setOpen] = useState(false);
+  const miniAppUrl = `${window.location.origin}/miniapp`;
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(miniAppUrl);
+    toast.success('URL скопирован');
+  };
+
+  const steps = [
+    {
+      num: 1,
+      title: 'Откройте @BotFather в Telegram',
+      desc: 'Перейдите в чат с @BotFather и отправьте команду /mybots.',
+      link: 'https://t.me/BotFather',
+      linkText: 'Открыть @BotFather',
+    },
+    {
+      num: 2,
+      title: 'Выберите вашего бота',
+      desc: 'Нажмите на кнопку с именем вашего бота из списка.',
+    },
+    {
+      num: 3,
+      title: 'Откройте настройки бота',
+      desc: 'Нажмите «Bot Settings» → «Menu Button» → «Configure menu button».',
+    },
+    {
+      num: 4,
+      title: 'Укажите URL Mini App',
+      desc: 'Вставьте URL вашего Mini App (скопируйте ниже) и задайте текст кнопки, например «📊 Панель».',
+      hasUrl: true,
+    },
+    {
+      num: 5,
+      title: 'Готово!',
+      desc: 'Теперь у вашего бота в чате появится кнопка меню, которая откроет мини-приложение с обзором, управлением кампаниями, аккаунтами и заданиями.',
+      isDone: true,
+    },
+  ];
+
+  return (
+    <div className="border border-violet-600/20 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-violet-900/10 transition-colors"
+      >
+        <div className="w-9 h-9 rounded-lg bg-violet-600/15 flex items-center justify-center shrink-0">
+          <Smartphone className="w-5 h-5 text-violet-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">Настройка Mini App</p>
+          <p className="text-xs text-gray-500">Инструкция по добавлению мини-приложения в Telegram бота</p>
+        </div>
+        {open
+          ? <ChevronUp className="w-4 h-4 text-gray-500 shrink-0" />
+          : <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
+        }
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-violet-600/10 pt-3">
+          {/* URL block */}
+          <div className="rounded-lg bg-gray-800/80 p-3">
+            <p className="text-xs text-gray-500 mb-1.5">URL вашего Mini App</p>
+            <div className="flex items-center gap-2">
+              <code className="text-sm text-violet-400 font-mono flex-1 break-all select-all">{miniAppUrl}</code>
+              <button
+                onClick={copyUrl}
+                className="shrink-0 p-1.5 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                title="Скопировать"
+              >
+                <ClipboardCopy className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-0">
+            {steps.map((step, i) => (
+              <div key={step.num} className="flex gap-3 relative">
+                {/* Vertical line */}
+                {i < steps.length - 1 && (
+                  <div className="absolute left-[15px] top-[30px] bottom-0 w-px bg-gray-800" />
+                )}
+                {/* Dot */}
+                <div className={`w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold z-10 ${
+                  step.isDone
+                    ? 'bg-green-600/20 text-green-400'
+                    : 'bg-violet-600/20 text-violet-400'
+                }`}>
+                  {step.isDone ? <CheckCircle2 className="w-4 h-4" /> : step.num}
+                </div>
+                {/* Content */}
+                <div className="pb-4 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white">{step.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{step.desc}</p>
+                  {step.link && (
+                    <a
+                      href={step.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 mt-1.5 transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3" /> {step.linkText}
+                    </a>
+                  )}
+                  {step.hasUrl && (
+                    <button
+                      onClick={copyUrl}
+                      className="inline-flex items-center gap-1.5 text-xs mt-1.5 px-2.5 py-1 rounded-lg bg-violet-600/15 text-violet-400 hover:bg-violet-600/25 transition-colors"
+                    >
+                      <ClipboardCopy className="w-3 h-3" /> Скопировать URL
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tip */}
+          <div className="rounded-lg bg-blue-900/10 border border-blue-600/15 px-3 py-2.5">
+            <div className="flex gap-2">
+              <BookOpen className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-blue-300 font-medium">Подсказка</p>
+                <p className="text-xs text-blue-400/70 mt-0.5">
+                  Mini App позволяет управлять ботом, кампаниями и аккаунтами прямо из Telegram — без перехода в браузер. Также можно использовать команду <code className="bg-blue-900/30 px-1 rounded">/setmenubutton</code> в @BotFather для более быстрой настройки.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

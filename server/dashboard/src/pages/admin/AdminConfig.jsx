@@ -129,7 +129,8 @@ export default function AdminConfig() {
           { to: '/admin',        label: 'Обзор' },
           { to: '/admin/users',  label: 'Пользователи' },
           { to: '/admin/plans',  label: 'Тарифы' },
-          { to: '/admin/config', label: 'Конфигурация', active: true },
+          { to: '/admin/config',   label: 'Конфигурация', active: true },
+          { to: '/admin/support', label: 'Поддержка' },
         ].map(t => (
           <Link key={t.to} to={t.to}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${

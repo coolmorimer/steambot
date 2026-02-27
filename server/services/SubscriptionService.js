@@ -114,6 +114,16 @@ async function handleCheckoutCompleted(userId, session) {
   const stripeSub = await stripe.subscriptions.retrieve(subId);
   const expiresAt = new Date(stripeSub.current_period_end * 1000).toISOString();
 
+  // Отменяем текущую подписку (если есть)
+  const oldSub = await db.getActiveSubscription(userId);
+  if (oldSub) {
+    await db.updateSubscription(oldSub.id, {
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      cancel_reason: `Обновление через Stripe на план ${planId}`,
+    });
+  }
+
   const dbSubId = await db.createSubscription({
     userId,
     planId,

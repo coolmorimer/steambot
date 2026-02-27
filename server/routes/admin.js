@@ -77,9 +77,9 @@ router.delete('/users/:id', requireAdmin, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/users/:id/subscription', requireAdmin, async (req, res, next) => {
+const setSubscription = async (req, res, next) => {
   try {
-    const { plan_id, billing_period = 'monthly', expires_at, status = 'active' } = req.body;
+    const { plan_id, billing_period = 'monthly', status = 'active', days } = req.body;
 
     const [user, plan] = await Promise.all([
       db.getUserById(req.params.id),
@@ -88,15 +88,44 @@ router.post('/users/:id/subscription', requireAdmin, async (req, res, next) => {
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     if (!plan) return res.status(400).json({ error: 'План не найден' });
 
-    const subId = await db.createSubscription({ userId: req.params.id, planId: plan_id, billingPeriod: billing_period, status });
-    if (expires_at) await db.updateSubscription(subId, { expires_at });
+    // Отменяем текущую подписку (если есть)
+    const oldSub = await db.getActiveSubscription(req.params.id);
+    if (oldSub) {
+      await db.updateSubscription(oldSub.id, {
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancel_reason: `Изменено администратором на план ${plan_id}`,
+      });
+    }
+
+    const daysNum = Number(days) || 30;
+    const expiresAt = new Date(Date.now() + daysNum * 86400000).toISOString();
+
+    if (status === 'trial') {
+      const subId = await db.createSubscription({
+        userId: req.params.id, planId: plan_id, billingPeriod: billing_period,
+        status: 'trial', trialDays: daysNum,
+      });
+      await db.auditLog(req.user.id, 'admin.subscription.set', 'subscription', subId, {
+        user_id: req.params.id, plan_id, status, days: daysNum,
+      });
+      return res.json({ ok: true, subscription_id: subId });
+    }
+
+    const subId = await db.createSubscription({
+      userId: req.params.id, planId: plan_id, billingPeriod: billing_period, status,
+    });
+    await db.updateSubscription(subId, { expires_at: expiresAt });
 
     await db.auditLog(req.user.id, 'admin.subscription.set', 'subscription', subId, {
-      user_id: req.params.id, plan_id, status,
+      user_id: req.params.id, plan_id, status, days: daysNum,
     });
     res.json({ ok: true, subscription_id: subId });
   } catch (e) { next(e); }
-});
+};
+
+router.post('/users/:id/subscription', requireAdmin, setSubscription);
+router.put('/users/:id/subscription', requireAdmin, setSubscription);
 
 router.get('/plans', requireAdmin, async (req, res, next) => {
   try { res.json(await db.getPlans(false)); }
@@ -113,7 +142,10 @@ router.put('/plans/:id', requireAdmin, async (req, res, next) => {
 
 router.delete('/plans/:id', requireAdmin, async (req, res, next) => {
   try {
-    await db.upsertPlan({ id: req.params.id, is_active: false });
+    const plan = await db.getPlan(req.params.id);
+    if (!plan) return res.status(404).json({ error: 'Тариф не найден' });
+
+    await db.upsertPlan({ ...plan, is_active: false });
     await db.auditLog(req.user.id, 'admin.plan.deactivate', 'plan', req.params.id);
     res.json({ ok: true });
   } catch (e) { next(e); }

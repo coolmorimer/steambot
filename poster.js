@@ -44,12 +44,14 @@ async function createForumPost(profile, title, body, options = {}) {
   const postDelay  = options.postDelay  ?? [2000, 5000];
   const retries    = options.retries    ?? 2;
 
+  const targetUrl = options.targetUrl || null;
+
   let lastError;
   for (let attempt = 1; attempt <= retries; attempt++) {
     const t0 = Date.now();
     try {
       logger.info(`[${profile.name}] Попытка ${attempt}/${retries} — запуск браузера...`);
-      const url = await _doPost(profile, title, body, { headless, slowMo, postDelay });
+      const url = await _doPost(profile, title, body, { headless, slowMo, postDelay, targetUrl });
       logger.info(`[${profile.name}] Попытка ${attempt} успешна за ${((Date.now()-t0)/1000).toFixed(1)}с`);
       return url;
     } catch (err) {
@@ -71,7 +73,7 @@ async function createForumPost(profile, title, body, options = {}) {
   throw lastError;
 }
 
-async function _doPost(profile, title, body, { headless, slowMo, postDelay }) {
+async function _doPost(profile, title, body, { headless, slowMo, postDelay, targetUrl: optTargetUrl }) {
   const browser = await chromium.launch({ headless, slowMo });
 
   try {
@@ -79,7 +81,7 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay }) {
     await context.addCookies(profile.cookies);
 
     const page = await context.newPage();
-    const targetUrl = profile.target_url || 'https://steamcommunity.com/app/730/tradingforum/';
+    const targetUrl = optTargetUrl || profile.target_url || 'https://steamcommunity.com/app/730/tradingforum/';
 
     // ── Утилита: скриншот при ошибке ───────────────────────────────────
     async function screenshotOnError(tag) {

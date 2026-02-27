@@ -55,15 +55,56 @@ router.post('/upgrade', ALL, async (req, res, next) => {
     const plan = await db.getPlan(plan_id);
     if (!plan || !plan.is_active) return res.status(400).json({ error: 'План не найден' });
 
+    // Проверяем текущую подписку
+    const currentSub = await db.getActiveSubscription(req.userId);
+    const isExpired = !currentSub || currentSub.status === 'expired' || currentSub.status === 'cancelled';
+    const isTrialExpired = currentSub?.status === 'trial' && currentSub.trial_ends_at && new Date(currentSub.trial_ends_at) < new Date();
+
+    // После истечения trial пользователь может только купить (Stripe) или обратиться к админу
+    if (isExpired || isTrialExpired) {
+      if (!config.stripe.enabled) {
+        return res.status(403).json({
+          error: 'Пробный период истёк. Оплатите подписку или обратитесь к администратору.',
+          code: 'PAYMENT_REQUIRED',
+        });
+      }
+      // Stripe включён — перенаправляем на оплату
+      const session = await SubscriptionService.createCheckoutSession({
+        userId: req.userId, planId: plan_id, billingPeriod: billing_period,
+        successUrl: `${config.appUrl}/dashboard?upgraded=1`,
+        cancelUrl:  `${config.appUrl}/subscription`,
+      });
+      return res.json({ ok: true, checkout_url: session.url, session_id: session.id });
+    }
+
+    // Во время активного trial — смена плана только через оплату
+    if (currentSub?.status === 'trial') {
+      if (!config.stripe.enabled) {
+        return res.status(403).json({
+          error: 'Для смены тарифа необходимо оплатить подписку. Система оплаты находится в разработке.',
+          code: 'PAYMENT_REQUIRED',
+        });
+      }
+      const session = await SubscriptionService.createCheckoutSession({
+        userId: req.userId, planId: plan_id, billingPeriod: billing_period,
+        successUrl: `${config.appUrl}/dashboard?upgraded=1`,
+        cancelUrl:  `${config.appUrl}/subscription`,
+      });
+      return res.json({ ok: true, checkout_url: session.url, session_id: session.id });
+    }
+
+    // Активная подписка — смена только через оплату
     if (!config.stripe.enabled) {
-      const result = await SubscriptionService.activatePlan(req.userId, plan_id, billing_period);
-      return res.json({ ok: true, ...result });
+      return res.status(403).json({
+        error: 'Для смены тарифа необходимо оплатить подписку. Система оплаты находится в разработке.',
+        code: 'PAYMENT_REQUIRED',
+      });
     }
 
     const session = await SubscriptionService.createCheckoutSession({
       userId: req.userId, planId: plan_id, billingPeriod: billing_period,
       successUrl: `${config.appUrl}/dashboard?upgraded=1`,
-      cancelUrl:  `${config.appUrl}/pricing`,
+      cancelUrl:  `${config.appUrl}/subscription`,
     });
     res.json({ ok: true, checkout_url: session.url, session_id: session.id });
   } catch (e) { next(e); }
