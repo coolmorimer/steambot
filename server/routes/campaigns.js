@@ -26,7 +26,7 @@ router.post('/', ALL, ...checkLimit.campaigns, async (req, res, next) => {
   try {
     const { name, title_template, body_template,
             schedule_minutes, schedule_times,
-            window_start, window_end, profile_ids, target_url } = req.body;
+            window_start, window_end, profile_ids, target_url, group_ids } = req.body;
 
     if (!name)           return res.status(400).json({ error: 'name обязателен' });
     if (!title_template) return res.status(400).json({ error: 'title_template обязателен' });
@@ -39,11 +39,29 @@ router.post('/', ALL, ...checkLimit.campaigns, async (req, res, next) => {
         return res.status(400).json({ error: `Аккаунт ${pid} не найден` });
     }
 
+    // Проверяем лимит групп
+    if (group_ids && Array.isArray(group_ids) && group_ids.length > 0) {
+      const sub = req.subscription || await db.getActiveSubscription(req.userId);
+      const maxGroups = sub?.max_steam_groups ?? 0;
+      if (maxGroups !== -1 && group_ids.length > maxGroups) {
+        return res.status(403).json({
+          error: `Превышен лимит Steam-групп: максимум ${maxGroups} на вашем плане.`,
+          code: 'LIMIT_REACHED',
+        });
+      }
+      // Проверяем что все group_ids существуют
+      const groups = await db.getSteamGroupsByIds(group_ids);
+      if (groups.length !== group_ids.length) {
+        return res.status(400).json({ error: 'Одна или несколько групп не найдены' });
+      }
+    }
+
     const id = await db.addCampaign(req.userId, {
       name, titleTemplate: title_template, bodyTemplate: body_template,
       scheduleMinutes: schedule_minutes, scheduleTimes: schedule_times,
       windowStart: window_start, windowEnd: window_end, profileIds: profile_ids,
       targetUrl: target_url,
+      groupIds: group_ids,
     });
 
     SteamBotManager.notifyNewCampaign(req.userId);
@@ -58,7 +76,7 @@ router.patch('/:id', ALL, async (req, res, next) => {
     if (!c) return res.status(404).json({ error: 'Кампания не найдена' });
 
     const { name, title_template, body_template, schedule_minutes,
-            schedule_times, window_start, window_end, profile_ids, is_active, target_url } = req.body;
+            schedule_times, window_start, window_end, profile_ids, is_active, target_url, group_ids } = req.body;
 
     const updates = {};
     if (name             !== undefined) updates.name             = name;
@@ -71,6 +89,24 @@ router.patch('/:id', ALL, async (req, res, next) => {
     if (profile_ids      !== undefined) updates.profile_ids      = profile_ids;
     if (is_active        !== undefined) updates.is_active        = is_active ? 1 : 0;
     if (target_url       !== undefined) updates.target_url       = target_url;
+    if (group_ids        !== undefined) {
+      // Проверяем лимит групп
+      if (Array.isArray(group_ids) && group_ids.length > 0) {
+        const sub = await db.getActiveSubscription(req.userId);
+        const maxGroups = sub?.max_steam_groups ?? 0;
+        if (maxGroups !== -1 && group_ids.length > maxGroups) {
+          return res.status(403).json({
+            error: `Превышен лимит Steam-групп: максимум ${maxGroups} на вашем плане.`,
+            code: 'LIMIT_REACHED',
+          });
+        }
+        const groups = await db.getSteamGroupsByIds(group_ids);
+        if (groups.length !== group_ids.length) {
+          return res.status(400).json({ error: 'Одна или несколько групп не найдены' });
+        }
+      }
+      updates.group_ids = group_ids;
+    }
 
     await db.updateCampaign(req.params.id, req.userId, updates);
     await db.deletePendingJobsByCampaign(req.params.id, req.userId);

@@ -29,8 +29,10 @@ const TelegramBotManager  = require('./services/TelegramBotManager');
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 const authRoutes          = require('./routes/auth');
+const oauthRoutes         = require('./routes/oauth');
 const profilesRoutes      = require('./routes/profiles');
 const campaignsRoutes     = require('./routes/campaigns');
+const steamGroupsRoutes   = require('./routes/steamGroups');
 const jobsRoutes          = require('./routes/jobs');
 const settingsRoutes      = require('./routes/settings');
 const telegramRoutes      = require('./routes/telegram');
@@ -41,6 +43,10 @@ const adminRoutes         = require('./routes/admin');
 const supportRoutes       = require('./routes/support');
 const apikeysRoutes       = require('./routes/apikeys');
 const publicApiRoutes     = require('./routes/publicApi');
+const tradesRoutes        = require('./routes/trades');
+const balanceRoutes       = require('./routes/balance');
+const steamInventoryRoutes = require('./routes/steamInventory');
+const steamItemsRoutes    = require('./routes/steamItems');
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Express app
@@ -136,8 +142,10 @@ app.use('/api/auth/password/forgot',authLimiter);
 // ════════════════════════════════════════════════════════════════════════════
 
 app.use('/api/auth',          authRoutes);
+app.use('/api/oauth',         oauthRoutes);
 app.use('/api/profiles',      profilesRoutes);
 app.use('/api/campaigns',     campaignsRoutes);
+app.use('/api/steam-groups',  steamGroupsRoutes);
 app.use('/api/jobs',          jobsRoutes);
 app.use('/api/settings',      settingsRoutes);
 app.use('/api/telegram',      telegramRoutes);
@@ -148,6 +156,10 @@ app.use('/api/admin',         adminRoutes);
 app.use('/api/support',       supportRoutes);
 app.use('/api/apikeys',       apikeysRoutes);
 app.use('/api/v1',            publicApiRoutes);
+app.use('/api/trades',        tradesRoutes);
+app.use('/api/balance',       balanceRoutes);
+app.use('/api/steam-inventory', steamInventoryRoutes);
+app.use('/api/steam-items',     steamItemsRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -180,6 +192,12 @@ if (fs.existsSync(miniAppDir)) {
       res.setHeader('Pragma', 'no-cache');
     },
   }));
+}
+
+// Статические публичные страницы (legal, terms и т.д.)
+const publicDir = path.join(__dirname, 'public');
+if (fs.existsSync(publicDir)) {
+  app.get('/legal', (req, res) => res.sendFile(path.join(publicDir, 'legal.html')));
 }
 
 if (fs.existsSync(dashboardDist)) {

@@ -26,6 +26,7 @@ module.exports = function createSchema(db) {
       max_campaigns           INTEGER NOT NULL DEFAULT 1,   -- -1 = безлимит
       max_jobs_per_day        INTEGER NOT NULL DEFAULT 10,  -- -1 = безлимит
       max_telegram_bots       INTEGER NOT NULL DEFAULT 0,
+      max_steam_groups        INTEGER NOT NULL DEFAULT 0,
       has_mini_app            INTEGER NOT NULL DEFAULT 0,
       has_ai_templates        INTEGER NOT NULL DEFAULT 0,
       has_analytics           INTEGER NOT NULL DEFAULT 0,
@@ -140,6 +141,8 @@ module.exports = function createSchema(db) {
       window_start      TEXT NOT NULL DEFAULT '00:00',
       window_end        TEXT NOT NULL DEFAULT '23:59',
       profile_ids       TEXT NOT NULL DEFAULT '[]',      -- JSON array
+      group_ids         TEXT NOT NULL DEFAULT '[]',      -- JSON array of steam_groups IDs
+      target_url        TEXT,
       is_active         INTEGER NOT NULL DEFAULT 1,
       created_at        TEXT NOT NULL
     );
@@ -151,19 +154,20 @@ module.exports = function createSchema(db) {
   // ════════════════════════════════════════════════════════════════════════
   db.exec(`
     CREATE TABLE IF NOT EXISTS jobs (
-      id            TEXT PRIMARY KEY,
-      user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      campaign_id   TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
-      profile_id    TEXT REFERENCES profiles(id)  ON DELETE SET NULL,
-      scheduled_at  TEXT NOT NULL,
-      status        TEXT NOT NULL DEFAULT 'pending',
+      id               TEXT PRIMARY KEY,
+      user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      campaign_id      TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+      profile_id       TEXT REFERENCES profiles(id)  ON DELETE SET NULL,
+      target_group_id  INTEGER,
+      scheduled_at     TEXT NOT NULL,
+      status           TEXT NOT NULL DEFAULT 'pending',
         -- 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
-      title         TEXT NOT NULL,
-      body          TEXT NOT NULL,
-      topic_url     TEXT,
-      error         TEXT,
-      created_at    TEXT NOT NULL,
-      executed_at   TEXT
+      title            TEXT NOT NULL,
+      body             TEXT NOT NULL,
+      topic_url        TEXT,
+      error            TEXT,
+      created_at       TEXT NOT NULL,
+      executed_at      TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_jobs_user_status  ON jobs(user_id, status);
     CREATE INDEX IF NOT EXISTS idx_jobs_scheduled    ON jobs(scheduled_at);
@@ -202,7 +206,7 @@ module.exports = function createSchema(db) {
       user_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       subscription_id  TEXT REFERENCES user_subscriptions(id),
       amount           REAL NOT NULL,
-      currency         TEXT NOT NULL DEFAULT 'USD',
+      currency         TEXT NOT NULL DEFAULT 'RUB',
       status           TEXT NOT NULL,
         -- 'pending' | 'completed' | 'failed' | 'refunded'
       plan_id          TEXT,
@@ -278,5 +282,23 @@ module.exports = function createSchema(db) {
     );
     CREATE INDEX IF NOT EXISTS idx_audit_user_id    ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_created_at ON audit_log(created_at);
+  `);
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  STEAM GROUPS (глобальные, предзаданный список)
+  // ════════════════════════════════════════════════════════════════════════
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS steam_groups (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug        TEXT NOT NULL UNIQUE,
+      name        TEXT NOT NULL,
+      url         TEXT NOT NULL,
+      avatar_url  TEXT,
+      members     INTEGER NOT NULL DEFAULT 0,
+      is_active   INTEGER NOT NULL DEFAULT 1,
+      sort_order  INTEGER NOT NULL DEFAULT 0,
+      created_at  TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_steam_groups_active ON steam_groups(is_active);
   `);
 };

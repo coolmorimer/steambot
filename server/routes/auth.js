@@ -9,6 +9,7 @@ const db        = require('../db');
 const { requireAuth, requireActiveUser } = require('../middleware/auth');
 const { validate, schemas }              = require('../middleware/validate');
 const EmailService = require('../services/EmailService');
+const SbpPaymentService = require('../services/SbpPaymentService');
 const logger       = require('../logger');
 
 const router = express.Router();
@@ -141,21 +142,49 @@ router.get('/me', requireAuth, requireActiveUser, async (req, res, next) => {
   try {
     const user = req.dbUser;
     const sub  = await db.getActiveSubscription(req.userId);
+
+    let daysLeft = null;
+    if (sub?.expires_at) {
+      daysLeft = Math.max(0, Math.ceil((new Date(sub.expires_at) - Date.now()) / 86400000));
+    } else if (sub?.status === 'trial' && sub?.trial_ends_at) {
+      daysLeft = Math.max(0, Math.ceil((new Date(sub.trial_ends_at) - Date.now()) / 86400000));
+    }
+
+    const priceRub = sub ? SbpPaymentService.getPriceRub(sub.plan_id, sub.billing_period || 'monthly') : 0;
+
+    // Последний платёж
+    const transactions = await db.getTransactions(req.userId, 3);
+    const lastPayment = transactions.find(t => t.status === 'completed') || null;
+
     res.json({
       id: user.id, email: user.email, name: user.name, role: user.role,
       email_verified: user.email_verified, created_at: user.created_at,
+      steam_id: user.steam_id, steam_username: user.steam_username,
+      steam_avatar: user.steam_avatar, google_id: user.google_id,
+      trade_url: user.trade_url, balance: user.balance || 0,
       subscription: sub ? {
         plan_id: sub.plan_id, plan_name: sub.plan_name, status: sub.status,
         expires_at: sub.expires_at, trial_ends_at: sub.trial_ends_at,
+        days_left: daysLeft,
+        price_rub: priceRub,
+        billing_period: sub.billing_period,
+        started_at: sub.started_at,
         limits: {
           max_steam_accounts: sub.max_steam_accounts, max_campaigns: sub.max_campaigns,
           max_jobs_per_day: sub.max_jobs_per_day, max_telegram_bots: sub.max_telegram_bots,
+          max_steam_groups: sub.max_steam_groups ?? 0,
         },
         features: {
           has_mini_app: !!sub.has_mini_app, has_ai_templates: !!sub.has_ai_templates,
           has_analytics: !!sub.has_analytics, has_priority_support: !!sub.has_priority_support,
           has_api_access: !!sub.has_api_access,
         },
+        last_payment: lastPayment ? {
+          amount: lastPayment.amount,
+          currency: lastPayment.currency,
+          date: lastPayment.created_at,
+          method: lastPayment.payment_method,
+        } : null,
       } : null,
     });
   } catch (e) { next(e); }

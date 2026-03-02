@@ -5,12 +5,22 @@ const db        = require('../db');
 const config    = require('../config');
 const { requireAuth, requireActiveUser } = require('../middleware/auth');
 const SubscriptionService = require('../services/SubscriptionService');
+const SbpPaymentService   = require('../services/SbpPaymentService');
 
 const router = express.Router();
 const ALL    = [requireAuth, requireActiveUser];
 
 router.get('/plans', async (req, res, next) => {
-  try { res.json(await db.getPlans(true)); }
+  try {
+    const plans = await db.getPlans(true);
+    // Добавляем рублёвые цены к каждому плану
+    const enriched = plans.map(p => ({
+      ...p,
+      price_monthly_rub: SbpPaymentService.getPriceRub(p.id, 'monthly'),
+      price_yearly_rub:  SbpPaymentService.getPriceRub(p.id, 'yearly'),
+    }));
+    res.json(enriched);
+  }
   catch (e) { next(e); }
 });
 
@@ -18,21 +28,46 @@ router.get('/current', ALL, async (req, res, next) => {
   try {
     const sub = await db.getActiveSubscription(req.userId);
     if (!sub) return res.json(null);
-    const plans = await db.getPlans(true);
+
+    // Последний успешный платёж
+    const transactions = await db.getTransactions(req.userId, 5);
+    const lastPayment = transactions.find(t => t.status === 'completed') || null;
+
+    // Оставшиеся дни
+    let daysLeft = null;
+    if (sub.expires_at) {
+      daysLeft = Math.max(0, Math.ceil((new Date(sub.expires_at) - Date.now()) / 86400000));
+    } else if (sub.status === 'trial' && sub.trial_ends_at) {
+      daysLeft = Math.max(0, Math.ceil((new Date(sub.trial_ends_at) - Date.now()) / 86400000));
+    }
+
+    // Рублёвая цена текущего плана
+    const priceRub = SbpPaymentService.getPriceRub(sub.plan_id, sub.billing_period || 'monthly');
+
     res.json({
       id: sub.id, plan_id: sub.plan_id, plan_name: sub.plan_name,
       status: sub.status, billing_period: sub.billing_period,
       started_at: sub.started_at, expires_at: sub.expires_at, trial_ends_at: sub.trial_ends_at,
+      days_left: daysLeft,
+      price_rub: priceRub,
       limits: {
         max_steam_accounts: sub.max_steam_accounts, max_campaigns: sub.max_campaigns,
         max_jobs_per_day: sub.max_jobs_per_day, max_telegram_bots: sub.max_telegram_bots,
+        max_steam_groups: sub.max_steam_groups ?? 0,
       },
       features: {
         has_mini_app: !!sub.has_mini_app, has_ai_templates: !!sub.has_ai_templates,
         has_analytics: !!sub.has_analytics, has_priority_support: !!sub.has_priority_support,
         has_api_access: !!sub.has_api_access,
       },
-      available_plans: plans,
+      last_payment: lastPayment ? {
+        amount:     lastPayment.amount,
+        currency:   lastPayment.currency,
+        date:       lastPayment.created_at,
+        method:     lastPayment.payment_method,
+        plan_id:    lastPayment.plan_id,
+        period:     lastPayment.billing_period,
+      } : null,
     });
   } catch (e) { next(e); }
 });
@@ -60,53 +95,33 @@ router.post('/upgrade', ALL, async (req, res, next) => {
     const isExpired = !currentSub || currentSub.status === 'expired' || currentSub.status === 'cancelled';
     const isTrialExpired = currentSub?.status === 'trial' && currentSub.trial_ends_at && new Date(currentSub.trial_ends_at) < new Date();
 
-    // После истечения trial пользователь может только купить (Stripe) или обратиться к админу
-    if (isExpired || isTrialExpired) {
-      if (!config.stripe.enabled) {
-        return res.status(403).json({
-          error: 'Пробный период истёк. Оплатите подписку или обратитесь к администратору.',
-          code: 'PAYMENT_REQUIRED',
-        });
-      }
-      // Stripe включён — перенаправляем на оплату
-      const session = await SubscriptionService.createCheckoutSession({
-        userId: req.userId, planId: plan_id, billingPeriod: billing_period,
-        successUrl: `${config.appUrl}/dashboard?upgraded=1`,
-        cancelUrl:  `${config.appUrl}/subscription`,
-      });
-      return res.json({ ok: true, checkout_url: session.url, session_id: session.id });
+    const priceRub = SbpPaymentService.getPriceRub(plan_id, billing_period);
+
+    // Бесплатный план — сразу переключаем
+    if (priceRub <= 0) {
+      await SubscriptionService.activatePlan(req.userId, plan_id, billing_period);
+      return res.json({ ok: true, message: 'Тариф активирован' });
     }
 
-    // Во время активного trial — смена плана только через оплату
-    if (currentSub?.status === 'trial') {
-      if (!config.stripe.enabled) {
-        return res.status(403).json({
-          error: 'Для смены тарифа необходимо оплатить подписку. Система оплаты находится в разработке.',
-          code: 'PAYMENT_REQUIRED',
-        });
-      }
-      const session = await SubscriptionService.createCheckoutSession({
-        userId: req.userId, planId: plan_id, billingPeriod: billing_period,
-        successUrl: `${config.appUrl}/dashboard?upgraded=1`,
-        cancelUrl:  `${config.appUrl}/subscription`,
+    // Платный план — создаём платёж через СБП
+    try {
+      const payment = await SbpPaymentService.createPayment({
+        userId:        req.userId,
+        planId:        plan_id,
+        billingPeriod: billing_period,
+        returnUrl:     `${config.appUrl}/subscription?payment=success`,
       });
-      return res.json({ ok: true, checkout_url: session.url, session_id: session.id });
-    }
-
-    // Активная подписка — смена только через оплату
-    if (!config.stripe.enabled) {
-      return res.status(403).json({
-        error: 'Для смены тарифа необходимо оплатить подписку. Система оплаты находится в разработке.',
-        code: 'PAYMENT_REQUIRED',
+      return res.json({
+        ok:               true,
+        payment_required: true,
+        payment:          payment,
+      });
+    } catch (payErr) {
+      return res.status(400).json({
+        error: payErr.message || 'Ошибка создания платежа',
+        code:  'PAYMENT_ERROR',
       });
     }
-
-    const session = await SubscriptionService.createCheckoutSession({
-      userId: req.userId, planId: plan_id, billingPeriod: billing_period,
-      successUrl: `${config.appUrl}/dashboard?upgraded=1`,
-      cancelUrl:  `${config.appUrl}/subscription`,
-    });
-    res.json({ ok: true, checkout_url: session.url, session_id: session.id });
   } catch (e) { next(e); }
 });
 

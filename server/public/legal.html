@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Реквизиты — Steam Poster Bot</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 720px;
+      width: 100%;
+    }
+    h1 {
+      font-size: 28px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #9ca3af;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2d3148;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    .card h2 {
+      font-size: 18px;
+      color: #fff;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2d3148;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #1f2235;
+    }
+    .row:last-child { border-bottom: none; }
+    .label {
+      color: #9ca3af;
+      font-size: 14px;
+      flex-shrink: 0;
+      margin-right: 16px;
+    }
+    .value {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: right;
+    }
+    .info {
+      background: #1e2a3a;
+      border: 1px solid #2a4a6a;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 8px;
+    }
+    .info p {
+      color: #93c5fd;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #818cf8;
+      text-decoration: none;
+      font-size: 14px;
+      margin-top: 16px;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: #a5b4fc; }
+    @media (max-width: 480px) {
+      .row { flex-direction: column; gap: 4px; }
+      .value { text-align: left; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Реквизиты</h1>
+    <p class="subtitle">Информация об индивидуальном предпринимателе</p>
+
+    <div class="card">
+      <h2>Данные ИП</h2>
+      <div class="row">
+        <span class="label">ИНН</span>
+        <span class="value">261813606308</span>
+      </div>
+      <div class="row">
+        <span class="label">ОГРНИП</span>
+        <span class="value">325265100103992</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Сервис</h2>
+      <div class="row">
+        <span class="label">Название</span>
+        <span class="value">Steam Poster Bot</span>
+      </div>
+      <div class="row">
+        <span class="label">Сайт</span>
+        <span class="value">communityrig.ru</span>
+      </div>
+      <div class="row">
+        <span class="label">Описание</span>
+        <span class="value">Автоматизация постинга в Steam Community</span>
+      </div>
+    </div>
+
+    <div class="info">
+      <p>
+        Оплата услуг осуществляется через защищённый платёжный шлюз.
+        Чеки формируются автоматически в соответствии с 54-ФЗ.
+      </p>
+    </div>
+
+    <a href="/" class="back-link">← Вернуться на главную</a>
+  </div>
+</body>
+</html>

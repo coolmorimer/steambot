@@ -193,6 +193,7 @@ router.get('/subscription', requirePermission('read'), async (req, res, next) =>
         max_steam_accounts: sub.max_steam_accounts,
         max_campaigns:      sub.max_campaigns,
         max_jobs_per_day:   sub.max_jobs_per_day,
+        max_steam_groups:   sub.max_steam_groups ?? 0,
       },
     });
   } catch (e) { next(e); }

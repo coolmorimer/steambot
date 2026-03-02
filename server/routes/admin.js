@@ -4,12 +4,64 @@ const express = require('express');
 const db      = require('../db');
 const config  = require('../config');
 const { requireAdmin } = require('../middleware/auth');
+const SbpPaymentService = require('../services/SbpPaymentService');
 
 const router = express.Router();
 
 router.get('/stats', requireAdmin, async (req, res, next) => {
   try { res.json(await db.getAdminStats()); }
   catch (e) { next(e); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PAYMENTS ADMIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/payments', requireAdmin, async (req, res, next) => {
+  try {
+    const limit  = Math.min(parseInt(req.query.limit  || '50'), 200);
+    const offset = parseInt(req.query.offset || '0');
+    const { status, method, search, date_from, date_to } = req.query;
+    const result = await db.getAdminTransactions({ limit, offset, status, method, search, dateFrom: date_from, dateTo: date_to });
+    res.json(result);
+  } catch (e) { next(e); }
+});
+
+router.get('/payments/stats', requireAdmin, async (req, res, next) => {
+  try { res.json(await db.getPaymentStats()); }
+  catch (e) { next(e); }
+});
+
+router.get('/payments/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const tx = await db.getTransactionById(req.params.id);
+    if (!tx) return res.status(404).json({ error: 'Транзакция не найдена' });
+    res.json(tx);
+  } catch (e) { next(e); }
+});
+
+router.patch('/payments/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const tx = await db.getTransactionById(req.params.id);
+    if (!tx) return res.status(404).json({ error: 'Транзакция не найдена' });
+
+    const { status } = req.body;
+    const allowed = ['completed', 'failed', 'refunded', 'pending'];
+    if (!allowed.includes(status)) return res.status(400).json({ error: 'Недопустимый статус' });
+
+    await db.updateTransaction(req.params.id, { status });
+    await db.auditLog(req.user.id, 'admin.payment.update', 'payment_transaction', req.params.id, {
+      old_status: tx.status, new_status: status,
+    });
+
+    // Если подтверждаем платёж — активируем подписку
+    if (status === 'completed' && tx.status === 'pending' && tx.plan_id && tx.user_id) {
+      const SubscriptionService = require('../services/SubscriptionService');
+      await SubscriptionService.activatePlan(tx.user_id, tx.plan_id, tx.billing_period || 'monthly');
+    }
+
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 router.get('/users', requireAdmin, async (req, res, next) => {
@@ -274,6 +326,56 @@ router.get('/audit', requireAdmin, async (req, res, next) => {
 
     const rows = await db.getAuditLog ? db.getAuditLog({ limit, offset }) : [];
     res.json({ logs: rows, limit, offset });
+  } catch (e) { next(e); }
+});
+
+/* ═══════ WITHDRAWAL REQUESTS ═══════ */
+router.get('/withdrawals', requireAdmin, async (req, res, next) => {
+  try {
+    const status = req.query.status || null;
+    const items = await db.getAllWithdrawalRequests(status);
+    res.json(items || []);
+  } catch (e) { next(e); }
+});
+
+router.patch('/withdrawals/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, admin_note } = req.body;
+    if (!['approved', 'rejected', 'completed'].includes(status)) {
+      return res.status(400).json({ error: 'Недопустимый статус' });
+    }
+
+    const wd = await db.getWithdrawalRequests ? null : null;
+    // Update withdrawal
+    const updates = { status };
+    if (admin_note) updates.admin_note = admin_note;
+    if (['approved', 'rejected', 'completed'].includes(status)) {
+      updates.processed_at = new Date().toISOString();
+    }
+
+    await db.updateWithdrawalRequest(id, updates);
+
+    // If rejected, refund the frozen amount to user balance
+    if (status === 'rejected') {
+      // Find the withdrawal to get amount and user_id
+      const rows = await db.getAllWithdrawalRequests();
+      const wr = rows.find(r => String(r.id) === String(id));
+      if (wr) {
+        await db.updateUserBalance(wr.user_id, wr.amount); // positive = refund
+        await db.createBalanceTransaction({
+          userId: wr.user_id,
+          type: 'refund',
+          amount: wr.amount,
+          balanceAfter: (await db.getUserBalance(wr.user_id)) || 0,
+          description: `Возврат средств: заявка на вывод #${id} отклонена`,
+          referenceType: 'withdrawal',
+          referenceId: String(id),
+        });
+      }
+    }
+
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 

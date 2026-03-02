@@ -12,7 +12,7 @@ const config = require('../config');
 
 // ── Ручная активация плана (без Stripe) ───────────────────────────────────────
 
-async function activatePlan(userId, planId, billingPeriod = 'monthly') {
+async function activatePlan(userId, planId, billingPeriod = 'monthly', { skipTransaction = false } = {}) {
   const plan = await db.getPlan(planId);
   if (!plan || !plan.is_active) throw new Error('План не найден');
 
@@ -38,16 +38,20 @@ async function activatePlan(userId, planId, billingPeriod = 'monthly') {
   });
   await db.updateSubscription(subId, { expires_at: expiresAt });
 
-  await db.createTransaction({
-    userId,
-    subscriptionId: subId,
-    amount:         billingPeriod === 'yearly' ? plan.price_yearly : plan.price_monthly,
-    currency:       'USD',
-    status:         'completed',
-    planId,
-    billingPeriod,
-    paymentMethod:  'manual',
-  });
+  if (!skipTransaction) {
+    const SbpPaymentService = require('./SbpPaymentService');
+    const amountRub = SbpPaymentService.getPriceRub(planId, billingPeriod) || (billingPeriod === 'yearly' ? plan.price_yearly : plan.price_monthly);
+    await db.createTransaction({
+      userId,
+      subscriptionId: subId,
+      amount:         amountRub,
+      currency:       'RUB',
+      status:         'completed',
+      planId,
+      billingPeriod,
+      paymentMethod:  'manual',
+    });
+  }
 
   return { subscription_id: subId, expires_at: expiresAt };
 }

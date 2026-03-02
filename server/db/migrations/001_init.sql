@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS payment_transactions (
   user_id          TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   subscription_id  TEXT,
   amount           NUMERIC(10,2) NOT NULL DEFAULT 0,
-  currency         TEXT        NOT NULL DEFAULT 'USD',
+  currency         TEXT        NOT NULL DEFAULT 'RUB',
   status           TEXT        NOT NULL,
   plan_id          TEXT,
   billing_period   TEXT,

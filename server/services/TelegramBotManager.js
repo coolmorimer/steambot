@@ -12,6 +12,7 @@
  */
 
 const TelegramBot = require('node-telegram-bot-api');
+const db = require('../db');
 
 // userId -> { bot, config, chatIds }
 const _bots        = new Map();
@@ -31,7 +32,53 @@ function isAuthorized(chatId, chatIds) {
 
 async function sendToAll(bot, chatIds, text, opts = {}) {
   for (const cid of chatIds) {
-    try { await bot.sendMessage(cid, text, opts); } catch (_) {}
+    try {
+      await bot.sendMessage(cid, text, opts);
+    } catch (e) {
+      console.error(`[TG Bot] sendToAll error chatId=${cid}:`, e.message);
+    }
+  }
+}
+
+/**
+ * Получить бот-инстанс и chatIds для userId.
+ * Если бот уже в памяти — возвращает из Map.
+ * Иначе создаёт одноразовый инстанс из БД-конфига (без polling).
+ */
+async function _getOrCreateBotForNotify(userId) {
+  const entry = _bots.get(userId);
+  if (entry) return entry;
+
+  // Бота нет в памяти (409 conflict, другая реплика, перезапуск) — создаём одноразовый
+  try {
+    const botRecord = await db.getTelegramBot(userId);
+    if (!botRecord || !botRecord.bot_token || !botRecord.is_active) return null;
+
+    const chatIds = typeof botRecord.authorized_chat_ids === 'string'
+      ? JSON.parse(botRecord.authorized_chat_ids || '[]')
+      : (botRecord.authorized_chat_ids || []);
+    if (!chatIds.length) return null;
+
+    // Создаём бот БЕЗ polling — только для отправки сообщений
+    const tempBot = new TelegramBot(botRecord.bot_token, { polling: false });
+    console.log(`[TG Bot ${userId}] Создан одноразовый инстанс для уведомления`);
+
+    return {
+      bot: tempBot,
+      chatIds: chatIds.map(String),
+      config: {
+        notify: {
+          errors:   !!botRecord.notify_errors,
+          success:  !!botRecord.notify_success,
+          expired:  !!botRecord.notify_expired,
+          botState: !!botRecord.notify_bot_state,
+        },
+      },
+      _temp: true, // пометка что временный
+    };
+  } catch (e) {
+    console.error(`[TG Bot ${userId}] Не удалось создать одноразовый инстанс:`, e.message);
+    return null;
   }
 }
 
@@ -181,12 +228,34 @@ async function restart(userId, config) {
   await start(userId, config);
 }
 
-function isRunning(userId) { return _bots.has(userId); }
+function isRunning(userId) {
+  if (_bots.has(userId)) return true;
+  // Fallback: проверяем БД — если is_active=true, значит бот должен работать
+  // (возможно на другой реплике или ещё не восстановился)
+  try {
+    // Synchronous check isn't possible, so we return false here
+    // and fix the route to use async version
+    return false;
+  } catch { return false; }
+}
+
+/**
+ * Async-версия проверки статуса бота — с fallback в БД.
+ * Если бот не в памяти, но is_active=true в БД — значит он работает
+ * на другой реплике или ещё восстанавливается.
+ */
+async function isRunningAsync(userId) {
+  if (_bots.has(userId)) return true;
+  try {
+    const bot = await db.getTelegramBot(userId);
+    return !!(bot && bot.is_active);
+  } catch { return false; }
+}
 
 // ── Уведомления ──────────────────────────────────────────────────────────────
 
 async function sendNotification(userId, text, options = {}) {
-  const entry = _bots.get(userId);
+  const entry = await _getOrCreateBotForNotify(userId);
   if (!entry) return;
   await sendToAll(entry.bot, entry.chatIds, text, options);
 }
@@ -196,7 +265,7 @@ async function sendNotification(userId, text, options = {}) {
  * Вызывается из SteamBotManager.
  */
 async function notifyJobResult(userId, { success, title, profileName, topicUrl, error } = {}) {
-  const entry = _bots.get(userId);
+  const entry = await _getOrCreateBotForNotify(userId);
   if (!entry) return;
   const { notify } = entry.config;
   if (success  && !notify?.success) return;
@@ -213,7 +282,7 @@ async function notifyJobResult(userId, { success, title, profileName, topicUrl, 
 }
 
 async function notifyExpiredAccount(userId, profileName) {
-  const entry = _bots.get(userId);
+  const entry = await _getOrCreateBotForNotify(userId);
   if (!entry || !entry.config.notify?.expired) return;
   await sendToAll(entry.bot, entry.chatIds,
     `⚠️ <b>Аккаунт Steam вышел из системы:</b> ${escHtml(profileName)}\nПереавторизуйтесь в личном кабинете.`,
@@ -376,7 +445,7 @@ async function handleCallback(bot, data, chatId, config) {
 }
 
 module.exports = {
-  start, stop, restart, isRunning,
+  start, stop, restart, isRunning, isRunningAsync,
   sendNotification, notifyJobResult, notifyExpiredAccount,
   stopAll,
 };

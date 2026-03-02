@@ -179,50 +179,77 @@ async function generatePendingJobs(userId) {
       profiles.some(p => p.id === pid)
     );
 
+    // Определяем цели постинга: группы (если есть) + форум (target_url) + дефолт
+    const groupIds = campaign.group_ids || [];
+    const hasGroups = groupIds.length > 0;
+    const hasTargetUrl = !!campaign.target_url;
+
+    // Создаём список целей: [{groupId: N} | {groupId: null}]
+    const targets = [];
+    if (hasGroups) {
+      for (const gid of groupIds) {
+        targets.push({ groupId: gid });
+      }
+    }
+    if (!hasGroups || hasTargetUrl) {
+      // Если групп нет — постим по target_url/дефолту; если есть target_url — тоже добавляем
+      if (!hasGroups) targets.push({ groupId: null });
+      else if (hasTargetUrl) targets.push({ groupId: null });
+    }
+
     for (const profileId of profileIds) {
       const profileObj = profiles.find(p => p.id === profileId);
       if (!profileObj) continue;
 
-      // Получить последний job для этой кампании + профиля
-      const lastJob = await db.getLastJobForCampaignProfile(userId, campaign.id, profileId);
+      for (const target of targets) {
+        const tgId = target.groupId;
 
-      const nextTime = calcNextScheduledAt(campaign, lastJob);
-      if (!nextTime) {
-        console.log(`[SteamBot ${userId}] Кампания "${campaign.name}" / профиль ${profileId}: следующее время не вычислено — пропуск.`);
-        continue;
+        // Получить последний job для этой кампании + профиля + группы
+        const lastJob = await db.getLastJobForCampaignProfile(userId, campaign.id, profileId, tgId);
+
+        const nextTime = calcNextScheduledAt(campaign, lastJob);
+        if (!nextTime) {
+          continue;
+        }
+
+        // Не дублировать уже существующий pending job
+        const existing = await db.getPendingJobForCampaignProfile(userId, campaign.id, profileId, tgId);
+        if (existing) {
+          continue;
+        }
+
+        const title = renderTemplate(campaign.title_template, {
+          date:    fmtDate(new Date()),
+          time:    fmtTime(new Date()),
+          num:     lastJob ? (lastJob.id ? 1 : 1) : 1,
+          profile: profileObj.name,
+          day:     fmtDay(new Date()),
+        });
+
+        const body = renderTemplate(campaign.body_template, {
+          date:    fmtDate(new Date()),
+          time:    fmtTime(new Date()),
+          num:     1,
+          profile: profileObj.name,
+          day:     fmtDay(new Date()),
+        });
+
+        // Смещаем время для разных групп, чтобы не постить одновременно
+        const staggerMs = tgId ? targets.indexOf(target) * 2 * 60 * 1000 : 0; // +2мин на группу
+        const scheduledAt = new Date(nextTime.getTime() + staggerMs);
+
+        const jobId = await db.addJob(userId, {
+          campaignId:    campaign.id,
+          profileId,
+          scheduledAt:   scheduledAt.toISOString(),
+          title,
+          body,
+          targetGroupId: tgId,
+        });
+        if (jobId) {
+          console.log(`[SteamBot ${userId}] Создан джоб ${jobId}: кампания "${campaign.name}", профиль ${profileId}${tgId ? `, группа #${tgId}` : ''}, время ${scheduledAt.toISOString()}`);
+        }
       }
-
-      // Не дублировать уже существующий pending job
-      const existing = await db.getPendingJobForCampaignProfile(userId, campaign.id, profileId);
-      if (existing) {
-        console.log(`[SteamBot ${userId}] Кампания "${campaign.name}" / профиль ${profileId}: pending-джоб уже есть — пропуск.`);
-        continue;
-      }
-
-      const title = renderTemplate(campaign.title_template, {
-        date:    fmtDate(new Date()),
-        time:    fmtTime(new Date()),
-        num:     lastJob ? (lastJob.id ? 1 : 1) : 1,
-        profile: profileObj.name,
-        day:     fmtDay(new Date()),
-      });
-
-      const body = renderTemplate(campaign.body_template, {
-        date:    fmtDate(new Date()),
-        time:    fmtTime(new Date()),
-        num:     1,
-        profile: profileObj.name,
-        day:     fmtDay(new Date()),
-      });
-
-      const jobId = await db.addJob(userId, {
-        campaignId:  campaign.id,
-        profileId,
-        scheduledAt: nextTime.toISOString(),
-        title,
-        body,
-      });
-      console.log(`[SteamBot ${userId}] Создан джоб ${jobId}: кампания "${campaign.name}", профиль ${profileId}, время ${nextTime.toISOString()}`);
     }
   }
 }
@@ -293,8 +320,15 @@ async function runJob(userId, job, poster, state) {
   const posterConfig = config.playwright;
 
   // Загрузить target_url из кампании (приоритет над profile.target_url)
+  // Если job имеет target_group_id — используем URL группы
   let campaignTargetUrl = null;
-  if (job.campaign_id) {
+  if (job.target_group_id) {
+    try {
+      const group = await db.getSteamGroup(job.target_group_id);
+      if (group?.url) campaignTargetUrl = group.url;
+    } catch (_) { /* игнорируем */ }
+  }
+  if (!campaignTargetUrl && job.campaign_id) {
     try {
       const campaign = await db.getCampaign(job.campaign_id, userId);
       if (campaign?.target_url) campaignTargetUrl = campaign.target_url;
@@ -319,12 +353,12 @@ async function runJob(userId, job, poster, state) {
     state.lastActivity = new Date().toISOString();
 
     // Уведомить TG
-    TelegramBotManager.notifyJobResult(userId, {
+    await TelegramBotManager.notifyJobResult(userId, {
       success:     true,
       title:       jobTitle,
       profileName: profile.name,
       topicUrl,
-    });
+    }).catch(e => console.error(`[SteamBot ${userId}] TG notify error:`, e.message));
 
   } catch (err) {
     console.error(`[SteamBot ${userId}] Job ${job.id} failed:`, err.message);
@@ -335,17 +369,17 @@ async function runJob(userId, job, poster, state) {
         err.message?.toLowerCase().includes('login')) {
       await db.updateProfile(profile.id, userId, { is_active: 0 });
       await db.updateJobStatus(job.id, userId, 'failed', { error: 'Куки истекли' });
-      TelegramBotManager.notifyExpiredAccount(userId, profile.name);
+      await TelegramBotManager.notifyExpiredAccount(userId, profile.name).catch(e => console.error(`[SteamBot ${userId}] TG notify error:`, e.message));
       return;
     }
 
     await db.updateJobStatus(job.id, userId, 'failed', { error: err.message });
-    TelegramBotManager.notifyJobResult(userId, {
+    await TelegramBotManager.notifyJobResult(userId, {
       success:     false,
       title:       jobTitle,
       profileName: profile.name,
       error:       err.message,
-    });
+    }).catch(e => console.error(`[SteamBot ${userId}] TG notify error:`, e.message));
   }
 }
 

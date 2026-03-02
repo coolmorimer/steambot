@@ -51,6 +51,31 @@ module.exports = {
     enabled:        !!process.env.STRIPE_SECRET_KEY,
   },
 
+  // ── Sberbank Acquiring ───────────────────────────────────────────────────
+  sberbank: {
+    token:   process.env.SBERBANK_TOKEN   || '',
+    apiUrl:  process.env.SBERBANK_API_URL || 'https://securepayments.sberbank.ru/payment/rest',
+    enabled: !!process.env.SBERBANK_TOKEN,
+  },
+
+  // ── Evotor (онлайн-касса) ──────────────────────────────────────────────
+  evotor: {
+    accessToken:  process.env.EVOTOR_ACCESS_TOKEN  || '',
+    refreshToken: process.env.EVOTOR_REFRESH_TOKEN || '',
+    enabled:      !!process.env.EVOTOR_ACCESS_TOKEN,
+  },
+
+  steam: {
+    apiKey:  process.env.STEAM_API_KEY || '',
+    enabled: !!process.env.STEAM_API_KEY,
+  },
+
+  google: {
+    clientId:     process.env.GOOGLE_CLIENT_ID     || '',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    enabled:      !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET,
+  },
+
   // ── Email (optional) ─────────────────────────────────────────────────────
   email: {
     smtp: {

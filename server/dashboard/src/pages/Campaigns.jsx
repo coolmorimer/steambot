@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Play, Pause, RefreshCw, ChevronDown, ChevronUp, Pencil, Clock, X, Sparkles, Loader2, CheckCircle2, Globe, Search, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Play, Pause, RefreshCw, ChevronDown, ChevronUp, Pencil, Clock, X, Sparkles, Loader2, CheckCircle2, Globe, Search, ExternalLink, Users, Lock } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { EmptyState } from './Accounts';
@@ -243,6 +243,181 @@ function ForumPicker({ value, onChange }) {
         <Globe className="w-3.5 h-3.5" />
         Указать URL вручную
       </button>
+    </div>
+  );
+}
+
+// ─── GroupPicker — выбор Steam-групп для постинга ──────────────────────────────
+function GroupPicker({ value, onChange, maxGroups }) {
+  const [groups, setGroups]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch]   = useState('');
+  const [open, setOpen]       = useState(false);
+
+  useEffect(() => {
+    api.get('/steam-groups')
+      .then(({ data }) => setGroups(data.groups || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const selected = value || [];
+  const filtered = search
+    ? groups.filter(g =>
+        g.name.toLowerCase().includes(search.toLowerCase()) ||
+        g.slug.toLowerCase().includes(search.toLowerCase()))
+    : groups;
+
+  const toggle = (id) => {
+    if (selected.includes(id)) {
+      onChange(selected.filter(x => x !== id));
+    } else {
+      if (maxGroups !== -1 && selected.length >= maxGroups) {
+        return toast.error(`Максимум ${maxGroups} групп на вашем плане`);
+      }
+      onChange([...selected, id]);
+    }
+  };
+
+  const selectAll = () => {
+    const available = maxGroups === -1 ? groups : groups.slice(0, maxGroups);
+    onChange(available.map(g => g.id));
+  };
+
+  const clearAll = () => onChange([]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+        <Loader2 className="w-4 h-4 animate-spin" /> Загрузка групп...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Шапка */}
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between p-3 rounded-xl bg-gray-800/60 border border-gray-700/50 hover:border-brand-600/40 transition-all">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-indigo-600/20 border border-indigo-600/30 flex items-center justify-center">
+            <Users className="w-4.5 h-4.5 text-indigo-400" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-white">
+              Steam-группы
+              {selected.length > 0 && (
+                <span className="text-indigo-400 ml-1.5">
+                  {selected.length} / {maxGroups === -1 ? groups.length : maxGroups}
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-gray-500">
+              {selected.length === 0
+                ? 'Выберите группы для публикации'
+                : `Выбрано ${selected.length} групп`}
+            </p>
+          </div>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+      </button>
+
+      {open && (
+        <div className="rounded-xl border border-gray-700/50 bg-gray-900/60 overflow-hidden">
+          {/* Поиск + кнопки */}
+          <div className="p-3 border-b border-gray-800 space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                className="input pl-9 text-sm"
+                placeholder="Поиск группы..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={selectAll}
+                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                Выбрать все ({maxGroups === -1 ? groups.length : Math.min(maxGroups, groups.length)})
+              </button>
+              <span className="text-gray-700">|</span>
+              <button type="button" onClick={clearAll}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+                Сбросить
+              </button>
+            </div>
+          </div>
+
+          {/* Сетка групп */}
+          <div className="p-3 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {filtered.map((g, idx) => {
+                const isSelected = selected.includes(g.id);
+                const isLocked = !isSelected && maxGroups !== -1 && selected.length >= maxGroups;
+                return (
+                  <button key={g.id} type="button" onClick={() => toggle(g.id)}
+                    disabled={isLocked}
+                    className={`text-left px-2.5 py-2 rounded-lg border text-xs transition-all ${
+                      isSelected
+                        ? 'bg-indigo-600/20 border-indigo-600/50 text-indigo-300'
+                        : isLocked
+                        ? 'bg-gray-800/30 border-gray-800 text-gray-600 cursor-not-allowed'
+                        : 'bg-gray-800/40 border-gray-700/50 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                    }`}>
+                    <div className="flex items-center gap-1.5">
+                      {isLocked && <Lock className="w-3 h-3 text-gray-600 shrink-0" />}
+                      <span className="truncate font-medium">{g.name}</span>
+                    </div>
+                    <div className="text-[10px] text-gray-600 truncate mt-0.5">{g.slug}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Лимит */}
+          {maxGroups !== -1 && (
+            <div className="px-3 pb-2.5 pt-1 border-t border-gray-800">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {selected.length} / {maxGroups} групп
+                </span>
+                <div className="flex-1 mx-3 h-1.5 rounded-full bg-gray-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-indigo-500 transition-all"
+                    style={{ width: `${Math.min(100, (selected.length / maxGroups) * 100)}%` }}
+                  />
+                </div>
+                {selected.length >= maxGroups && (
+                  <span className="text-[10px] text-amber-500">Лимит</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Выбранные группы (превью) */}
+      {!open && selected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selected.slice(0, 8).map(id => {
+            const g = groups.find(gr => gr.id === id);
+            if (!g) return null;
+            return (
+              <span key={id}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-900/30 border border-indigo-800/40 text-indigo-400 text-[11px]">
+                {g.name}
+                <button type="button" onClick={() => toggle(id)} className="hover:text-red-400 ml-0.5">
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            );
+          })}
+          {selected.length > 8 && (
+            <span className="text-[11px] text-gray-500 px-2 py-0.5">+{selected.length - 8} ещё</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -672,6 +847,12 @@ function CampaignCard({ campaign: c, onDelete, onToggle, onEdit }) {
             <span className={c.is_active ? 'badge-green' : 'badge-gray'}>
               {c.is_active ? 'Активна' : 'Пауза'}
             </span>
+            {c.group_ids && c.group_ids.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-900/30 border border-indigo-800/30 text-indigo-400 text-[10px]">
+                <Users className="w-2.5 h-2.5" />
+                {c.group_ids.length}
+              </span>
+            )}
           </div>
           <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{c.title_template}</p>
         </div>
@@ -716,6 +897,18 @@ function CampaignCard({ campaign: c, onDelete, onToggle, onEdit }) {
               </a>
             </div>
           )}
+          {c.group_ids && c.group_ids.length > 0 && (
+            <div className="col-span-2">
+              <p className="text-gray-600 mb-1">Steam-группы ({c.group_ids.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {c.group_ids.map(gid => (
+                  <span key={gid} className="px-1.5 py-0.5 rounded bg-indigo-900/30 border border-indigo-800/40 text-indigo-400 text-[10px]">
+                    #{gid}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {c.body_template && (
             <div className="col-span-2">
               <p className="text-gray-600 mb-1">Тело публикации</p>
@@ -739,6 +932,7 @@ function parseTimes(raw) {
 // ─── Форма создания / редактирования ──────────────────────────────────────────
 function CampaignForm({ initial, profiles, onSaved, onClose }) {
   const isEdit = !!initial?.id;
+  const { sub } = useAuth();
 
   const [form, setForm] = useState({
     name:            initial?.name            ?? '',
@@ -749,6 +943,7 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
     window_end:      initial?.window_end      ?? '',
     profile_ids:     initial?.profile_ids     ?? [],
     target_url:      initial?.target_url      ?? '',
+    group_ids:       initial?.group_ids       ?? [],
   });
   const [saving, setSaving]   = useState(false);
   const titleRef              = useRef(null);
@@ -781,6 +976,7 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
         window_end:     form.window_end   || null,
         profile_ids:    form.profile_ids,
         target_url:     form.target_url || null,
+        group_ids:      form.group_ids,
       };
 
       let saved;
@@ -826,6 +1022,25 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
           {!form.target_url && (
             <p className="text-xs text-gray-500 mt-1.5">
               Если не выбрано — будет использоваться раздел из настроек аккаунта (по умолчанию CS2 Trading)
+            </p>
+          )}
+        </div>
+
+        {/* ── Steam-группы ── */}
+        <div>
+          <label className="label flex items-center gap-2">
+            <Users className="w-4 h-4 text-indigo-400" />
+            Steam-группы
+            <span className="text-gray-500 font-normal ml-1">(опционально)</span>
+          </label>
+          <GroupPicker
+            value={form.group_ids}
+            onChange={ids => setForm(p => ({ ...p, group_ids: ids }))}
+            maxGroups={sub?.limits?.max_steam_groups ?? 0}
+          />
+          {form.group_ids.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1.5">
+              Бот будет создавать темы в выбранных группах. Публикации в группы и форум работают параллельно.
             </p>
           )}
         </div>

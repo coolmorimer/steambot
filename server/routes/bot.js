@@ -48,12 +48,17 @@ router.post('/miniapp/auth', async (req, res) => {
     try { tgUser = JSON.parse(userField); } catch { return res.status(401).json({ error: 'Некорректные данные' }); }
 
     const tgId = String(tgUser.id);
-    const botRecord = await db.getTelegramBotByAuthorizedChatId(tgId);
-    if (!botRecord) return res.status(401).json({ error: 'Telegram ID не авторизован' });
+    // Один chatId может быть в нескольких ботах — проверяем подпись каждого
+    const candidates = await db.getAllTelegramBotsByAuthorizedChatId(tgId);
+    if (!candidates.length) return res.status(401).json({ error: 'Telegram ID не авторизован' });
 
-    const secretKey    = crypto.createHmac('sha256', 'WebAppData').update(botRecord.bot_token).digest();
-    const expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckStr).digest('hex');
-    if (expectedHash !== hash) return res.status(401).json({ error: 'Подпись неверна' });
+    let botRecord = null;
+    for (const candidate of candidates) {
+      const secretKey    = crypto.createHmac('sha256', 'WebAppData').update(candidate.bot_token).digest();
+      const expectedHash = crypto.createHmac('sha256', secretKey).update(dataCheckStr).digest('hex');
+      if (expectedHash === hash) { botRecord = candidate; break; }
+    }
+    if (!botRecord) return res.status(401).json({ error: 'Подпись неверна' });
 
     const user = await db.getUserById(botRecord.user_id);
     if (!user || !user.is_active) return res.status(403).json({ error: 'Аккаунт недоступен' });

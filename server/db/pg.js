@@ -67,15 +67,16 @@ async function upsertPlan(plan) {
   await query(`
     INSERT INTO subscription_plans
       (id,name,description,price_monthly,price_yearly,
-       max_steam_accounts,max_campaigns,max_jobs_per_day,max_telegram_bots,
+       max_steam_accounts,max_campaigns,max_jobs_per_day,max_telegram_bots,max_steam_groups,
        has_mini_app,has_ai_templates,has_analytics,has_priority_support,has_api_access,
        features,stripe_monthly_price_id,stripe_yearly_price_id,is_active,sort_order,created_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
     ON CONFLICT(id) DO UPDATE SET
       name=EXCLUDED.name,description=EXCLUDED.description,
       price_monthly=EXCLUDED.price_monthly,price_yearly=EXCLUDED.price_yearly,
       max_steam_accounts=EXCLUDED.max_steam_accounts,max_campaigns=EXCLUDED.max_campaigns,
       max_jobs_per_day=EXCLUDED.max_jobs_per_day,max_telegram_bots=EXCLUDED.max_telegram_bots,
+      max_steam_groups=EXCLUDED.max_steam_groups,
       has_mini_app=EXCLUDED.has_mini_app,has_ai_templates=EXCLUDED.has_ai_templates,
       has_analytics=EXCLUDED.has_analytics,has_priority_support=EXCLUDED.has_priority_support,
       has_api_access=EXCLUDED.has_api_access,features=EXCLUDED.features,
@@ -87,6 +88,7 @@ async function upsertPlan(plan) {
     plan.price_monthly ?? 0, plan.price_yearly ?? 0,
     plan.max_steam_accounts ?? 1, plan.max_campaigns ?? 1,
     plan.max_jobs_per_day ?? 10, plan.max_telegram_bots ?? 0,
+    plan.max_steam_groups ?? 0,
     !!plan.has_mini_app, !!plan.has_ai_templates,
     !!plan.has_analytics, !!plan.has_priority_support, !!plan.has_api_access,
     JSON.stringify(plan.features || []),
@@ -108,13 +110,25 @@ function parsePlan(row) {
 //  USERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function createUser({ email, passwordHash, name, role = 'user' }) {
+async function createUser({ email, passwordHash, name, role = 'user', steamId, steamUsername, steamAvatar, googleId, tradeUrl }) {
   const id = uuidv4();
   await query(`
-    INSERT INTO users (id, email, password_hash, name, role, created_at, updated_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7)
-  `, [id, email.toLowerCase().trim(), passwordHash, name || '', role, now(), now()]);
+    INSERT INTO users (id, email, password_hash, name, role, steam_id, steam_username, steam_avatar, google_id, trade_url, created_at, updated_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+  `, [id, (email || '').toLowerCase().trim(), passwordHash, name || '', role,
+    steamId || null, steamUsername || '', steamAvatar || '', googleId || null, tradeUrl || '',
+    now(), now()]);
   return id;
+}
+
+async function getUserBySteamId(steamId) {
+  const row = await getOne('SELECT * FROM users WHERE steam_id = $1', [steamId]);
+  return row ? parseUser(row) : null;
+}
+
+async function getUserByGoogleId(googleId) {
+  const row = await getOne('SELECT * FROM users WHERE google_id = $1', [googleId]);
+  return row ? parseUser(row) : null;
 }
 
 async function getUserById(id) {
@@ -142,7 +156,8 @@ async function countUsers() {
 }
 
 async function updateUser(id, fields) {
-  const allowed = ['name', 'email', 'role', 'is_active', 'email_verified', 'password_hash'];
+  const allowed = ['name', 'email', 'role', 'is_active', 'email_verified', 'password_hash',
+    'steam_id', 'steam_username', 'steam_avatar', 'google_id', 'trade_url', 'balance'];
   const updates = [], values = [];
   let i = 1;
   for (const [k, v] of Object.entries(fields)) {
@@ -185,7 +200,8 @@ async function createSubscription({ userId, planId, billingPeriod = 'monthly', s
 async function getActiveSubscription(userId) {
   return getOne(`
     SELECT s.*, p.max_steam_accounts, p.max_campaigns, p.max_jobs_per_day,
-           p.max_telegram_bots, p.has_mini_app, p.has_ai_templates,
+           p.max_telegram_bots, p.max_steam_groups,
+           p.has_mini_app, p.has_ai_templates,
            p.has_analytics, p.has_priority_support, p.has_api_access,
            p.name as plan_name, p.features
     FROM user_subscriptions s
@@ -239,15 +255,31 @@ async function getTelegramBots(userId) {
 
 async function getTelegramBotByAuthorizedChatId(chatId) {
   const bots = await getAll('SELECT * FROM user_telegram_bots WHERE is_active = TRUE');
+  const cid = String(chatId);
   for (const bot of bots) {
     try {
       const ids = typeof bot.authorized_chat_ids === 'string'
         ? JSON.parse(bot.authorized_chat_ids)
         : (bot.authorized_chat_ids || []);
-      if (!ids.length || ids.includes(chatId) || ids.includes(String(chatId))) return bot;
+      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) return bot;
     } catch {}
   }
   return null;
+}
+
+async function getAllTelegramBotsByAuthorizedChatId(chatId) {
+  const bots = await getAll('SELECT * FROM user_telegram_bots WHERE is_active = TRUE');
+  const cid = String(chatId);
+  const result = [];
+  for (const bot of bots) {
+    try {
+      const ids = typeof bot.authorized_chat_ids === 'string'
+        ? JSON.parse(bot.authorized_chat_ids)
+        : (bot.authorized_chat_ids || []);
+      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) result.push(bot);
+    } catch {}
+  }
+  return result;
 }
 
 async function upsertTelegramBot(userId, data) {
@@ -366,19 +398,20 @@ async function countProfiles(userId) {
 
 async function addCampaign(userId, { name, titleTemplate, bodyTemplate, scheduleMinutes,
                                      scheduleTimes, windowStart, windowEnd, profileIds,
-                                     targetUrl }) {
+                                     targetUrl, groupIds }) {
   const id   = uuidv4();
   const mins = (scheduleTimes && scheduleTimes.length > 0) ? 0 : (scheduleMinutes || 60);
   await query(`
     INSERT INTO campaigns
       (id,user_id,name,title_template,body_template,schedule_minutes,
-       schedule_times,window_start,window_end,profile_ids,is_active,created_at,target_url)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,$11,$12)
+       schedule_times,window_start,window_end,profile_ids,is_active,created_at,target_url,group_ids)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE,$11,$12,$13)
   `, [id, userId, name, titleTemplate, bodyTemplate, mins,
     scheduleTimes ? JSON.stringify(scheduleTimes) : null,
     windowStart || '00:00', windowEnd || '23:59',
     JSON.stringify(profileIds || []), now(),
-    targetUrl || null]);
+    targetUrl || null,
+    JSON.stringify(groupIds || [])]);
   return id;
 }
 
@@ -394,13 +427,13 @@ async function getCampaign(id, userId) {
 
 async function updateCampaign(id, userId, fields) {
   const allowed = ['name','title_template','body_template','schedule_minutes',
-                   'schedule_times','window_start','window_end','profile_ids','is_active','target_url'];
+                   'schedule_times','window_start','window_end','profile_ids','is_active','target_url','group_ids'];
   const updates = [], values = [];
   let i = 1;
   for (const [k, v] of Object.entries(fields)) {
     if (allowed.includes(k)) {
       updates.push(`${k} = $${i++}`);
-      const serialized = ['schedule_times','profile_ids'].includes(k) && typeof v !== 'string'
+      const serialized = ['schedule_times','profile_ids','group_ids'].includes(k) && typeof v !== 'string'
         ? JSON.stringify(v) : v;
       values.push(serialized);
     }
@@ -423,6 +456,7 @@ function parseCampaign(row) {
   return {
     ...row,
     profile_ids:    typeof row.profile_ids    === 'string' ? JSON.parse(row.profile_ids)    : (row.profile_ids    || []),
+    group_ids:      typeof row.group_ids      === 'string' ? JSON.parse(row.group_ids)      : (row.group_ids      || []),
     schedule_times: typeof row.schedule_times === 'string' ? JSON.parse(row.schedule_times) : row.schedule_times,
   };
 }
@@ -431,15 +465,15 @@ function parseCampaign(row) {
 //  JOBS
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function addJob(userId, { campaignId, profileId, scheduledAt, title, body }) {
+async function addJob(userId, { campaignId, profileId, scheduledAt, title, body, targetGroupId }) {
   const id = uuidv4();
   // ON CONFLICT DO NOTHING — уникальный partial index idx_jobs_unique_pending
   // предотвращает дубликаты pending-джобов (для K8s multi-replica)
   const result = await query(`
-    INSERT INTO jobs (id,user_id,campaign_id,profile_id,scheduled_at,status,title,body,created_at)
-    VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8)
+    INSERT INTO jobs (id,user_id,campaign_id,profile_id,scheduled_at,status,title,body,created_at,target_group_id)
+    VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$9)
     ON CONFLICT DO NOTHING
-  `, [id, userId, campaignId, profileId, scheduledAt, title, body, now()]);
+  `, [id, userId, campaignId, profileId, scheduledAt, title, body, now(), targetGroupId || null]);
   return result.rowCount > 0 ? id : null;
 }
 
@@ -537,18 +571,51 @@ async function deletePendingJobsByCampaign(campaignId, userId) {
 
 // ─── Хелперы для SteamBotManager ─────────────────────────────────────────────
 
-async function getLastJobForCampaignProfile(userId, campaignId, profileId) {
+async function getLastJobForCampaignProfile(userId, campaignId, profileId, targetGroupId = null) {
+  if (targetGroupId) {
+    return getOne(`
+      SELECT * FROM jobs WHERE user_id = $1 AND campaign_id = $2 AND profile_id = $3 AND target_group_id = $4
+      ORDER BY scheduled_at DESC LIMIT 1
+    `, [userId, campaignId, profileId, targetGroupId]);
+  }
   return getOne(`
-    SELECT * FROM jobs WHERE user_id = $1 AND campaign_id = $2 AND profile_id = $3
+    SELECT * FROM jobs WHERE user_id = $1 AND campaign_id = $2 AND profile_id = $3 AND target_group_id IS NULL
     ORDER BY scheduled_at DESC LIMIT 1
   `, [userId, campaignId, profileId]);
 }
 
-async function getPendingJobForCampaignProfile(userId, campaignId, profileId) {
+async function getPendingJobForCampaignProfile(userId, campaignId, profileId, targetGroupId = null) {
+  if (targetGroupId) {
+    return getOne(`
+      SELECT id FROM jobs
+      WHERE user_id = $1 AND campaign_id = $2 AND profile_id = $3 AND target_group_id = $4 AND status = 'pending' LIMIT 1
+    `, [userId, campaignId, profileId, targetGroupId]);
+  }
   return getOne(`
     SELECT id FROM jobs
-    WHERE user_id = $1 AND campaign_id = $2 AND profile_id = $3 AND status = 'pending' LIMIT 1
+    WHERE user_id = $1 AND campaign_id = $2 AND profile_id = $3 AND target_group_id IS NULL AND status = 'pending' LIMIT 1
   `, [userId, campaignId, profileId]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  STEAM GROUPS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function getSteamGroups(activeOnly = true) {
+  const rows = activeOnly
+    ? await getAll('SELECT * FROM steam_groups WHERE is_active = TRUE ORDER BY sort_order')
+    : await getAll('SELECT * FROM steam_groups ORDER BY sort_order');
+  return rows;
+}
+
+async function getSteamGroup(id) {
+  return getOne('SELECT * FROM steam_groups WHERE id = $1', [id]);
+}
+
+async function getSteamGroupsByIds(ids) {
+  if (!ids || !ids.length) return [];
+  const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+  return getAll(`SELECT * FROM steam_groups WHERE id IN (${placeholders}) ORDER BY sort_order`, ids);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -716,7 +783,7 @@ async function markEmailVerificationUsed(id) {
 //  PAYMENT TRANSACTIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function createTransaction({ userId, subscriptionId, amount, currency = 'USD', status,
+async function createTransaction({ userId, subscriptionId, amount, currency = 'RUB', status,
                                     planId, billingPeriod, paymentMethod, externalId, metadata }) {
   const id = uuidv4();
   await query(`
@@ -746,7 +813,11 @@ async function updateTransactionStatus(externalId, status) {
 
 async function getAdminStats() {
   const today = new Date().toISOString().split('T')[0];
-  const [[tu],[au],[tr],[ac],[tp],[tc],[jt],[rev]] = await Promise.all([
+  const month30 = new Date(Date.now() - 30 * 86400000).toISOString();
+
+  const [[tu],[au],[tr],[ac],[tp],[tc],[jt],[rev],[rev30],[txCount],[txPending],
+    mrrRows, recentTx, planDist
+  ] = await Promise.all([
     getAll('SELECT COUNT(*) as n FROM users'),
     getAll('SELECT COUNT(*) as n FROM users WHERE is_active = TRUE'),
     getAll("SELECT COUNT(*) as n FROM user_subscriptions WHERE status = 'trial'"),
@@ -754,15 +825,73 @@ async function getAdminStats() {
     getAll('SELECT COUNT(*) as n FROM profiles'),
     getAll('SELECT COUNT(*) as n FROM campaigns WHERE is_active = TRUE'),
     getAll("SELECT COUNT(*) as n FROM jobs WHERE status='done' AND DATE(executed_at)=$1", [today]),
-    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed'"),
+    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual'"),
+    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual' AND created_at >= $1", [month30]),
+    getAll("SELECT COUNT(*) as n FROM payment_transactions"),
+    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='pending'"),
+    // MRR: sum of monthly prices for active subscriptions with real payment
+    getAll(`
+      SELECT COALESCE(SUM(p.price_monthly),0) as mrr
+      FROM user_subscriptions s
+      JOIN subscription_plans p ON p.id = s.plan_id
+      WHERE s.status = 'active'
+        AND EXISTS (
+          SELECT 1 FROM payment_transactions t
+          WHERE t.subscription_id = s.id
+            AND t.status = 'completed'
+            AND t.payment_method != 'manual'
+        )
+    `),
+    // Last 5 transactions
+    getAll(`
+      SELECT t.*, u.email as user_email, u.name as user_name
+      FROM payment_transactions t
+      LEFT JOIN users u ON u.id = t.user_id
+      ORDER BY t.created_at DESC LIMIT 5
+    `),
+    // Plan distribution
+    getAll(`
+      SELECT s.plan_id, p.name as plan_name, COUNT(*) as count
+      FROM user_subscriptions s
+      LEFT JOIN subscription_plans p ON p.id = s.plan_id
+      WHERE s.status IN ('active','trial')
+      GROUP BY s.plan_id, p.name
+      ORDER BY count DESC
+    `),
   ]);
+
+  const mrrVal = Number(mrrRows[0]?.mrr || 0);
+
   return {
+    users: {
+      total:  Number(tu.n),
+      active: Number(au.n),
+    },
+    subscriptions: {
+      active: Number(ac.n),
+      trial:  Number(tr.n),
+    },
+    jobs: {
+      today: Number(jt.n),
+    },
+    revenue: {
+      total:    Number(rev.n),
+      last30d:  Number(rev30.n),
+      mrr:      mrrVal,
+    },
+    payments: {
+      total:   Number(txCount.n),
+      pending: Number(txPending.n),
+    },
+    total_profiles:   Number(tp.n),
+    total_campaigns:  Number(tc.n),
+    recent_transactions: recentTx,
+    plan_distribution: planDist,
+    // Legacy flat fields for backward compat
     total_users:          Number(tu.n),
     active_users:         Number(au.n),
     trial_subscriptions:  Number(tr.n),
     active_subscriptions: Number(ac.n),
-    total_profiles:       Number(tp.n),
-    total_campaigns:      Number(tc.n),
     jobs_today:           Number(jt.n),
     revenue_total:        Number(rev.n),
   };
@@ -787,6 +916,123 @@ async function getAdminUserList({ limit = 50, offset = 0, search = '' } = {}) {
     WHERE u.name ILIKE $1 OR u.email ILIKE $2
     ORDER BY u.created_at DESC LIMIT $3 OFFSET $4
   `, [like, like, limit, offset]);
+}
+
+async function getAdminTransactions({ limit = 50, offset = 0, status, method, search, dateFrom, dateTo } = {}) {
+  let where = 'WHERE 1=1';
+  const params = [];
+  let idx = 1;
+  if (status) { where += ` AND t.status = $${idx++}`; params.push(status); }
+  if (method) { where += ` AND t.payment_method = $${idx++}`; params.push(method); }
+  if (dateFrom) { where += ` AND t.created_at >= $${idx++}`; params.push(dateFrom); }
+  if (dateTo) { where += ` AND t.created_at <= $${idx++}`; params.push(dateTo); }
+  if (search) {
+    where += ` AND (u.email ILIKE $${idx} OR u.name ILIKE $${idx} OR t.external_id ILIKE $${idx})`;
+    params.push(`%${search}%`); idx++;
+  }
+  const countQ = `SELECT COUNT(*) as n FROM payment_transactions t LEFT JOIN users u ON u.id = t.user_id ${where}`;
+  const dataQ = `
+    SELECT t.*, u.email as user_email, u.name as user_name,
+           p.name as plan_name
+    FROM payment_transactions t
+    LEFT JOIN users u ON u.id = t.user_id
+    LEFT JOIN subscription_plans p ON p.id = t.plan_id
+    ${where}
+    ORDER BY t.created_at DESC
+    LIMIT $${idx++} OFFSET $${idx++}
+  `;
+  params.push(limit, offset);
+  const [[cnt], rows] = await Promise.all([
+    getAll(countQ, params.slice(0, -2)),
+    getAll(dataQ, params),
+  ]);
+  return { transactions: rows, total: Number(cnt.n) };
+}
+
+async function getTransactionById(id) {
+  return getOne(`
+    SELECT t.*, u.email as user_email, u.name as user_name, p.name as plan_name
+    FROM payment_transactions t
+    LEFT JOIN users u ON u.id = t.user_id
+    LEFT JOIN subscription_plans p ON p.id = t.plan_id
+    WHERE t.id = $1
+  `, [id]);
+}
+
+async function getTransactionByExternalId(externalId) {
+  return getOne(`
+    SELECT t.*, u.email as user_email, u.name as user_name, p.name as plan_name
+    FROM payment_transactions t
+    LEFT JOIN users u ON u.id = t.user_id
+    LEFT JOIN subscription_plans p ON p.id = t.plan_id
+    WHERE t.external_id = $1
+  `, [externalId]);
+}
+
+async function updateTransaction(id, updates) {
+  const sets = [];
+  const vals = [];
+  let idx = 1;
+  for (const [k, v] of Object.entries(updates)) {
+    sets.push(`${k} = $${idx++}`);
+    vals.push(v);
+  }
+  if (sets.length === 0) return;
+  vals.push(id);
+  await query(`UPDATE payment_transactions SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
+}
+
+async function getPaymentStats() {
+  const month30 = new Date(Date.now() - 30 * 86400000).toISOString();
+  const week7 = new Date(Date.now() - 7 * 86400000).toISOString();
+  const today = new Date().toISOString().split('T')[0];
+  const [
+    [total], [completed], [pending], [failed], [refunded],
+    [sumAll], [sum30], [sum7], [sumToday],
+    byMethod, byPlan, dailyRevenue
+  ] = await Promise.all([
+    getAll('SELECT COUNT(*) as n FROM payment_transactions'),
+    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='completed'"),
+    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='pending'"),
+    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='failed'"),
+    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='refunded'"),
+    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual'"),
+    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual' AND created_at >= $1", [month30]),
+    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual' AND created_at >= $1", [week7]),
+    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual' AND DATE(created_at) = $1", [today]),
+    getAll(`
+      SELECT payment_method, COUNT(*) as count, COALESCE(SUM(amount),0) as total
+      FROM payment_transactions WHERE status='completed' AND payment_method != 'manual'
+      GROUP BY payment_method
+    `),
+    getAll(`
+      SELECT t.plan_id, p.name as plan_name, COUNT(*) as count, COALESCE(SUM(t.amount),0) as total
+      FROM payment_transactions t
+      LEFT JOIN subscription_plans p ON p.id = t.plan_id
+      WHERE t.status='completed' AND t.payment_method != 'manual'
+      GROUP BY t.plan_id, p.name
+    `),
+    getAll(`
+      SELECT DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(amount),0) as total
+      FROM payment_transactions
+      WHERE status='completed' AND payment_method != 'manual' AND created_at >= $1
+      GROUP BY DATE(created_at)
+      ORDER BY date
+    `, [month30]),
+  ]);
+  return {
+    counts: {
+      total: Number(total.n), completed: Number(completed.n),
+      pending: Number(pending.n), failed: Number(failed.n), refunded: Number(refunded.n),
+    },
+    revenue: {
+      total: Number(sumAll.n), last30d: Number(sum30.n),
+      last7d: Number(sum7.n), today: Number(sumToday.n),
+    },
+    byMethod: byMethod.map(r => ({ method: r.payment_method, count: Number(r.count), total: Number(r.total) })),
+    byPlan: byPlan.map(r => ({ plan_id: r.plan_id, plan_name: r.plan_name, count: Number(r.count), total: Number(r.total) })),
+    dailyRevenue: dailyRevenue.map(r => ({ date: r.date, count: Number(r.count), total: Number(r.total) })),
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -841,20 +1087,237 @@ async function auditLog(userId, action, resourceType, resourceId, details, ip) {
     details ? JSON.stringify(details) : null, ip || null, now()]);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  MARKET LISTINGS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function createMarketListing({ sellerId, itemName, itemImage, itemExterior, itemType, itemRarity, steamAssetId, floatValue, price, currency }) {
+  const { rows } = await query(`
+    INSERT INTO market_listings (seller_id, item_name, item_image, item_exterior, item_type, item_rarity, steam_asset_id, float_value, price, currency)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id
+  `, [sellerId, itemName, itemImage || '', itemExterior || '', itemType || '', itemRarity || '', steamAssetId || '', floatValue || null, price, currency || 'RUB']);
+  return rows[0].id;
+}
+
+async function getMarketListings({ status = 'active', search = '', type = '', exterior = '', sort = 'newest', limit = 40, offset = 0 } = {}) {
+  let sql = `SELECT ml.*, u.name as seller_name, u.steam_username, u.steam_avatar as seller_avatar, u.steam_avatar
+    FROM market_listings ml JOIN users u ON ml.seller_id = u.id WHERE ml.status = $1`;
+  const params = [status];
+  let i = 2;
+  if (search) { sql += ` AND ml.item_name ILIKE $${i++}`; params.push(`%${search}%`); }
+  if (type) { sql += ` AND ml.item_type = $${i++}`; params.push(type); }
+  if (exterior) { sql += ` AND ml.item_exterior = $${i++}`; params.push(exterior); }
+  if (sort === 'price_asc') sql += ' ORDER BY ml.price ASC';
+  else if (sort === 'price_desc') sql += ' ORDER BY ml.price DESC';
+  else sql += ' ORDER BY ml.created_at DESC';
+  sql += ` LIMIT $${i++} OFFSET $${i++}`;
+  params.push(limit, offset);
+  return getAll(sql, params);
+}
+
+async function countMarketListings({ status = 'active', search = '', type = '', exterior = '' } = {}) {
+  let sql = 'SELECT COUNT(*)::int as n FROM market_listings WHERE status = $1';
+  const params = [status];
+  let i = 2;
+  if (search) { sql += ` AND item_name ILIKE $${i++}`; params.push(`%${search}%`); }
+  if (type) { sql += ` AND item_type = $${i++}`; params.push(type); }
+  if (exterior) { sql += ` AND item_exterior = $${i++}`; params.push(exterior); }
+  const row = await getOne(sql, params);
+  return row?.n || 0;
+}
+
+async function getMarketListing(id) {
+  return getOne(`SELECT ml.*, u.name as seller_name, u.steam_username, u.steam_avatar, u.trade_url as seller_trade_url
+    FROM market_listings ml JOIN users u ON ml.seller_id = u.id WHERE ml.id = $1`, [id]);
+}
+
+async function getUserMarketListings(userId) {
+  return getAll('SELECT * FROM market_listings WHERE seller_id = $1 ORDER BY created_at DESC', [userId]);
+}
+
+async function updateMarketListing(id, fields) {
+  const allowed = ['price', 'status', 'buyer_id', 'sold_at'];
+  const updates = [], values = [];
+  let i = 1;
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { updates.push(`${k} = $${i++}`); values.push(v); }
+  }
+  if (!updates.length) return;
+  updates.push(`updated_at = $${i++}`);
+  values.push(now(), id);
+  await query(`UPDATE market_listings SET ${updates.join(', ')} WHERE id = $${i}`, values);
+}
+
+async function deleteMarketListing(id, sellerId) {
+  await query('DELETE FROM market_listings WHERE id = $1 AND seller_id = $2', [id, sellerId]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TRADE OFFERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function createTradeOffer({ creatorId, title, description, offeringItems, wantedItems, wantedTags, totalValue }) {
+  const { rows } = await query(`
+    INSERT INTO trade_offers (creator_id, title, description, offering_items, wanted_items, wanted_tags, total_value, bumped_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING id
+  `, [creatorId, title || '', description || '',
+    JSON.stringify(offeringItems || []), JSON.stringify(wantedItems || []),
+    wantedTags || [], totalValue || 0]);
+  return rows[0].id;
+}
+
+async function getTradeOffers({ status = 'active', search = '', sort = 'bumped', limit = 20, offset = 0 } = {}) {
+  let sql = `SELECT t.*, u.name as creator_name, u.steam_username, u.steam_avatar as creator_avatar, u.steam_avatar, u.trade_url as creator_trade_url
+    FROM trade_offers t JOIN users u ON t.creator_id = u.id WHERE t.status = $1`;
+  const params = [status];
+  let i = 2;
+  if (search) { sql += ` AND (t.title ILIKE $${i} OR t.description ILIKE $${i})`; params.push(`%${search}%`); i++; }
+  if (sort === 'newest') sql += ' ORDER BY t.created_at DESC';
+  else if (sort === 'value_desc') sql += ' ORDER BY t.total_value DESC';
+  else sql += ' ORDER BY t.bumped_at DESC';
+  sql += ` LIMIT $${i++} OFFSET $${i++}`;
+  params.push(limit, offset);
+  const rows = await getAll(sql, params);
+  return rows.map(parseTradeOffer);
+}
+
+async function countTradeOffers({ status = 'active', search = '' } = {}) {
+  let sql = 'SELECT COUNT(*)::int as n FROM trade_offers WHERE status = $1';
+  const params = [status];
+  if (search) { sql += ' AND (title ILIKE $2 OR description ILIKE $2)'; params.push(`%${search}%`); }
+  const row = await getOne(sql, params);
+  return row?.n || 0;
+}
+
+async function getTradeOffer(id) {
+  const row = await getOne(`SELECT t.*, u.name as creator_name, u.steam_username, u.steam_avatar, u.trade_url as creator_trade_url
+    FROM trade_offers t JOIN users u ON t.creator_id = u.id WHERE t.id = $1`, [id]);
+  return row ? parseTradeOffer(row) : null;
+}
+
+async function getUserTradeOffers(userId) {
+  const rows = await getAll('SELECT * FROM trade_offers WHERE creator_id = $1 ORDER BY created_at DESC', [userId]);
+  return rows.map(parseTradeOffer);
+}
+
+async function updateTradeOffer(id, fields) {
+  const allowed = ['title', 'description', 'status', 'accepted_by', 'completed_at'];
+  const jsonFields = ['offering_items', 'wanted_items'];
+  const updates = [], values = [];
+  let i = 1;
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { updates.push(`${k} = $${i++}`); values.push(v); }
+    else if (jsonFields.includes(k)) { updates.push(`${k} = $${i++}`); values.push(JSON.stringify(v)); }
+    else if (k === 'wanted_tags') { updates.push(`wanted_tags = $${i++}`); values.push(v); }
+  }
+  if (!updates.length) return;
+  updates.push(`updated_at = $${i++}`);
+  values.push(now(), id);
+  await query(`UPDATE trade_offers SET ${updates.join(', ')} WHERE id = $${i}`, values);
+}
+
+async function bumpTradeOffer(id, creatorId) {
+  await query('UPDATE trade_offers SET bumped_at = NOW(), updated_at = $1 WHERE id = $2 AND creator_id = $3', [now(), id, creatorId]);
+}
+
+async function deleteTradeOffer(id, creatorId) {
+  await query('DELETE FROM trade_offers WHERE id = $1 AND creator_id = $2', [id, creatorId]);
+}
+
+function parseTradeOffer(row) {
+  if (!row) return null;
+  try { if (typeof row.offering_items === 'string') row.offering_items = JSON.parse(row.offering_items); } catch { row.offering_items = []; }
+  try { if (typeof row.wanted_items === 'string') row.wanted_items = JSON.parse(row.wanted_items); } catch { row.wanted_items = []; }
+  return row;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BALANCE TRANSACTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function createBalanceTransaction({ userId, type, amount, balanceAfter, description, referenceType, referenceId, status }) {
+  const { rows } = await query(`
+    INSERT INTO balance_transactions (user_id, type, amount, balance_after, description, reference_type, reference_id, status)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id
+  `, [userId, type, amount, balanceAfter || 0, description || '', referenceType || '', referenceId || '', status || 'completed']);
+  return rows[0].id;
+}
+
+async function getBalanceTransactions(userId, limit = 50) {
+  return getAll('SELECT * FROM balance_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2', [userId, limit]);
+}
+
+async function updateUserBalance(userId, delta) {
+  const { rows } = await query(
+    'UPDATE users SET balance = balance + $1, updated_at = $2 WHERE id = $3 RETURNING balance',
+    [delta, now(), userId]
+  );
+  return rows[0]?.balance ?? 0;
+}
+
+async function getUserBalance(userId) {
+  const row = await getOne('SELECT balance FROM users WHERE id = $1', [userId]);
+  return row?.balance ?? 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  WITHDRAWAL REQUESTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function createWithdrawalRequest({ userId, amount, method, details }) {
+  const { rows } = await query(`
+    INSERT INTO withdrawal_requests (user_id, amount, method, details)
+    VALUES ($1,$2,$3,$4) RETURNING id
+  `, [userId, amount, method || 'card', JSON.stringify(details || {})]);
+  return rows[0].id;
+}
+
+async function getWithdrawalRequests(userId) {
+  return getAll('SELECT * FROM withdrawal_requests WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
+}
+
+async function getAllWithdrawalRequests(status) {
+  if (status) return getAll('SELECT w.*, u.name, u.email, u.steam_username FROM withdrawal_requests w JOIN users u ON w.user_id = u.id WHERE w.status = $1 ORDER BY w.created_at DESC', [status]);
+  return getAll('SELECT w.*, u.name, u.email, u.steam_username FROM withdrawal_requests w JOIN users u ON w.user_id = u.id ORDER BY w.created_at DESC');
+}
+
+async function updateWithdrawalRequest(id, fields) {
+  const allowed = ['status', 'admin_note', 'processed_at'];
+  const updates = [], values = [];
+  let i = 1;
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { updates.push(`${k} = $${i++}`); values.push(v); }
+  }
+  if (!updates.length) return;
+  values.push(id);
+  await query(`UPDATE withdrawal_requests SET ${updates.join(', ')} WHERE id = $${i}`, values);
+}
+
 module.exports = {
   query, getOne,
   getPlans, getPlan, upsertPlan,
-  createUser, getUserById, getUserByEmail, getAllUsers, countUsers,
+  createUser, getUserById, getUserByEmail, getUserBySteamId, getUserByGoogleId, getAllUsers, countUsers,
   updateUser, updateLastLogin, deleteUser,
+  // Market
+  createMarketListing, getMarketListings, countMarketListings, getMarketListing,
+  getUserMarketListings, updateMarketListing, deleteMarketListing,
+  // Trades
+  createTradeOffer, getTradeOffers, countTradeOffers, getTradeOffer,
+  getUserTradeOffers, updateTradeOffer, bumpTradeOffer, deleteTradeOffer,
+  // Balance
+  createBalanceTransaction, getBalanceTransactions, updateUserBalance, getUserBalance,
+  // Withdrawals
+  createWithdrawalRequest, getWithdrawalRequests, getAllWithdrawalRequests, updateWithdrawalRequest,
   createSubscription, getActiveSubscription, getSubscriptionHistory,
   updateSubscription, getSubscriptionByStripeId, getUserByStripeCustomer,
-  getTelegramBot, getTelegramBots, getTelegramBotByAuthorizedChatId,
+  getTelegramBot, getTelegramBots, getTelegramBotByAuthorizedChatId, getAllTelegramBotsByAuthorizedChatId,
   upsertTelegramBot, deleteTelegramBot, getActiveTelegramBotUsers,
   addProfile, getProfiles, getProfile, updateProfile, deleteProfile, countProfiles,
   addCampaign, getCampaigns, getCampaign, updateCampaign, deleteCampaign, countCampaigns,
   addJob, getDueJobs, getRecentJobs, getJobsPaged, getJobStats, countJobsToday,
   updateJobStatus, resetRunningJobs, cancelOverduePendingJobs, deleteJob,
   deletePendingJobsByCampaign, getLastJobForCampaignProfile, getPendingJobForCampaignProfile,
+  getSteamGroups, getSteamGroup, getSteamGroupsByIds,
   getSetting, setSetting, getAllSettings, bulkSetSettings,
   getServerSetting, setServerSetting, getAllServerSettings, bulkSetServerSettings,
   createRefreshToken, getRefreshToken, deleteRefreshToken,
@@ -862,6 +1325,7 @@ module.exports = {
   createPasswordReset, getPasswordReset, markPasswordResetUsed,
   createEmailVerification, getEmailVerification, markEmailVerificationUsed,
   createTransaction, getTransactions, updateTransactionStatus,
+  getAdminTransactions, getTransactionById, getTransactionByExternalId, updateTransaction, getPaymentStats,
   getAdminStats, getAdminUserList, auditLog,
   createApiKey, getApiKeys, getApiKeyByHash, updateApiKeyLastUsed,
   deleteApiKey, deactivateApiKey, countApiKeys,

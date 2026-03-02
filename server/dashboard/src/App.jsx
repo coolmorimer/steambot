@@ -9,6 +9,7 @@ import Register       from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword  from './pages/ResetPassword';
 import VerifyEmail    from './pages/VerifyEmail';
+import OAuthCallback  from './pages/OAuthCallback';
 import Dashboard      from './pages/Dashboard';
 import Accounts       from './pages/Accounts';
 import Campaigns      from './pages/Campaigns';
@@ -17,23 +18,29 @@ import Telegram       from './pages/Telegram';
 import Settings       from './pages/Settings';
 import Subscription   from './pages/Subscription';
 import ApiKeys        from './pages/ApiKeys';
+import Trades         from './pages/Trades';
+import CreateTrade    from './pages/CreateTrade';
+import Balance        from './pages/Balance';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers     from './pages/admin/AdminUsers';
 import AdminPlans     from './pages/admin/AdminPlans';
 import AdminConfig    from './pages/admin/AdminConfig';
 import AdminSupport   from './pages/admin/AdminSupport';
+import AdminPayments  from './pages/admin/AdminPayments';
+import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 
 export default function App() {
   return (
     <AuthProvider>
       <Routes>
         {/* Public */}
-        <Route path="/landing"        element={<Landing />} />
-        <Route path="/login"          element={<Login />} />
-        <Route path="/register"       element={<Register />} />
+        <Route path="/landing"         element={<Landing />} />
+        <Route path="/login"           element={<Login />} />
+        <Route path="/register"        element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/verify-email"    element={<VerifyEmail />} />
+        <Route path="/oauth-callback"  element={<OAuthCallback />} />
 
         {/* Protected */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
@@ -46,12 +53,19 @@ export default function App() {
           <Route path="subscription" element={<Subscription />} />
           <Route path="api"          element={<ApiKeys />} />
 
+          {/* P2P Trades */}
+          <Route path="trades"         element={<Trades />} />
+          <Route path="trades/create"  element={<CreateTrade />} />
+          <Route path="balance"        element={<Balance />} />
+
           {/* Admin */}
           <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="admin/users"  element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="admin/plans"  element={<AdminRoute><AdminPlans /></AdminRoute>} />
           <Route path="admin/config"   element={<AdminRoute><AdminConfig /></AdminRoute>} />
           <Route path="admin/support" element={<AdminRoute><AdminSupport /></AdminRoute>} />
+          <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
+          <Route path="admin/withdrawals" element={<AdminRoute><AdminWithdrawals /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

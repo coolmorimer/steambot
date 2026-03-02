@@ -107,7 +107,7 @@ export default function Accounts() {
       ) : (
         <div className="space-y-2">
           {profiles.map(p => (
-            <ProfileCard key={p.id} profile={p} onDelete={handleDelete} />
+            <ProfileCard key={p.id} profile={p} onDelete={handleDelete} onRefresh={load} />
           ))}
         </div>
       )}
@@ -547,11 +547,12 @@ function LoginModal({ onClose, onSuccess }) {
 
 // ── Карточка аккаунта ─────────────────────────────────────────────────────────
 
-function ProfileCard({ profile, onDelete }) {
+function ProfileCard({ profile, onDelete, onRefresh }) {
   const [busy, setBusy] = useState(false);
 
-  const statusColor = profile.status === 'active'  ? 'badge-green'
-    : profile.status === 'invalid' ? 'badge-red'
+  const status = profile.is_active ? 'active' : 'invalid';
+  const statusColor = status === 'active'  ? 'badge-green'
+    : status === 'invalid' ? 'badge-red'
     : 'badge-gray';
 
 
@@ -559,8 +560,13 @@ function ProfileCard({ profile, onDelete }) {
   const handleCheck = async () => {
     setBusy(true);
     try {
-      await api.post(`/profiles/${profile.id}/check`);
-      toast.success('Проверка запущена');
+      const { data } = await api.post(`/profiles/${profile.id}/check`);
+      if (data.valid) {
+        toast.success(`✅ ${profile.name} — сессия активна`);
+      } else {
+        toast.error(`❌ ${profile.name} — сессия недействительна${data.reason ? ': ' + data.reason : ''}`);
+      }
+      if (onRefresh) onRefresh();
     } catch {
       toast.error('Ошибка проверки');
     } finally {
@@ -577,7 +583,7 @@ function ProfileCard({ profile, onDelete }) {
         <div className="flex-1 min-w-0">
           <p className="font-medium text-white truncate">{profile.name}</p>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className={statusColor}>{statusLabels[profile.status] || profile.status}</span>
+            <span className={statusColor}>{statusLabels[status] || status}</span>
             {profile.target_url && (
               <a href={profile.target_url} target="_blank" rel="noreferrer"
                 className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">

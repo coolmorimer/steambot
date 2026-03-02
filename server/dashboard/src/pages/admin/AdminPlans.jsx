@@ -70,12 +70,13 @@ export default function AdminPlans() {
               </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-400">
-              <div>Цена/мес: <span className="text-white">${plan.price_monthly}</span></div>
-              <div>Цена/год: <span className="text-white">${plan.price_yearly}</span></div>
+              <div>Цена/мес: <span className="text-white">{plan.price_monthly.toLocaleString('ru')} ₽</span></div>
+              <div>Цена/год: <span className="text-white">{plan.price_yearly.toLocaleString('ru')} ₽</span></div>
               <div>Аккаунты: <span className="text-white">{plan.max_steam_accounts === -1 ? '∞' : plan.max_steam_accounts}</span></div>
               <div>Кампании: <span className="text-white">{plan.max_campaigns === -1 ? '∞' : plan.max_campaigns}</span></div>
               <div>Постов/день: <span className="text-white">{plan.max_jobs_per_day === -1 ? '∞' : plan.max_jobs_per_day}</span></div>
               <div>TG боты: <span className="text-white">{plan.max_telegram_bots}</span></div>
+              <div>Steam-групп: <span className="text-white">{plan.max_steam_groups ?? 0}</span></div>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {plan.has_mini_app      && <span className="badge-blue">Mini App</span>}
@@ -93,6 +94,7 @@ export default function AdminPlans() {
 const DEFAULTS = {
   id: '', name: '', price_monthly: 0, price_yearly: 0,
   max_steam_accounts: 1, max_campaigns: 1, max_jobs_per_day: 5, max_telegram_bots: 0,
+  max_steam_groups: 0,
   has_mini_app: false, has_ai_templates: false, has_analytics: false,
   has_api_access: false, has_priority_support: false, stripe_price_id_monthly: '',
   stripe_price_id_yearly: '', is_active: true,
@@ -145,12 +147,13 @@ function PlanForm({ plan, onSaved, onClose }) {
             <label className="label">Название</label>
             <input className="input" required value={form.name} onChange={f('name')} placeholder="Pro" />
           </div>
-          {numField('price_monthly', 'Цена/мес ($)', 0)}
-          {numField('price_yearly',  'Цена/год ($)',  0)}
+          {numField('price_monthly', 'Цена/мес (₽)', 0)}
+          {numField('price_yearly',  'Цена/год (₽)',  0)}
           {numField('max_steam_accounts', 'Макс. аккаунтов (-1=∞)')}
           {numField('max_campaigns',      'Макс. кампаний (-1=∞)')}
           {numField('max_jobs_per_day',   'Постов в день (-1=∞)')}
           {numField('max_telegram_bots',  'TG ботов', 0)}
+          {numField('max_steam_groups',   'Steam-групп', 0)}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           {[

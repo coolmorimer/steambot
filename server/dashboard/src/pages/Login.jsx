@@ -27,6 +27,24 @@ export default function Login() {
 
   return (
     <AuthShell title="Вход в систему">
+      {/* OAuth кнопки */}
+      <div className="mb-5">
+        <a href="/api/oauth/steam"
+          className="flex items-center justify-center gap-3 w-full py-2.5 px-4 bg-[#171a21] hover:bg-[#2a475e] border border-gray-700 rounded-lg text-sm font-medium text-white transition-colors"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 256 259" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M128.015 0C58.206 0 1.578 54.244.076 123.143l68.94 28.477c5.864-4.025 12.932-6.378 20.556-6.378.685 0 1.363.021 2.034.058l30.735-44.539v-.625c0-27.879 22.678-50.557 50.56-50.557 27.882 0 50.56 22.678 50.56 50.575 0 27.896-22.678 50.574-50.56 50.574-.42 0-.834-.014-1.254-.028l-43.835 31.288c.028.539.042 1.082.042 1.631 0 20.904-17.014 37.918-37.923 37.918-18.514 0-33.96-13.314-37.293-30.893L2.527 163.464C18.053 218.596 68.845 259 128.015 259c70.684 0 127.985-57.301 127.985-128.007C256 60.688 198.699 0 128.015 0" fill="#fff"/>
+          </svg>
+          <span>Войти через Steam</span>
+        </a>
+      </div>
+
+      <div className="flex items-center gap-3 mb-5">
+        <div className="flex-1 h-px bg-gray-800"></div>
+        <span className="text-xs text-gray-500">или по email</span>
+        <div className="flex-1 h-px bg-gray-800"></div>
+      </div>
+
       <form onSubmit={submit} className="space-y-4">
         <div>
           <label className="label">Email</label>

@@ -109,6 +109,51 @@ router.delete('/login/:sid', ALL, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.post('/:id/check', ALL, async (req, res, next) => {
+  try {
+    const profile = await db.getProfile(req.params.id, req.userId);
+    if (!profile) return res.status(404).json({ error: 'Аккаунт не найден' });
+    if (!profile.cookies || !Array.isArray(profile.cookies) || !profile.cookies.length) {
+      await db.updateProfile(req.params.id, req.userId, { is_active: 0 });
+      return res.json({ ok: true, valid: false, reason: 'Нет сохранённых cookies' });
+    }
+
+    const loginCookie = profile.cookies.find(c => c.name === 'steamLoginSecure' && c.value);
+    if (!loginCookie) {
+      await db.updateProfile(req.params.id, req.userId, { is_active: 0 });
+      return res.json({ ok: true, valid: false, reason: 'steamLoginSecure отсутствует' });
+    }
+
+    // Проверяем срок действия cookie
+    const now = Date.now() / 1000;
+    if (loginCookie.expires && loginCookie.expires > 0 && loginCookie.expires < now) {
+      await db.updateProfile(req.params.id, req.userId, { is_active: 0 });
+      const expDate = new Date(loginCookie.expires * 1000).toLocaleString('ru-RU');
+      return res.json({ ok: true, valid: false, reason: `Cookie истёк ${expDate}` });
+    }
+
+    // Извлекаем SteamID из cookie для дополнительной проверки
+    const steamId = loginCookie.value.split('%7C')[0];
+    const hasSteamId = steamId && /^\d{17}$/.test(steamId);
+
+    if (!hasSteamId) {
+      await db.updateProfile(req.params.id, req.userId, { is_active: 0 });
+      return res.json({ ok: true, valid: false, reason: 'Повреждённый steamLoginSecure cookie' });
+    }
+
+    // Cookie есть, не истёк, SteamID валидный → считаем активным
+    if (!profile.is_active) {
+      await db.updateProfile(req.params.id, req.userId, { is_active: 1 });
+    }
+
+    const expiresDate = loginCookie.expires
+      ? new Date(loginCookie.expires * 1000).toLocaleString('ru-RU')
+      : 'без срока';
+
+    res.json({ ok: true, valid: true, steamId, expires: expiresDate });
+  } catch (e) { next(e); }
+});
+
 router.post('/', ALL, ...checkLimit.profiles, async (req, res) => {
   return res.status(410).json({
     error: 'Используйте /login/start для QR-входа или /import для импорта cookies.',

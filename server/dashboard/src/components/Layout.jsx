@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Users, Megaphone, Activity,
   Send, Settings, CreditCard, LogOut, ChevronLeft,
   ChevronRight, ShieldCheck, Menu, X, Code2,
+  ArrowLeftRight, Wallet, Globe,
 } from 'lucide-react';
 import clsx from 'clsx';
 import SupportWidget from './SupportWidget';
@@ -16,6 +17,11 @@ const navItems = [
   { to: '/activity',    icon: Activity,        label: 'Активность' },
   { to: '/telegram',    icon: Send,            label: 'Telegram бот' },
   { to: '/api',          icon: Code2,           label: 'API' },
+  null, // separator
+  { to: '/trades',      icon: ArrowLeftRight,  label: 'P2P Обмен' },
+  { to: '/balance',     icon: Wallet,          label: 'Баланс' },
+  null, // separator
+  { to: '/landing',     icon: Globe,           label: 'Главная' },
   { to: '/settings',    icon: Settings,        label: 'Настройки' },
   { to: '/subscription',icon: CreditCard,      label: 'Подписка' },
 ];
@@ -45,26 +51,30 @@ export default function Layout() {
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-        {items.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              clsx(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                isActive
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white',
-                collapsed && 'justify-center'
-              )
-            }
-          >
-            <Icon className="w-5 h-5 shrink-0" />
-            {!collapsed && <span>{label}</span>}
-          </NavLink>
-        ))}
+        {items.map((item, idx) => {
+          if (!item) return <div key={`sep-${idx}`} className="my-2 border-t border-gray-800/60" />;
+          const { to, icon: Icon, label } = item;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                clsx(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                  isActive
+                    ? 'bg-brand-600/20 text-brand-400'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white',
+                  collapsed && 'justify-center'
+                )
+              }
+            >
+              <Icon className="w-5 h-5 shrink-0" />
+              {!collapsed && <span>{label}</span>}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* User + logout */}

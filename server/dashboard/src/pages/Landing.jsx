@@ -4,23 +4,39 @@ import {
   Check, Zap, Shield, Clock, BarChart3, Bot,
   Users, Target, Rocket, ChevronDown, ArrowRight,
   Menu, X, Lock, FileText, Play, Gamepad2, Palette, DollarSign,
-  TrendingUp, CheckCircle2, Timer, Send,
+  TrendingUp, CheckCircle2, Timer, Send, ArrowLeftRight,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useAuth } from '../contexts/AuthContext';
 
 const API = '/api';
 
+function formatRub(kopecks) {
+  return (kopecks / 100).toLocaleString('ru-RU', { minimumFractionDigits: 0 }) + ' ₽';
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return 'только что';
+  if (m < 60) return `${m} мин назад`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} ч назад`;
+  return `${Math.floor(h / 24)} д назад`;
+}
+
 export default function Landing() {
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
   const [plans, setPlans] = useState([]);
   const [period, setPeriod] = useState('monthly');
   const [faqOpen, setFaqOpen] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
+  const [trades, setTrades] = useState([]);
 
   useEffect(() => {
-    fetch(`${API}/subscriptions/plans`)
-      .then(r => r.json())
-      .then(setPlans)
-      .catch(() => {});
+    fetch(`${API}/subscriptions/plans`).then(r => r.json()).then(setPlans).catch(() => {});
+    fetch(`${API}/trades?limit=6&sort=bumped`).then(r => r.json()).then(d => setTrades(d.items || [])).catch(() => {});
   }, []);
 
   return (
@@ -79,18 +95,31 @@ export default function Landing() {
             <span className="font-bold text-white text-lg">Steam Poster Bot</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
+            <a href="#trades" className="hover:text-white transition-colors">P2P Обмен</a>
             <a href="#features" className="hover:text-white transition-colors">Возможности</a>
-            <a href="#how-it-works" className="hover:text-white transition-colors">Как это работает</a>
             <a href="#pricing" className="hover:text-white transition-colors">Тарифы</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/login" className="text-sm text-gray-300 hover:text-white transition-colors px-3 py-2">
-              Войти
-            </Link>
-            <Link to="/register" className="btn-primary text-sm !py-2 !px-4">
-              Начать бесплатно
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link to="/trades" className="text-sm text-gray-300 hover:text-white transition-colors px-3 py-2">
+                  P2P Обмен
+                </Link>
+                <Link to="/" className="btn-primary text-sm !py-2 !px-4">
+                  Дашборд →
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="text-sm text-gray-300 hover:text-white transition-colors px-3 py-2">
+                  Войти
+                </Link>
+                <Link to="/register" className="btn-primary text-sm !py-2 !px-4">
+                  Начать бесплатно
+                </Link>
+              </>
+            )}
           </div>
           {/* Mobile burger */}
           <button onClick={() => setMobileNav(o => !o)} className="md:hidden text-gray-400 hover:text-white p-1">
@@ -100,13 +129,19 @@ export default function Landing() {
         {/* Mobile dropdown */}
         {mobileNav && (
           <div className="md:hidden border-t border-gray-800/50 bg-gray-950/95 backdrop-blur-xl px-4 py-4 space-y-3">
+            <a href="#trades" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">P2P Обмен</a>
             <a href="#features" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Возможности</a>
-            <a href="#how-it-works" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Как это работает</a>
             <a href="#pricing" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Тарифы</a>
             <a href="#faq" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">FAQ</a>
             <div className="flex gap-3 pt-2 border-t border-gray-800">
-              <Link to="/login" className="btn-ghost text-sm flex-1 justify-center">Войти</Link>
-              <Link to="/register" className="btn-primary text-sm flex-1 justify-center">Регистрация</Link>
+              {isLoggedIn ? (
+                <Link to="/" className="btn-primary text-sm flex-1 justify-center">Дашборд →</Link>
+              ) : (
+                <>
+                  <Link to="/login" className="btn-ghost text-sm flex-1 justify-center">Войти</Link>
+                  <Link to="/register" className="btn-primary text-sm flex-1 justify-center">Регистрация</Link>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -303,6 +338,87 @@ export default function Landing() {
               <p className="text-sm text-gray-400 mt-1">{s.label}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ══ MARKETPLACE ══ */}
+      {/* ══ TRADES ══ */}
+      <section id="trades" className="relative z-10 py-14 md:py-20 bg-gray-900/20">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-purple-600/10 border border-purple-600/20 rounded-full px-4 py-1.5 mb-3">
+                <ArrowLeftRight className="w-4 h-4 text-purple-400" />
+                <span className="text-sm text-purple-300 font-medium">P2P Обмен</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-white">
+                Обменивайтесь предметами
+              </h2>
+              <p className="text-gray-400 mt-2">Безопасные обмены через Steam Trade Offer</p>
+            </div>
+            <Link to={isLoggedIn ? '/trades' : '/login'} className="btn-primary text-sm !py-2.5 !px-5 shrink-0">
+              Все предложения <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {trades.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trades.map(trade => {
+                const offering = (() => { try { return JSON.parse(trade.offering_items || '[]'); } catch { return []; } })();
+                const wanted = trade.wanted_tags || [];
+                const WANTED_LABELS = { any_knife: '🔪 Любой нож', any_gloves: '🧤 Любые перчатки', any_offers: '💬 Любые предложения' };
+                return (
+                  <div key={trade.id} className="card hover:border-gray-600 transition-all duration-300 group">
+                    <div className="flex items-center gap-2 mb-3">
+                      {trade.steam_avatar && <img src={trade.steam_avatar} className="w-6 h-6 rounded-full" alt="" />}
+                      <span className="text-sm text-gray-300 font-medium">{trade.creator_name || 'Трейдер'}</span>
+                      <span className="text-xs text-gray-600 ml-auto">{timeAgo(trade.bumped_at || trade.created_at)}</span>
+                    </div>
+                    {trade.title && <p className="text-sm font-semibold text-white mb-2">{trade.title}</p>}
+                    {offering.length > 0 && (
+                      <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+                        {offering.slice(0, 4).map((it, i) => (
+                          <div key={i} className="w-14 h-14 shrink-0 bg-gray-800 rounded-lg flex items-center justify-center border border-gray-700/50">
+                            {it.image ? (
+                              <img src={it.image} className="max-w-[48px] max-h-[48px] object-contain" alt="" />
+                            ) : (
+                              <span className="text-[10px] text-gray-500 text-center px-0.5 truncate">{it.name?.slice(0, 10)}</span>
+                            )}
+                          </div>
+                        ))}
+                        {offering.length > 4 && (
+                          <div className="w-14 h-14 shrink-0 bg-gray-800 rounded-lg flex items-center justify-center border border-gray-700/50 text-xs text-gray-500">
+                            +{offering.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {wanted.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        <span className="text-xs text-gray-500">Хочет:</span>
+                        {wanted.map(tag => (
+                          <span key={tag} className="text-xs bg-purple-900/30 text-purple-300 px-2 py-0.5 rounded-full">
+                            {WANTED_LABELS[tag] || tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {trade.total_value > 0 && (
+                      <p className="text-xs text-gray-500 mt-2">Оценка: <span className="text-green-400 font-medium">{formatRub(trade.total_value)}</span></p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="card text-center py-12">
+              <ArrowLeftRight className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500">Предложений обмена пока нет</p>
+              <Link to={isLoggedIn ? '/trades/create' : '/login'} className="btn-primary text-sm mt-4 inline-flex items-center gap-2">
+                Создать предложение
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -544,9 +660,9 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
             {plans.map(plan => {
-              const price = period === 'yearly' ? plan.price_yearly : plan.price_monthly;
+              const price = period === 'yearly' ? (plan.price_yearly_rub ?? plan.price_yearly) : (plan.price_monthly_rub ?? plan.price_monthly);
               const isPopular = plan.id === 'pro';
               return (
                 <div
@@ -577,7 +693,7 @@ export default function Landing() {
                     <h3 className="text-xl font-bold text-white">{plan.name}</h3>
                     <div className="mt-2">
                       <span className="text-4xl font-extrabold text-white">
-                        {price === 0 ? 'Free' : `$${price}`}
+                        {price === 0 ? 'Бесплатно' : `${price.toLocaleString('ru')} ₽`}
                       </span>
                       {price > 0 && (
                         <span className="text-gray-500 text-base ml-1.5">
@@ -734,8 +850,8 @@ export default function Landing() {
               <span className="text-gray-400 text-base">Steam Poster Bot © {new Date().getFullYear()}</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-base text-gray-500">
+              <Link to="/trades" className="hover:text-white transition-colors">P2P Обмен</Link>
               <Link to="/login" className="hover:text-white transition-colors">Войти</Link>
-              <Link to="/register" className="hover:text-white transition-colors">Регистрация</Link>
               <a href="#pricing" className="hover:text-white transition-colors">Тарифы</a>
               <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
             </div>
@@ -748,9 +864,18 @@ export default function Landing() {
 
 function buildFeatures(plan) {
   const f = [];
+  // Free plan — only P2P trades
+  if (plan.id === 'free') {
+    f.push('P2P обмен предметами');
+    f.push('Баланс и вывод средств');
+    return f;
+  }
+  // Paid plans — all posting features + trades
+  f.push('P2P обмен предметами');
   f.push(`${plan.max_steam_accounts === -1 ? '∞' : plan.max_steam_accounts} Steam аккаунтов`);
   f.push(`${plan.max_campaigns === -1 ? '∞' : plan.max_campaigns} кампаний`);
   f.push(`${plan.max_jobs_per_day === -1 ? '∞' : plan.max_jobs_per_day} постов / день`);
+  if (plan.max_steam_groups > 0) f.push(`${plan.max_steam_groups} Steam-групп`);
   if (plan.max_telegram_bots > 0) f.push(`Telegram бот (${plan.max_telegram_bots})`);
   if (plan.has_mini_app) f.push('Telegram Mini App');
   if (plan.has_ai_templates) f.push('AI шаблоны');

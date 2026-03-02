@@ -26,7 +26,7 @@ router.get('/', ALL, async (req, res, next) => {
       notify_expired:   !!bot.notify_expired,
       notify_bot_state: !!bot.notify_bot_state,
       is_active:        !!bot.is_active,
-      is_running:       TelegramBotManager.isRunning(req.userId),
+      is_running:       await TelegramBotManager.isRunningAsync(req.userId),
     });
   } catch (e) { next(e); }
 });

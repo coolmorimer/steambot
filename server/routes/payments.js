@@ -3,7 +3,10 @@
 /**
  * server/routes/payments.js
  *
- * POST /api/payments/webhook  — Stripe webhook (raw body!)
+ * POST /api/payments/webhook       — Stripe webhook (raw body!)
+ * POST /api/payments/sbp/callback  — СБП / онлайн-касса callback
+ * POST /api/payments/sbp/create    — Создать платёж через СБП
+ * GET  /api/payments/sbp/:id/status — Проверить статус платежа
  *
  * Обрабатывает события:
  *  - checkout.session.completed
@@ -17,8 +20,106 @@ const express = require('express');
 const config  = require('../config');
 const db      = require('../db');
 const SubscriptionService = require('../services/SubscriptionService');
+const SbpPaymentService   = require('../services/SbpPaymentService');
+const { requireAuth, requireActiveUser } = require('../middleware/auth');
 
 const router  = express.Router();
+const ALL     = [requireAuth, requireActiveUser];
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  СБП — Создать платёж
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/sbp/create', ALL, async (req, res, next) => {
+  try {
+    const { plan_id, billing_period = 'monthly' } = req.body;
+    if (!plan_id) return res.status(400).json({ error: 'plan_id обязателен' });
+
+    const plan = await db.getPlan(plan_id);
+    if (!plan || !plan.is_active) return res.status(400).json({ error: 'Тариф не найден' });
+
+    const price = SbpPaymentService.getPriceRub(plan_id, billing_period);
+    if (price <= 0) return res.status(400).json({ error: 'Этот тариф бесплатный' });
+
+    const result = await SbpPaymentService.createPayment({
+      userId:        req.userId,
+      planId:        plan_id,
+      billingPeriod: billing_period,
+      returnUrl:     `${config.appUrl}/subscription?payment=success`,
+    });
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  СБП — Проверить статус платежа
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/sbp/:id/status', ALL, async (req, res, next) => {
+  try {
+    const result = await SbpPaymentService.getPaymentStatus(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  СБП — Callback (Webhook) от кассы
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.post('/sbp/callback', express.json(), async (req, res) => {
+  try {
+    // Проверяем подпись
+    const signature = req.headers['x-webhook-signature'] || req.headers['x-signature'] || '';
+    const rawBody   = JSON.stringify(req.body);
+
+    if (!SbpPaymentService.verifyWebhookSignature(rawBody, signature)) {
+      console.error('[SBP] Невалидная подпись webhook');
+      return res.status(403).json({ error: 'Invalid signature' });
+    }
+
+    const result = await SbpPaymentService.handleCallback(req.body);
+    res.json(result);
+  } catch (err) {
+    console.error('[SBP] Callback error:', err);
+    res.json({ ok: true }); // Отвечаем 200 чтобы касса не повторяла
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sberbank Acquiring — Callback (GET / POST)
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/sberbank/callback', async (req, res) => {
+  try {
+    await SbpPaymentService.handleCallback(req.query);
+  } catch (err) {
+    console.error('[Sberbank] GET callback error:', err);
+  }
+  res.send('OK');
+});
+
+router.post('/sberbank/callback', express.json(), async (req, res) => {
+  try {
+    const payload = { ...req.body, ...req.query };
+    await SbpPaymentService.handleCallback(payload);
+  } catch (err) {
+    console.error('[Sberbank] POST callback error:', err);
+  }
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Получить рублёвые цены для планов
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/sbp/prices', async (req, res) => {
+  res.json(SbpPaymentService.RUB_PRICES);
+});
 
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   if (!config.stripe.enabled) {
