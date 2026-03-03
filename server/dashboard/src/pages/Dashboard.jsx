@@ -52,11 +52,6 @@ export default function Dashboard() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  const hour = new Date().getHours();
-  const greeting = hour < 6 ? '🌙 Доброй ночи' : hour < 12 ? '☀️ Доброе утро' : hour < 17 ? '🌤️ Добрый день' : '🌙 Добрый вечер';
-
-  if (loading) return <PageSkeleton />;
-
   const chartData = useMemo(() => {
     const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const days = [];
@@ -70,6 +65,11 @@ export default function Dashboard() {
     }
     return days;
   }, [jobs]);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 6 ? '🌙 Доброй ночи' : hour < 12 ? '☀️ Доброе утро' : hour < 17 ? '🌤️ Добрый день' : '🌙 Добрый вечер';
+
+  if (loading) return <PageSkeleton />;
 
   const todayJobs = jobs.filter(j => new Date(j.created_at).toDateString() === new Date().toDateString()).length;
   const successRate = jobs.length > 0 ? Math.round(jobs.filter(j => j.status === 'done').length / jobs.length * 100) : 0;
