@@ -785,11 +785,16 @@ export default function Campaigns() {
   const canAdd = isUnlimited || campaigns.length < limit;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 animate-slide-up">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-white">Кампании</h1>
-          <p className="text-gray-500 text-sm">{campaigns.length} / {isUnlimited ? '∞' : limit}</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-brand-500/20 border border-emerald-500/20 flex items-center justify-center">
+            <span className="text-lg">📢</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-white tracking-tight">Кампании</h1>
+            <p className="text-gray-500 text-sm">{campaigns.length} / {isUnlimited ? '∞' : limit} кампаний</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button onClick={load} className="btn-ghost"><RefreshCw className="w-4 h-4" /></button>
@@ -812,14 +817,16 @@ export default function Campaigns() {
       )}
 
       {loading ? (
-        <div className="space-y-2">{[...Array(3)].map((_, i) => <div key={i} className="card h-20 animate-pulse bg-gray-800" />)}</div>
+        <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="card h-24 animate-pulse bg-gray-800/50 rounded-2xl" />)}</div>
       ) : campaigns.length === 0 ? (
-        <EmptyState title="Нет кампаний" desc="Создайте первую кампанию для автоматической публикации." />
+        <EmptyState title="Нет кампаний" emoji="📢" desc="Создайте первую кампанию для автоматической публикации на Steam." />
       ) : (
-        <div className="space-y-2">
-          {campaigns.map(c => (
-            <CampaignCard key={c.id} campaign={c}
-              onDelete={handleDelete} onToggle={handleToggle} onEdit={openEdit} />
+        <div className="space-y-3">
+          {campaigns.map((c, i) => (
+            <div key={c.id} className="animate-scale-in" style={{ animationDelay: `${i * 50}ms` }}>
+              <CampaignCard campaign={c}
+                onDelete={handleDelete} onToggle={handleToggle} onEdit={openEdit} />
+            </div>
           ))}
         </div>
       )}
@@ -839,59 +846,68 @@ function CampaignCard({ campaign: c, onDelete, onToggle, onEdit }) {
   };
 
   return (
-    <div className="card">
+    <div className="card-hover">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-white truncate">{c.name}</p>
-            <span className={c.is_active ? 'badge-green' : 'badge-gray'}>
-              {c.is_active ? 'Активна' : 'Пауза'}
-            </span>
-            {c.group_ids && c.group_ids.length > 0 && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-900/30 border border-indigo-800/30 text-indigo-400 text-[10px]">
-                <Users className="w-2.5 h-2.5" />
-                {c.group_ids.length}
-              </span>
-            )}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            c.is_active
+              ? 'bg-gradient-to-br from-green-600/20 to-emerald-700/20 border border-green-600/30'
+              : 'bg-gray-800 border border-gray-700'
+          }`}>
+            {c.is_active ? <Play className="w-4 h-4 text-green-400" /> : <Pause className="w-4 h-4 text-gray-500" />}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{c.title_template}</p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-white truncate">{c.name}</p>
+              <span className={c.is_active ? 'badge-green' : 'badge-gray'}>
+                {c.is_active ? '🟢 Активна' : 'Пауза'}
+              </span>
+              {c.group_ids && c.group_ids.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-900/30 border border-indigo-800/30 text-indigo-400 text-[10px]">
+                  <Users className="w-2.5 h-2.5" />
+                  {c.group_ids.length}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{c.title_template}</p>
+          </div>
         </div>
         <div className="flex gap-1 shrink-0">
-          <button onClick={() => onToggle(c)} className="btn-ghost px-2 py-1" title={c.is_active ? 'Пауза' : 'Запустить'}>
+          <button onClick={() => onToggle(c)} className="btn-ghost px-2 py-1.5 rounded-lg" title={c.is_active ? 'Пауза' : 'Запустить'}>
             {c.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
-          <button onClick={() => onEdit(c)} className="btn-ghost px-2 py-1" title="Редактировать">
+          <button onClick={() => onEdit(c)} className="btn-ghost px-2 py-1.5 rounded-lg" title="Редактировать">
             <Pencil className="w-4 h-4" />
           </button>
-          <button onClick={() => setOpen(o => !o)} className="btn-ghost px-2 py-1">
+          <button onClick={() => setOpen(o => !o)} className="btn-ghost px-2 py-1.5 rounded-lg">
             {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
-          <button onClick={() => onDelete(c.id)} className="btn-ghost px-2 py-1 hover:text-red-400" title="Удалить">
+          <button onClick={() => onDelete(c.id)} className="btn-ghost px-2 py-1.5 rounded-lg hover:text-red-400 hover:bg-red-500/10" title="Удалить">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
       {open && (
-        <div className="mt-3 pt-3 border-t border-gray-800 grid grid-cols-2 gap-3 text-xs text-gray-400">
+        <div className="mt-4 pt-4 border-t border-gray-800/60 grid grid-cols-2 gap-4 text-xs text-gray-400">
           <div>
-            <p className="text-gray-600 mb-1">Заголовок</p>
-            <p>{c.title_template}</p>
+            <p className="text-gray-600 mb-1 font-medium">📝 Заголовок</p>
+            <p className="text-gray-300">{c.title_template}</p>
           </div>
           <div>
-            <p className="text-gray-600 mb-1">Расписание</p>
-            <p>{scheduleLabel()}</p>
+            <p className="text-gray-600 mb-1 font-medium">⏰ Расписание</p>
+            <p className="text-gray-300">{scheduleLabel()}</p>
           </div>
           {c.window_start && c.window_end && (
             <div>
-              <p className="text-gray-600 mb-1">Окно публикации</p>
-              <p>{c.window_start} – {c.window_end}</p>
+              <p className="text-gray-600 mb-1 font-medium">🕐 Окно публикации</p>
+              <p className="text-gray-300">{c.window_start} – {c.window_end}</p>
             </div>
           )}
           {c.target_url && (
             <div className="col-span-2">
-              <p className="text-gray-600 mb-1">Раздел форума</p>
+              <p className="text-gray-600 mb-1 font-medium">🌐 Раздел форума</p>
               <a href={c.target_url} target="_blank" rel="noopener noreferrer"
-                className="text-brand-400 hover:text-brand-300 flex items-center gap-1 truncate">
+                className="text-brand-400 hover:text-brand-300 flex items-center gap-1 truncate transition-colors">
                 <Globe className="w-3 h-3 shrink-0" />
                 {c.target_url.replace('https://steamcommunity.com', '')}
               </a>
@@ -1003,8 +1019,9 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
   });
 
   return (
-    <div className="card border-brand-700">
-      <h2 className="font-semibold text-white mb-4">
+    <div className="card border-brand-700/50">
+      <h2 className="font-bold text-white text-lg mb-5 flex items-center gap-2">
+        <span className="text-xl">{isEdit ? '✏️' : '✨'}</span>
         {isEdit ? `Редактировать: ${initial.name}` : 'Новая кампания'}
       </h2>
       <form onSubmit={submit} className="space-y-4">

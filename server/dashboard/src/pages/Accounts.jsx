@@ -59,12 +59,17 @@ export default function Accounts() {
   const canAdd = isUnlimited || profiles.length < limit;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 animate-slide-up">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-white">Steam аккаунты</h1>
-          <p className="text-gray-500 text-sm">{profiles.length} / {isUnlimited ? '∞' : limit}</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500/20 to-purple-500/20 border border-brand-500/20 flex items-center justify-center">
+            <span className="text-lg">🎮</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-white tracking-tight">Steam аккаунты</h1>
+            <p className="text-gray-500 text-sm">{profiles.length} / {isUnlimited ? '∞' : limit} аккаунтов</p>
+          </div>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={load} className="btn-ghost" title="Обновить">
@@ -82,22 +87,23 @@ export default function Accounts() {
               </button>
             </>
           ) : (
-            <div className="badge-yellow">Лимит достигнут</div>
+            <div className="badge-yellow">⚠️ Лимит достигнут</div>
           )}
         </div>
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="card h-16 animate-pulse bg-gray-800" />
+            <div key={i} className="card h-20 animate-pulse bg-gray-800/50 rounded-2xl" />
           ))}
         </div>
       ) : profiles.length === 0 ? (
         <EmptyState
           title="Нет аккаунтов"
           desc="Войдите через QR-код приложения Steam или введите логин и пароль."
+          emoji="🎮"
           action={canAdd ? (
             <button onClick={() => setShowModal(true)} className="btn-primary">
               <LogIn className="w-4 h-4" /> Добавить аккаунт
@@ -105,17 +111,19 @@ export default function Accounts() {
           ) : null}
         />
       ) : (
-        <div className="space-y-2">
-          {profiles.map(p => (
-            <ProfileCard key={p.id} profile={p} onDelete={handleDelete} onRefresh={load} />
+        <div className="space-y-3">
+          {profiles.map((p, i) => (
+            <div key={p.id} className="animate-scale-in" style={{ animationDelay: `${i * 50}ms` }}>
+              <ProfileCard profile={p} onDelete={handleDelete} onRefresh={load} />
+            </div>
           ))}
         </div>
       )}
 
       {!canAdd && (
-        <div className="rounded-xl bg-yellow-900/20 border border-yellow-700/40 p-3 flex gap-2 items-start sm:items-center text-sm text-yellow-300">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          Достигнут лимит аккаунтов. Улучшите подписку.
+        <div className="rounded-xl bg-yellow-900/20 border border-yellow-700/40 p-4 flex gap-3 items-start sm:items-center text-sm text-yellow-300">
+          <span className="text-xl">⚠️</span>
+          Достигнут лимит аккаунтов. Улучшите подписку для добавления новых.
         </div>
       )}
 
@@ -353,11 +361,16 @@ function LoginModal({ onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={e => e.target === e.currentTarget && handleClose()}>
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl">
+      <div className="bg-gray-900 border border-gray-700/60 rounded-2xl w-full max-w-md shadow-2xl shadow-black/40">
 
         {/* Заголовок */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <span className="font-semibold text-white">Добавить Steam аккаунт</span>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800/60">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand-500/20 flex items-center justify-center">
+              <span className="text-sm">🎮</span>
+            </div>
+            <span className="font-bold text-white">Добавить Steam аккаунт</span>
+          </div>
           <button onClick={handleClose} className="btn-ghost p-1.5"><X className="w-4 h-4" /></button>
         </div>
 
@@ -575,18 +588,22 @@ function ProfileCard({ profile, onDelete, onRefresh }) {
   };
 
   return (
-    <div className="card flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+    <div className="card-hover flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 font-medium text-sm shrink-0">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 shadow-lg ${
+          status === 'active'
+            ? 'bg-gradient-to-br from-green-600/30 to-emerald-700/20 border border-green-600/30 text-green-400'
+            : 'bg-gradient-to-br from-red-600/20 to-gray-800 border border-red-600/30 text-red-400'
+        }`}>
           {(profile.name || 'U')[0].toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-white truncate">{profile.name}</p>
+          <p className="font-semibold text-white truncate">{profile.name}</p>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className={statusColor}>{statusLabels[status] || status}</span>
             {profile.target_url && (
               <a href={profile.target_url} target="_blank" rel="noreferrer"
-                className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
+                className="text-xs text-gray-500 hover:text-brand-400 flex items-center gap-1 transition-colors">
                 <Globe className="w-3 h-3" /> Открыть
               </a>
             )}
@@ -594,17 +611,14 @@ function ProfileCard({ profile, onDelete, onRefresh }) {
         </div>
       </div>
       <div className="flex items-center justify-between sm:justify-end gap-2">
-        <p className="text-xs text-gray-600 sm:hidden">
-          {new Date(profile.created_at).toLocaleDateString('ru')}
-        </p>
-        <p className="text-xs text-gray-600 hidden sm:block">
+        <p className="text-xs text-gray-600">
           {new Date(profile.created_at).toLocaleDateString('ru')}
         </p>
         <div className="flex gap-1">
-          <button onClick={handleCheck} disabled={busy} className="btn-ghost text-xs px-2 py-1" title="Проверить">
+          <button onClick={handleCheck} disabled={busy} className="btn-ghost text-xs px-2.5 py-1.5 rounded-lg" title="Проверить">
             <RefreshCw className={`w-3.5 h-3.5 ${busy ? 'animate-spin' : ''}`} />
           </button>
-          <button onClick={() => onDelete(profile.id)} className="btn-ghost text-xs px-2 py-1 hover:text-red-400" title="Удалить">
+          <button onClick={() => onDelete(profile.id)} className="btn-ghost text-xs px-2.5 py-1.5 rounded-lg hover:text-red-400 hover:bg-red-500/10" title="Удалить">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -615,12 +629,13 @@ function ProfileCard({ profile, onDelete, onRefresh }) {
 
 const statusLabels = { active: 'Активен', invalid: 'Недействителен', checking: 'Проверяется', unknown: 'Неизвестно' };
 
-export function EmptyState({ title, desc, action }) {
+export function EmptyState({ title, desc, emoji, action }) {
   return (
-    <div className="card text-center py-12">
-      <p className="text-gray-400 font-medium">{title}</p>
-      <p className="text-gray-600 text-sm mt-1">{desc}</p>
-      {action && <div className="mt-4">{action}</div>}
+    <div className="card text-center py-14">
+      {emoji && <div className="text-5xl mb-3">{emoji}</div>}
+      <p className="text-gray-300 font-semibold text-lg">{title}</p>
+      <p className="text-gray-500 text-sm mt-1.5 max-w-xs mx-auto">{desc}</p>
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

@@ -21,6 +21,8 @@ const config  = require('../config');
 const db      = require('../db');
 const SubscriptionService = require('../services/SubscriptionService');
 const SbpPaymentService   = require('../services/SbpPaymentService');
+const YooKassaService     = require('../services/YooKassaService');
+const logger              = require('../logger');
 const { requireAuth, requireActiveUser } = require('../middleware/auth');
 
 const router  = express.Router();
@@ -38,15 +40,29 @@ router.post('/sbp/create', ALL, async (req, res, next) => {
     const plan = await db.getPlan(plan_id);
     if (!plan || !plan.is_active) return res.status(400).json({ error: 'Тариф не найден' });
 
-    const price = SbpPaymentService.getPriceRub(plan_id, billing_period);
+    const price = config.yookassa.enabled
+      ? YooKassaService.getPriceRub(plan_id, billing_period)
+      : SbpPaymentService.getPriceRub(plan_id, billing_period);
     if (price <= 0) return res.status(400).json({ error: 'Этот тариф бесплатный' });
 
-    const result = await SbpPaymentService.createPayment({
-      userId:        req.userId,
-      planId:        plan_id,
-      billingPeriod: billing_period,
-      returnUrl:     `${config.appUrl}/subscription?payment=success`,
-    });
+    let result;
+    if (config.yookassa.enabled) {
+      result = await YooKassaService.createSubscriptionPayment({
+        userId:        req.userId,
+        planId:        plan_id,
+        billingPeriod: billing_period,
+        returnUrl:     `${config.appUrl}/subscription?payment=success`,
+      });
+    } else if (config.sberbank.enabled) {
+      result = await SbpPaymentService.createPayment({
+        userId:        req.userId,
+        planId:        plan_id,
+        billingPeriod: billing_period,
+        returnUrl:     `${config.appUrl}/subscription?payment=success`,
+      });
+    } else {
+      return res.status(400).json({ error: 'Платёжная система не настроена' });
+    }
 
     res.json(result);
   } catch (err) {
@@ -60,6 +76,11 @@ router.post('/sbp/create', ALL, async (req, res, next) => {
 
 router.get('/sbp/:id/status', ALL, async (req, res, next) => {
   try {
+    // Если Sberbank не настроен, пробуем YooKassa
+    if (!config.sberbank.enabled && config.yookassa.enabled) {
+      const result = await YooKassaService.getPaymentStatus(req.params.id);
+      return res.json(result);
+    }
     const result = await SbpPaymentService.getPaymentStatus(req.params.id);
     res.json(result);
   } catch (err) {
@@ -118,7 +139,41 @@ router.post('/sberbank/callback', express.json(), async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.get('/sbp/prices', async (req, res) => {
+  if (config.yookassa.enabled) return res.json(YooKassaService.RUB_PRICES);
   res.json(SbpPaymentService.RUB_PRICES);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  YooKassa — Проверить статус платежа подписки (polling fallback)
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/yookassa/:paymentId/status', ALL, async (req, res) => {
+  try {
+    if (!config.yookassa.enabled) return res.status(400).json({ error: 'ЮKassa не настроена' });
+
+    const result = await YooKassaService.getPaymentStatus(req.params.paymentId);
+
+    if (result.status === 'succeeded' && result.paid && result.metadata?.type === 'subscription') {
+      const userId        = result.metadata.user_id;
+      const planId        = result.metadata.plan_id;
+      const billingPeriod = result.metadata.billing_period || 'monthly';
+
+      if (userId === req.userId) {
+        const existing = await db.getTransactionByExternalId(result.id);
+        if (!existing) {
+          await SubscriptionService.activatePlan(userId, planId, billingPeriod, { paymentMethod: 'yookassa' });
+          logger.info('YooKassa: подписка активирована (polling)', {
+            userId, planId, billingPeriod, paymentId: result.id,
+          });
+        }
+      }
+    }
+
+    res.json({ status: result.status, paid: result.paid, amount: result.amount });
+  } catch (err) {
+    logger.error('YooKassa payment status error', { err: err.message });
+    res.status(500).json({ error: 'Ошибка' });
+  }
 });
 
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {

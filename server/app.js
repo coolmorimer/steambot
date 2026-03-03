@@ -47,6 +47,7 @@ const tradesRoutes        = require('./routes/trades');
 const balanceRoutes       = require('./routes/balance');
 const steamInventoryRoutes = require('./routes/steamInventory');
 const steamItemsRoutes    = require('./routes/steamItems');
+const referralsRoutes     = require('./routes/referrals');
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Express app
@@ -160,6 +161,7 @@ app.use('/api/trades',        tradesRoutes);
 app.use('/api/balance',       balanceRoutes);
 app.use('/api/steam-inventory', steamInventoryRoutes);
 app.use('/api/steam-items',     steamItemsRoutes);
+app.use('/api/referrals',       referralsRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

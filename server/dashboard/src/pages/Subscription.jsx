@@ -116,9 +116,14 @@ export default function Subscription() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Подписка</h1>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-brand-500/20 border border-purple-500/20 flex items-center justify-center">
+            <span className="text-lg">👑</span>
+          </div>
+          <h1 className="text-xl font-extrabold text-white tracking-tight">Подписка</h1>
+        </div>
         <button onClick={handleRefresh} className="btn-ghost flex items-center gap-1.5 text-xs" disabled={refreshing}>
           <RefreshCw className={clsx('w-3.5 h-3.5', refreshing && 'animate-spin')} />
           Обновить
@@ -348,8 +353,6 @@ function PaymentInfoCard({ cs, daysLeft, isActive, isTrialActive }) {
             </p>
             <p className="text-xs text-gray-500 mt-0.5">
               {new Date(lastPayment.date).toLocaleDateString('ru', { day: '2-digit', month: 'long', year: 'numeric' })}
-              {' · '}
-              {PAYMENT_METHODS[lastPayment.method] || lastPayment.method}
             </p>
           </div>
         )}
@@ -398,8 +401,6 @@ function TransactionRow({ tx }) {
           </p>
           <p className="text-xs text-gray-500">
             {new Date(tx.created_at).toLocaleDateString('ru', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            {' · '}
-            {PAYMENT_METHODS[tx.payment_method] || tx.payment_method || '—'}
           </p>
         </div>
       </div>
@@ -421,13 +422,18 @@ function PaymentModal({ payment, planId, plans, onClose, onSuccess }) {
   const [polling, setPolling] = useState(false);
   const [pollMsg, setPollMsg] = useState('');
 
+  const isYookassa = payment?.provider === 'yookassa';
+  const pollUrl = isYookassa
+    ? `/payments/yookassa/${encodeURIComponent(payment?.paymentId)}/status`
+    : `/payments/sbp/${encodeURIComponent(payment?.paymentId)}/status`;
+
   // Поллинг статуса платежа каждые 5 сек после открытия ссылки
   useEffect(() => {
     if (!polling || !payment?.paymentId) return;
     let active = true;
     const interval = setInterval(async () => {
       try {
-        const { data } = await api.get(`/payments/sbp/${encodeURIComponent(payment.paymentId)}/status`);
+        const { data } = await api.get(pollUrl);
         if (!active) return;
         if (data.status === 'succeeded' || data.paid) {
           clearInterval(interval);
@@ -441,7 +447,7 @@ function PaymentModal({ payment, planId, plans, onClose, onSuccess }) {
       } catch { /* silent */ }
     }, 5000);
     return () => { active = false; clearInterval(interval); };
-  }, [polling, payment?.paymentId, onSuccess]);
+  }, [polling, payment?.paymentId, pollUrl, onSuccess]);
 
   const handlePay = () => {
     if (payment.confirmationUrl) {
@@ -460,7 +466,7 @@ function PaymentModal({ payment, planId, plans, onClose, onSuccess }) {
           <div className="w-16 h-16 rounded-2xl bg-brand-600/20 border border-brand-600/30 flex items-center justify-center mx-auto mb-3">
             <CreditCard className="w-8 h-8 text-brand-400" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">Оплата через Сбербанк</h2>
+          <h2 className="text-xl font-bold text-white mb-1">Оплата подписки</h2>
           <p className="text-gray-400 text-sm">Банковская карта, SberPay или СБП</p>
         </div>
 
@@ -491,7 +497,7 @@ function PaymentModal({ payment, planId, plans, onClose, onSuccess }) {
               <div>
                 <p className="text-sm font-medium text-blue-300 mb-1">Безопасная оплата</p>
                 <p className="text-xs text-blue-400/70">
-                  Оплата обрабатывается через защищённый платёжный шлюз Сбербанка.
+                  Оплата обрабатывается через защищённый платёжный шлюз.
                   Вы будете перенаправлены на страницу оплаты.
                 </p>
               </div>
@@ -515,7 +521,7 @@ function PaymentModal({ payment, planId, plans, onClose, onSuccess }) {
           {!polling && !pollMsg && (
             <div className="bg-green-900/10 rounded-xl p-3 border border-green-700/20">
               <p className="text-xs text-green-400/80 text-center">
-                🔒 Платёж защищён SSL-шифрованием Сбербанка
+                🔒 Платёж защищён SSL-шифрованием
               </p>
             </div>
           )}

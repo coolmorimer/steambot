@@ -5,42 +5,131 @@
 @layer base {
   body {
     @apply bg-gray-950 text-gray-100 antialiased;
+    font-feature-settings: 'cv11', 'ss01';
   }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-gray-900; }
-  ::-webkit-scrollbar-thumb { @apply bg-gray-600 rounded-full; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-gray-700/60 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-600; }
+  ::selection { @apply bg-brand-600/40 text-white; }
 }
 
 @layer components {
+  /* ── Buttons ── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-950 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+    transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-950
+    disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97];
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
+    @apply btn bg-gradient-to-r from-brand-600 to-brand-500 text-white
+    hover:from-brand-500 hover:to-brand-400 hover:shadow-lg hover:shadow-brand-600/25
+    focus:ring-brand-500;
+  }
+  .btn-secondary {
+    @apply btn bg-gray-800 text-gray-200 border border-gray-700/60
+    hover:bg-gray-700 hover:border-gray-600 hover:text-white
+    focus:ring-gray-500;
   }
   .btn-ghost {
-    @apply btn text-gray-300 hover:bg-gray-800 hover:text-white focus:ring-gray-500;
+    @apply btn text-gray-400 hover:bg-gray-800/80 hover:text-white focus:ring-gray-500;
   }
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply btn bg-gradient-to-r from-red-600 to-red-500 text-white
+    hover:from-red-500 hover:to-red-400 hover:shadow-lg hover:shadow-red-600/20
+    focus:ring-red-500;
   }
+  .btn-success {
+    @apply btn bg-gradient-to-r from-green-600 to-emerald-500 text-white
+    hover:from-green-500 hover:to-emerald-400 hover:shadow-lg hover:shadow-green-600/20
+    focus:ring-green-500;
+  }
+
+  /* ── Card ── */
   .card {
-    @apply bg-gray-900 border border-gray-800 rounded-xl p-5;
+    @apply bg-gray-900/80 backdrop-blur-sm border border-gray-800/60 rounded-2xl p-5
+    shadow-lg shadow-black/10;
   }
+  .card-glass {
+    @apply bg-gray-900/50 backdrop-blur-xl border border-gray-700/40 rounded-2xl p-5
+    shadow-xl shadow-black/20;
+  }
+  .card-hover {
+    @apply card hover:border-gray-700/80 hover:shadow-xl hover:shadow-brand-600/5
+    hover:-translate-y-0.5 transition-all duration-300;
+  }
+
+  /* ── Inputs ── */
   .input {
-    @apply w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
+    @apply w-full rounded-xl bg-gray-800/80 border border-gray-700/60 px-4 py-2.5 text-sm text-gray-100
+    placeholder-gray-500 transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 focus:bg-gray-800;
   }
   .label {
-    @apply block text-sm font-medium text-gray-400 mb-1;
+    @apply block text-sm font-medium text-gray-400 mb-1.5;
   }
+
+  /* ── Badges ── */
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
-  .badge-green  { @apply badge bg-green-900/50  text-green-400; }
-  .badge-yellow { @apply badge bg-yellow-900/50 text-yellow-400; }
-  .badge-red    { @apply badge bg-red-900/50    text-red-400; }
-  .badge-blue   { @apply badge bg-blue-900/50   text-blue-400; }
-  .badge-gray   { @apply badge bg-gray-700      text-gray-300; }
+  .badge-green  { @apply badge bg-green-500/10  text-green-400 ring-1 ring-green-500/20; }
+  .badge-yellow { @apply badge bg-yellow-500/10 text-yellow-400 ring-1 ring-yellow-500/20; }
+  .badge-red    { @apply badge bg-red-500/10    text-red-400 ring-1 ring-red-500/20; }
+  .badge-blue   { @apply badge bg-brand-500/10  text-brand-400 ring-1 ring-brand-500/20; }
+  .badge-gray   { @apply badge bg-gray-700/50   text-gray-300 ring-1 ring-gray-600/30; }
+  .badge-purple { @apply badge bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20; }
+
+  /* ── Stat card ── */
+  .stat-card {
+    @apply relative overflow-hidden rounded-2xl border border-gray-800/60 p-5
+    bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm
+    hover:border-gray-700/60 hover:shadow-xl transition-all duration-300
+    cursor-pointer;
+  }
+  .stat-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br opacity-0
+    transition-opacity duration-500 rounded-2xl;
+  }
+  .stat-card:hover::before {
+    @apply opacity-100;
+  }
+
+  /* ── Separator ── */
+  .divider { @apply border-t border-gray-800/60; }
+
+  /* ── Section heading ── */
+  .section-title {
+    @apply text-lg font-bold text-white flex items-center gap-2.5;
+  }
+
+  /* ── Tab bar ── */
+  .tab-bar {
+    @apply flex gap-1 bg-gray-800/40 backdrop-blur-sm rounded-xl p-1 border border-gray-800/40;
+  }
+  .tab-item {
+    @apply flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200 text-center;
+  }
+  .tab-active {
+    @apply tab-item bg-gray-700/80 text-white shadow-sm;
+  }
+  .tab-inactive {
+    @apply tab-item text-gray-400 hover:text-white hover:bg-gray-800/50;
+  }
+
+  /* ── Tooltip ── */
+  .tooltip-wrap {
+    @apply relative;
+  }
+  .tooltip-wrap .tooltip-text {
+    @apply invisible opacity-0 absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50
+    bg-gray-800 text-xs text-gray-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap
+    shadow-xl border border-gray-700/60 transition-all duration-200 pointer-events-none;
+  }
+  .tooltip-wrap:hover .tooltip-text {
+    @apply visible opacity-100;
+  }
 }
 
 /* ══ Aurora orb animations (inspired by calculatorrobotail.ru) ══ */
@@ -92,4 +181,27 @@
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
+}
+
+/* ═══ Onboarding Tour ═══ */
+.onboarding-overlay {
+  animation: onboarding-fade-in 0.4s ease-out;
+}
+.onboarding-card {
+  animation: onboarding-pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.onboarding-bounce {
+  animation: onboarding-bounce 2s ease-in-out infinite;
+}
+@keyframes onboarding-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes onboarding-pop-in {
+  from { opacity: 0; transform: scale(0.85) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes onboarding-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
 }

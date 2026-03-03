@@ -549,7 +549,8 @@ async function updateJobStatus(id, userId, status, extra = {}) {
 }
 
 async function resetRunningJobs(userId) {
-  await query(`UPDATE jobs SET status = 'pending' WHERE user_id = $1 AND status = 'running'`, [userId]);
+  // Delete running jobs instead of resetting to pending (avoids unique constraint violation)
+  await query(`DELETE FROM jobs WHERE user_id = $1 AND status = 'running'`, [userId]);
 }
 
 async function cancelOverduePendingJobs(userId) {
@@ -1166,12 +1167,28 @@ async function createTradeOffer({ creatorId, title, description, offeringItems, 
   return rows[0].id;
 }
 
-async function getTradeOffers({ status = 'active', search = '', sort = 'bumped', limit = 20, offset = 0 } = {}) {
+async function getTradeOffers({ status = 'active', search = '', sort = 'bumped', limit = 20, offset = 0,
+  has_knife, has_gloves, wanted_tag, min_value, max_value, has_description } = {}) {
   let sql = `SELECT t.*, u.name as creator_name, u.steam_username, u.steam_avatar as creator_avatar, u.steam_avatar, u.trade_url as creator_trade_url
     FROM trade_offers t JOIN users u ON t.creator_id = u.id WHERE t.status = $1`;
   const params = [status];
   let i = 2;
-  if (search) { sql += ` AND (t.title ILIKE $${i} OR t.description ILIKE $${i})`; params.push(`%${search}%`); i++; }
+  if (search) {
+    sql += ` AND (t.title ILIKE $${i} OR t.description ILIKE $${i}`
+      + ` OR EXISTS (SELECT 1 FROM jsonb_array_elements(t.offering_items) el WHERE el->>'name' ILIKE $${i})`
+      + ` OR EXISTS (SELECT 1 FROM jsonb_array_elements(t.wanted_items) el WHERE el->>'name' ILIKE $${i}))`;
+    params.push(`%${search}%`); i++;
+  }
+  if (has_knife) {
+    sql += ` AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.offering_items) el WHERE el->>'type' = 'knife' OR el->>'name' ILIKE '%Knife%' OR el->>'name' ILIKE '%Bayonet%' OR el->>'name' ILIKE '%Karambit%')`;
+  }
+  if (has_gloves) {
+    sql += ` AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.offering_items) el WHERE el->>'type' = 'gloves' OR el->>'name' ILIKE '%Gloves%' OR el->>'name' ILIKE '%Wraps%')`;
+  }
+  if (wanted_tag) { sql += ` AND $${i}::text = ANY(t.wanted_tags)`; params.push(wanted_tag); i++; }
+  if (min_value) { sql += ` AND t.total_value >= $${i}`; params.push(parseInt(min_value)); i++; }
+  if (max_value) { sql += ` AND t.total_value <= $${i}`; params.push(parseInt(max_value)); i++; }
+  if (has_description) { sql += ` AND t.description IS NOT NULL AND t.description <> ''`; }
   if (sort === 'newest') sql += ' ORDER BY t.created_at DESC';
   else if (sort === 'value_desc') sql += ' ORDER BY t.total_value DESC';
   else sql += ' ORDER BY t.bumped_at DESC';
@@ -1181,10 +1198,27 @@ async function getTradeOffers({ status = 'active', search = '', sort = 'bumped',
   return rows.map(parseTradeOffer);
 }
 
-async function countTradeOffers({ status = 'active', search = '' } = {}) {
-  let sql = 'SELECT COUNT(*)::int as n FROM trade_offers WHERE status = $1';
+async function countTradeOffers({ status = 'active', search = '',
+  has_knife, has_gloves, wanted_tag, min_value, max_value, has_description } = {}) {
+  let sql = 'SELECT COUNT(*)::int as n FROM trade_offers t WHERE t.status = $1';
   const params = [status];
-  if (search) { sql += ' AND (title ILIKE $2 OR description ILIKE $2)'; params.push(`%${search}%`); }
+  let i = 2;
+  if (search) {
+    sql += ` AND (t.title ILIKE $${i} OR t.description ILIKE $${i}`
+      + ` OR EXISTS (SELECT 1 FROM jsonb_array_elements(t.offering_items) el WHERE el->>'name' ILIKE $${i})`
+      + ` OR EXISTS (SELECT 1 FROM jsonb_array_elements(t.wanted_items) el WHERE el->>'name' ILIKE $${i}))`;
+    params.push(`%${search}%`); i++;
+  }
+  if (has_knife) {
+    sql += ` AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.offering_items) el WHERE el->>'type' = 'knife' OR el->>'name' ILIKE '%Knife%' OR el->>'name' ILIKE '%Bayonet%' OR el->>'name' ILIKE '%Karambit%')`;
+  }
+  if (has_gloves) {
+    sql += ` AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.offering_items) el WHERE el->>'type' = 'gloves' OR el->>'name' ILIKE '%Gloves%' OR el->>'name' ILIKE '%Wraps%')`;
+  }
+  if (wanted_tag) { sql += ` AND $${i}::text = ANY(t.wanted_tags)`; params.push(wanted_tag); i++; }
+  if (min_value) { sql += ` AND t.total_value >= $${i}`; params.push(parseInt(min_value)); i++; }
+  if (max_value) { sql += ` AND t.total_value <= $${i}`; params.push(parseInt(max_value)); i++; }
+  if (has_description) { sql += ` AND t.description IS NOT NULL AND t.description <> ''`; }
   const row = await getOne(sql, params);
   return row?.n || 0;
 }
@@ -1229,6 +1263,101 @@ function parseTradeOffer(row) {
   try { if (typeof row.offering_items === 'string') row.offering_items = JSON.parse(row.offering_items); } catch { row.offering_items = []; }
   try { if (typeof row.wanted_items === 'string') row.wanted_items = JSON.parse(row.wanted_items); } catch { row.wanted_items = []; }
   return row;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TRADE PROPOSALS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function createTradeProposal({ tradeOfferId, proposerId, items, message }) {
+  const { rows } = await query(`
+    INSERT INTO trade_proposals (trade_offer_id, proposer_id, items, message, created_at, updated_at)
+    VALUES ($1,$2,$3,$4,NOW(),NOW()) RETURNING id
+  `, [tradeOfferId, proposerId, JSON.stringify(items || []), message || '']);
+  return rows[0].id;
+}
+
+async function getTradeProposals(tradeOfferId) {
+  const rows = await getAll(`
+    SELECT tp.*, u.name as proposer_name, u.steam_username as proposer_steam_username,
+           u.steam_avatar as proposer_avatar, u.trade_url as proposer_trade_url
+    FROM trade_proposals tp JOIN users u ON tp.proposer_id = u.id
+    WHERE tp.trade_offer_id = $1
+    ORDER BY tp.created_at DESC
+  `, [tradeOfferId]);
+  return rows.map(parseTradeProposal);
+}
+
+async function getTradeProposal(id) {
+  const row = await getOne(`
+    SELECT tp.*, u.name as proposer_name, u.steam_username as proposer_steam_username,
+           u.steam_avatar as proposer_avatar, u.trade_url as proposer_trade_url
+    FROM trade_proposals tp JOIN users u ON tp.proposer_id = u.id
+    WHERE tp.id = $1
+  `, [id]);
+  return row ? parseTradeProposal(row) : null;
+}
+
+async function getIncomingProposals(userId) {
+  const rows = await getAll(`
+    SELECT tp.*, u.name as proposer_name, u.steam_username as proposer_steam_username,
+           u.steam_avatar as proposer_avatar, u.trade_url as proposer_trade_url,
+           t.title as trade_title, t.offering_items as trade_offering_items
+    FROM trade_proposals tp
+    JOIN users u ON tp.proposer_id = u.id
+    JOIN trade_offers t ON tp.trade_offer_id = t.id
+    WHERE t.creator_id = $1
+    ORDER BY tp.created_at DESC
+  `, [userId]);
+  return rows.map(r => { parseTradeProposal(r); parseTradeOfferFields(r); return r; });
+}
+
+async function getOutgoingProposals(userId) {
+  const rows = await getAll(`
+    SELECT tp.*, u.name as creator_name, u.steam_username as creator_steam_username,
+           u.steam_avatar as creator_avatar, u.trade_url as creator_trade_url,
+           t.title as trade_title, t.offering_items as trade_offering_items,
+           t.creator_id as trade_creator_id
+    FROM trade_proposals tp
+    JOIN trade_offers t ON tp.trade_offer_id = t.id
+    JOIN users u ON t.creator_id = u.id
+    WHERE tp.proposer_id = $1
+    ORDER BY tp.created_at DESC
+  `, [userId]);
+  return rows.map(r => { parseTradeProposal(r); parseTradeOfferFields(r); return r; });
+}
+
+async function updateTradeProposal(id, fields) {
+  const allowed = ['status', 'decline_reason'];
+  const updates = [], values = [];
+  let i = 1;
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { updates.push(`${k} = $${i++}`); values.push(v); }
+  }
+  if (!updates.length) return;
+  updates.push(`updated_at = NOW()`);
+  values.push(id);
+  await query(`UPDATE trade_proposals SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
+}
+
+async function countPendingProposals(userId) {
+  const row = await getOne(`
+    SELECT COUNT(*)::int as n FROM trade_proposals tp
+    JOIN trade_offers t ON tp.trade_offer_id = t.id
+    WHERE t.creator_id = $1 AND tp.status = 'pending'
+  `, [userId]);
+  return row?.n || 0;
+}
+
+function parseTradeProposal(row) {
+  if (!row) return null;
+  try { if (typeof row.items === 'string') row.items = JSON.parse(row.items); } catch { row.items = []; }
+  return row;
+}
+
+function parseTradeOfferFields(row) {
+  if (!row) return;
+  try { if (typeof row.trade_offering_items === 'string') row.trade_offering_items = JSON.parse(row.trade_offering_items); } catch { row.trade_offering_items = []; }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1293,6 +1422,155 @@ async function updateWithdrawalRequest(id, fields) {
   await query(`UPDATE withdrawal_requests SET ${updates.join(', ')} WHERE id = $${i}`, values);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  REFERRALS
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function generateReferralCode(userId) {
+  // Генерируем уникальный 8-символьный код
+  const code = uuidv4().replace(/-/g, '').slice(0, 8).toUpperCase();
+  await query('UPDATE users SET referral_code = $1 WHERE id = $2', [code, userId]);
+  return code;
+}
+
+async function getUserReferralCode(userId) {
+  const row = await getOne('SELECT referral_code FROM users WHERE id = $1', [userId]);
+  return row?.referral_code || null;
+}
+
+async function getUserByReferralCode(code) {
+  return getOne('SELECT id, name, email, steam_username, referral_code FROM users WHERE referral_code = $1', [code]);
+}
+
+async function setReferredBy(userId, referrerId) {
+  await query('UPDATE users SET referred_by = $1 WHERE id = $2', [referrerId, userId]);
+}
+
+async function createReferralUse({ referrerId, referredId, referralType, partnerReferralId, rewardType, rewardAmount, rewardGiven }) {
+  const { rows } = await query(`
+    INSERT INTO referral_uses (referrer_id, referred_id, referral_type, partner_referral_id, reward_given, reward_type, reward_amount)
+    VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id
+  `, [referrerId, referredId, referralType || 'user', partnerReferralId || null, rewardGiven === true, rewardType || 'trial_days', rewardAmount || 0]);
+  return rows[0].id;
+}
+
+async function getReferralUseByReferredId(referredId) {
+  return getOne('SELECT * FROM referral_uses WHERE referred_id = $1', [referredId]);
+}
+
+async function markReferralUseRewarded(id, rewardType, rewardAmount) {
+  await query(
+    'UPDATE referral_uses SET reward_given = true, reward_type = $1, reward_amount = $2 WHERE id = $3',
+    [rewardType, rewardAmount, id]
+  );
+}
+
+async function getReferralStats(userId) {
+  const total = await getOne('SELECT COUNT(*)::int as n FROM referral_uses WHERE referrer_id = $1', [userId]);
+  const rewarded = await getOne('SELECT COUNT(*)::int as n FROM referral_uses WHERE referrer_id = $1 AND reward_given = true', [userId]);
+  const totalDays = await getOne('SELECT COALESCE(SUM(reward_amount),0)::int as n FROM referral_uses WHERE referrer_id = $1 AND reward_type = $2', [userId, 'trial_days']);
+  const referrals = await getAll(`
+    SELECT ru.*, u.name, u.email, u.steam_username, u.created_at as user_created_at
+    FROM referral_uses ru JOIN users u ON ru.referred_id = u.id
+    WHERE ru.referrer_id = $1 ORDER BY ru.created_at DESC LIMIT 50
+  `, [userId]);
+  return { total: total?.n || 0, rewarded: rewarded?.n || 0, totalDays: totalDays?.n || 0, referrals };
+}
+
+// ── Партнёрские реферальные программы ──
+
+async function createPartnerReferral({ userId, code, label, commissionPercent }) {
+  const { rows } = await query(`
+    INSERT INTO partner_referrals (user_id, code, label, commission_percent, created_at)
+    VALUES ($1,$2,$3,$4,$5) RETURNING *
+  `, [userId, code.toUpperCase(), label || '', commissionPercent || 10, now()]);
+  return rows[0];
+}
+
+async function getPartnerReferrals() {
+  return getAll(`
+    SELECT pr.*, u.name, u.email, u.steam_username
+    FROM partner_referrals pr JOIN users u ON pr.user_id = u.id
+    ORDER BY pr.created_at DESC
+  `);
+}
+
+async function getPartnerReferral(id) {
+  return getOne('SELECT * FROM partner_referrals WHERE id = $1', [id]);
+}
+
+async function getPartnerReferralByCode(code) {
+  return getOne('SELECT * FROM partner_referrals WHERE code = $1 AND is_active = true', [code.toUpperCase()]);
+}
+
+async function getPartnerReferralByUserId(userId) {
+  return getOne('SELECT * FROM partner_referrals WHERE user_id = $1', [userId]);
+}
+
+async function updatePartnerReferral(id, fields) {
+  const allowed = ['label', 'commission_percent', 'is_active'];
+  const updates = [], values = [];
+  let i = 1;
+  for (const [k, v] of Object.entries(fields)) {
+    if (allowed.includes(k)) { updates.push(`${k} = $${i++}`); values.push(v); }
+  }
+  if (!updates.length) return;
+  updates.push(`updated_at = $${i++}`);
+  values.push(now(), id);
+  await query(`UPDATE partner_referrals SET ${updates.join(', ')} WHERE id = $${i}`, values);
+}
+
+async function deletePartnerReferral(id) {
+  await query('DELETE FROM partner_referrals WHERE id = $1', [id]);
+}
+
+async function incrementPartnerReferralStats(id, earningsKopecks) {
+  await query(`
+    UPDATE partner_referrals SET total_referrals = total_referrals + 1,
+      total_earnings = total_earnings + $1, updated_at = $2 WHERE id = $3
+  `, [earningsKopecks || 0, now(), id]);
+}
+
+async function createReferralEarning({ partnerReferralId, referralUseId, paymentId, amount }) {
+  const { rows } = await query(`
+    INSERT INTO referral_earnings (partner_referral_id, referral_use_id, payment_id, amount, created_at)
+    VALUES ($1,$2,$3,$4,$5) RETURNING id
+  `, [partnerReferralId, referralUseId, paymentId || null, amount, now()]);
+  return rows[0].id;
+}
+
+async function getPartnerEarnings(partnerReferralId) {
+  return getAll('SELECT * FROM referral_earnings WHERE partner_referral_id = $1 ORDER BY created_at DESC LIMIT 100', [partnerReferralId]);
+}
+
+async function extendSubscription(userId, days) {
+  // Продлить активную подписку на N дней
+  const sub = await getActiveSubscription(userId);
+  if (!sub) return false;
+  const baseDate = sub.status === 'trial'
+    ? (sub.trial_ends_at ? new Date(sub.trial_ends_at) : new Date())
+    : (sub.expires_at ? new Date(sub.expires_at) : new Date());
+  const newDate = new Date(Math.max(baseDate.getTime(), Date.now()) + days * 86400000).toISOString();
+  if (sub.status === 'trial') {
+    await query('UPDATE user_subscriptions SET trial_ends_at = $1 WHERE id = $2', [newDate, sub.id]);
+  } else {
+    await query('UPDATE user_subscriptions SET expires_at = $1 WHERE id = $2', [newDate, sub.id]);
+  }
+  return true;
+}
+
+// Найти реф. код (сначала обычный, потом партнёрский)
+async function resolveReferralCode(code) {
+  const upper = code.toUpperCase();
+  // Обычный пользовательский код
+  const user = await getUserByReferralCode(upper);
+  if (user) return { type: 'user', referrerId: user.id, user };
+  // Партнёрский код
+  const partner = await getPartnerReferralByCode(upper);
+  if (partner) return { type: 'partner', referrerId: partner.user_id, partner };
+  return null;
+}
+
 module.exports = {
   query, getOne,
   getPlans, getPlan, upsertPlan,
@@ -1304,6 +1582,9 @@ module.exports = {
   // Trades
   createTradeOffer, getTradeOffers, countTradeOffers, getTradeOffer,
   getUserTradeOffers, updateTradeOffer, bumpTradeOffer, deleteTradeOffer,
+  // Trade Proposals
+  createTradeProposal, getTradeProposals, getTradeProposal,
+  getIncomingProposals, getOutgoingProposals, updateTradeProposal, countPendingProposals,
   // Balance
   createBalanceTransaction, getBalanceTransactions, updateUserBalance, getUserBalance,
   // Withdrawals
@@ -1329,5 +1610,12 @@ module.exports = {
   getAdminStats, getAdminUserList, auditLog,
   createApiKey, getApiKeys, getApiKeyByHash, updateApiKeyLastUsed,
   deleteApiKey, deactivateApiKey, countApiKeys,
+  // Referrals
+  generateReferralCode, getUserReferralCode, getUserByReferralCode, setReferredBy,
+  createReferralUse, getReferralUseByReferredId, markReferralUseRewarded,
+  getReferralStats, resolveReferralCode, extendSubscription,
+  createPartnerReferral, getPartnerReferrals, getPartnerReferral, getPartnerReferralByCode,
+  getPartnerReferralByUserId, updatePartnerReferral, deletePartnerReferral,
+  incrementPartnerReferralStats, createReferralEarning, getPartnerEarnings,
   pool, // expose for health-checks / migrations
 };

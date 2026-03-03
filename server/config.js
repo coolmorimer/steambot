@@ -58,6 +58,13 @@ module.exports = {
     enabled: !!process.env.SBERBANK_TOKEN,
   },
 
+  // ── YooKassa ────────────────────────────────────────────────────────────
+  yookassa: {
+    shopId:    process.env.YOOKASSA_SHOP_ID    || '',
+    secretKey: process.env.YOOKASSA_SECRET_KEY || '',
+    enabled:   !!process.env.YOOKASSA_SHOP_ID && !!process.env.YOOKASSA_SECRET_KEY,
+  },
+
   // ── Evotor (онлайн-касса) ──────────────────────────────────────────────
   evotor: {
     accessToken:  process.env.EVOTOR_ACCESS_TOKEN  || '',

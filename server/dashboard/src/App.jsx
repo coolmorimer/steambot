@@ -20,6 +20,7 @@ import Subscription   from './pages/Subscription';
 import ApiKeys        from './pages/ApiKeys';
 import Trades         from './pages/Trades';
 import CreateTrade    from './pages/CreateTrade';
+import TradeView      from './pages/TradeView';
 import Balance        from './pages/Balance';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers     from './pages/admin/AdminUsers';
@@ -28,6 +29,8 @@ import AdminConfig    from './pages/admin/AdminConfig';
 import AdminSupport   from './pages/admin/AdminSupport';
 import AdminPayments  from './pages/admin/AdminPayments';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
+import AdminPartners from './pages/admin/AdminPartners';
+import Referrals from './pages/Referrals';
 
 export default function App() {
   return (
@@ -56,7 +59,9 @@ export default function App() {
           {/* P2P Trades */}
           <Route path="trades"         element={<Trades />} />
           <Route path="trades/create"  element={<CreateTrade />} />
+          <Route path="trades/:id"     element={<TradeView />} />
           <Route path="balance"        element={<Balance />} />
+          <Route path="referrals"      element={<Referrals />} />
 
           {/* Admin */}
           <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
@@ -66,6 +71,7 @@ export default function App() {
           <Route path="admin/support" element={<AdminRoute><AdminSupport /></AdminRoute>} />
           <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
           <Route path="admin/withdrawals" element={<AdminRoute><AdminWithdrawals /></AdminRoute>} />
+          <Route path="admin/partners" element={<AdminRoute><AdminPartners /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

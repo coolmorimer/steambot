@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
+import { RestartTourButton } from '../components/OnboardingTour';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 
@@ -41,66 +43,78 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6 max-w-xl">
-      <h1 className="text-xl font-bold text-white">Настройки</h1>
+    <div className="space-y-6 max-w-xl animate-slide-up">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-500/20 to-brand-500/20 border border-gray-500/20 flex items-center justify-center">
+          <span className="text-lg">⚙️</span>
+        </div>
+        <h1 className="text-xl font-extrabold text-white tracking-tight">Настройки</h1>
+      </div>
 
       {/* Profile */}
-      <section className="card space-y-4">
-        <h2 className="font-semibold text-white">Профиль</h2>
+      <section className="card-glass space-y-4">
+        <h2 className="font-bold text-white flex items-center gap-2">👤 Профиль</h2>
         <form onSubmit={saveProfile} className="space-y-3">
           <div>
-            <label className="label">Email</label>
+            <label className="label">📧 Email</label>
             <input className="input opacity-60 cursor-not-allowed" value={user?.email} readOnly />
           </div>
           <div>
-            <label className="label">Имя</label>
-            <input className="input" value={profile.name}
+            <label className="label">✏️ Имя</label>
+            <input className="input" value={profile.name} placeholder="Ваше имя"
               onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} />
           </div>
           <button type="submit" className="btn-primary" disabled={savingP}>
-            {savingP ? 'Сохраняю...' : 'Сохранить'}
+            {savingP ? <Loader2 className="w-4 h-4 animate-spin" /> : '💾 Сохранить'}
           </button>
         </form>
       </section>
 
       {/* Password */}
-      <section className="card space-y-4">
-        <h2 className="font-semibold text-white">Смена пароля</h2>
+      <section className="card-glass space-y-4">
+        <h2 className="font-bold text-white flex items-center gap-2">🔐 Смена пароля</h2>
         <form onSubmit={savePassword} className="space-y-3">
           <div>
-            <label className="label">Текущий пароль</label>
-            <input className="input" type="password" required
+            <label className="label">🔒 Текущий пароль</label>
+            <input className="input" type="password" required placeholder="••••••••"
               value={pass.current} onChange={e => setPass(p => ({ ...p, current: e.target.value }))} />
           </div>
           <div>
-            <label className="label">Новый пароль</label>
-            <input className="input" type="password" required minLength={8}
+            <label className="label">🆕 Новый пароль</label>
+            <input className="input" type="password" required minLength={8} placeholder="Минимум 8 символов"
               value={pass.next} onChange={e => setPass(p => ({ ...p, next: e.target.value }))} />
           </div>
           <div>
-            <label className="label">Повторите новый пароль</label>
-            <input className="input" type="password" required
+            <label className="label">🔒 Повторите новый пароль</label>
+            <input className="input" type="password" required placeholder="••••••••"
               value={pass.next2} onChange={e => setPass(p => ({ ...p, next2: e.target.value }))} />
           </div>
           <button type="submit" className="btn-primary" disabled={savingPw}>
-            {savingPw ? 'Сохраняю...' : 'Изменить пароль'}
+            {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔄 Изменить пароль'}
           </button>
         </form>
       </section>
 
       {/* Account info */}
-      <section className="card space-y-2 text-sm">
-        <h2 className="font-semibold text-white">Информация об аккаунте</h2>
+      <section className="card-glass space-y-3 text-sm">
+        <h2 className="font-bold text-white flex items-center gap-2">ℹ️ Информация об аккаунте</h2>
         <div className="flex justify-between text-gray-400">
-          <span>ID</span><span className="font-mono text-gray-300">{user?.id?.slice(0, 8)}…</span>
+          <span>ID</span><span className="font-mono text-gray-300 bg-gray-800 px-2 py-0.5 rounded">{user?.id?.slice(0, 8)}…</span>
         </div>
         <div className="flex justify-between text-gray-400">
-          <span>Роль</span><span className="text-gray-300">{user?.role}</span>
+          <span>Роль</span><span className="text-gray-300 capitalize">{user?.role}</span>
         </div>
         <div className="flex justify-between text-gray-400">
           <span>Дата регистрации</span>
           <span className="text-gray-300">{new Date(user?.created_at).toLocaleDateString('ru')}</span>
         </div>
+      </section>
+
+      {/* Tour restart */}
+      <section className="card-glass space-y-3">
+        <h2 className="font-bold text-white flex items-center gap-2">🎓 Обучение</h2>
+        <p className="text-sm text-gray-400">Пройдите интерактивный тур по интерфейсу ещё раз, если забыли где что находится.</p>
+        <RestartTourButton userId={user?.id} />
       </section>
     </div>
   );

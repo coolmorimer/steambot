@@ -379,4 +379,55 @@ router.patch('/withdrawals/:id', requireAdmin, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PARTNER REFERRALS (for YouTubers / influencers)
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/partners', requireAdmin, async (req, res, next) => {
+  try {
+    const partners = await db.getPartnerReferrals();
+    res.json(partners);
+  } catch (e) { next(e); }
+});
+
+router.post('/partners', requireAdmin, async (req, res, next) => {
+  try {
+    const { user_id, code, label, commission_percent } = req.body;
+    if (!user_id || !code) return res.status(400).json({ error: 'user_id и code обязательны' });
+
+    const user = await db.getUserById(user_id);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    const existing = await db.getPartnerReferralByCode(code);
+    if (existing) return res.status(409).json({ error: 'Код уже занят' });
+
+    const partner = await db.createPartnerReferral({
+      userId: user_id,
+      code: code.toUpperCase(),
+      label: label || '',
+      commissionPercent: commission_percent || 10,
+    });
+    res.status(201).json(partner);
+  } catch (e) { next(e); }
+});
+
+router.patch('/partners/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const { label, commission_percent, is_active } = req.body;
+    const updates = {};
+    if (label !== undefined) updates.label = label;
+    if (commission_percent !== undefined) updates.commission_percent = commission_percent;
+    if (is_active !== undefined) updates.is_active = is_active;
+    await db.updatePartnerReferral(req.params.id, updates);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+router.delete('/partners/:id', requireAdmin, async (req, res, next) => {
+  try {
+    await db.deletePartnerReferral(req.params.id);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 module.exports = router;

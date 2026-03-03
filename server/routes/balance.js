@@ -6,6 +6,8 @@ const db      = require('../db');
 const config  = require('../config');
 const logger  = require('../logger');
 const { requireAuth, requireActiveUser } = require('../middleware/auth');
+const YooKassaService     = require('../services/YooKassaService');
+const SubscriptionService = require('../services/SubscriptionService');
 
 const router = express.Router();
 
@@ -23,7 +25,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-/* ═══════ DEPOSIT (placeholder — will be linked to payment gateway) ═══════ */
+/* ═══════ DEPOSIT ═══════ */
 
 router.post('/deposit', requireAuth, requireActiveUser, async (req, res) => {
   try {
@@ -31,10 +33,22 @@ router.post('/deposit', requireAuth, requireActiveUser, async (req, res) => {
     if (!amount || amount < 100) return res.status(400).json({ error: 'Минимальная сумма пополнения: 100₽' });
     if (amount > 100000) return res.status(400).json({ error: 'Максимальная сумма: 100 000₽' });
 
-    const amountKopecks = Math.round(amount * 100);
+    // ── ЮKassa: создаём платёж и возвращаем URL для оплаты ──
+    if (config.yookassa.enabled) {
+      const result = await YooKassaService.createPayment({
+        userId: req.userId,
+        amountRub: parseFloat(amount),
+        returnUrl: `${config.appUrl}/balance`,
+      });
+      return res.json({
+        ok: true,
+        paymentUrl: result.confirmationUrl,
+        paymentId:  result.paymentId,
+      });
+    }
 
-    // For now: manual deposit (admin can approve)
-    // When ЮKassa is ready, this will create a payment
+    // Fallback: прямое начисление (без платёжной системы)
+    const amountKopecks = Math.round(amount * 100);
     const newBalance = await db.updateUserBalance(req.userId, amountKopecks);
     await db.createBalanceTransaction({
       userId: req.userId, type: 'deposit', amount: amountKopecks,
@@ -42,11 +56,140 @@ router.post('/deposit', requireAuth, requireActiveUser, async (req, res) => {
       description: `Пополнение баланса: ${amount}₽`,
     });
 
-    logger.info('Пополнение баланса', { userId: req.userId, amount: amountKopecks });
+    logger.info('Пополнение баланса (прямое)', { userId: req.userId, amount: amountKopecks });
     res.json({ ok: true, balance: newBalance });
   } catch (err) {
     logger.error('deposit error', { err: err.message });
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+/* ═══════ YOOKASSA UNIFIED WEBHOOK (баланс + подписки) ═══════ */
+
+router.post('/yookassa/webhook', express.json(), async (req, res) => {
+  try {
+    const payload = YooKassaService.parseWebhookPayload(req.body);
+    if (!payload) return res.status(400).json({ error: 'Invalid payload' });
+
+    const paymentType = payload.metadata?.type || 'unknown';
+    logger.info('YooKassa webhook', {
+      event: payload.event, paymentId: payload.paymentId,
+      status: payload.status, type: paymentType,
+    });
+
+    // ── payment.succeeded ─────────────────────────────────────────────
+    if (payload.event === 'payment.succeeded' && payload.paid) {
+      const userId = payload.metadata?.user_id;
+      if (!userId) {
+        logger.warn('YooKassa webhook: нет user_id в metadata', { paymentId: payload.paymentId });
+        return res.json({ ok: true });
+      }
+
+      // --- Подписка ---
+      if (paymentType === 'subscription') {
+        const planId        = payload.metadata.plan_id;
+        const billingPeriod = payload.metadata.billing_period || 'monthly';
+
+        if (!planId) {
+          logger.warn('YooKassa webhook: нет plan_id в metadata', { paymentId: payload.paymentId });
+          return res.json({ ok: true });
+        }
+
+        const existing = await db.getTransactionByExternalId(payload.paymentId);
+        if (existing) {
+          logger.info('YooKassa: подписка уже обработана', { paymentId: payload.paymentId });
+          return res.json({ ok: true });
+        }
+
+        await SubscriptionService.activatePlan(userId, planId, billingPeriod, { paymentMethod: 'yookassa' });
+        logger.info('YooKassa: подписка активирована', {
+          userId, planId, billingPeriod, paymentId: payload.paymentId,
+        });
+        return res.json({ ok: true });
+      }
+
+      // --- Пополнение баланса (default) ---
+      const rawKopecks = payload.metadata?.amount_kopecks
+        ? parseInt(payload.metadata.amount_kopecks)
+        : Math.round(payload.amount * 100);
+
+      // Комиссия сервиса 1%
+      const SERVICE_FEE = 0.01;
+      const feeKopecks    = Math.ceil(rawKopecks * SERVICE_FEE);
+      const amountKopecks = rawKopecks - feeKopecks;
+
+      const txList = await db.getBalanceTransactions(userId, 200);
+      const alreadyProcessed = txList.some(t => t.description?.includes(payload.paymentId));
+      if (alreadyProcessed) {
+        logger.info('YooKassa: баланс уже зачислен', { paymentId: payload.paymentId });
+        return res.json({ ok: true });
+      }
+
+      const newBalance = await db.updateUserBalance(userId, amountKopecks);
+      await db.createBalanceTransaction({
+        userId, type: 'deposit', amount: amountKopecks,
+        balanceAfter: newBalance,
+        description: `Пополнение через ЮKassa (${payload.paymentId})`,
+      });
+
+      logger.info('YooKassa: баланс пополнен', {
+        userId, amountKopecks, paymentId: payload.paymentId, newBalance,
+      });
+      return res.json({ ok: true });
+    }
+
+    // ── payment.canceled ──────────────────────────────────────────────
+    if (payload.event === 'payment.canceled') {
+      logger.info('YooKassa: платёж отменён', {
+        paymentId: payload.paymentId, type: paymentType,
+      });
+      return res.json({ ok: true });
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('YooKassa webhook error', { err: err.message });
+    res.json({ ok: true }); // Отвечаем 200 чтобы ЮKassa не повторяла
+  }
+});
+
+/* ═══════ CHECK PAYMENT STATUS (polling fallback) ═══════ */
+
+router.get('/payment/:paymentId/status', requireAuth, async (req, res) => {
+  try {
+    if (!config.yookassa.enabled) return res.status(400).json({ error: 'ЮKassa не настроена' });
+
+    const result = await YooKassaService.getPaymentStatus(req.params.paymentId);
+
+    // Если платёж успешен — зачисляем (на случай если webhook не дошёл)
+    if (result.status === 'succeeded' && result.paid) {
+      const userId = result.metadata?.user_id;
+      const amountKopecks = result.metadata?.amount_kopecks
+        ? parseInt(result.metadata.amount_kopecks)
+        : Math.round(result.amount * 100);
+
+      if (userId === req.userId) {
+        const existing = await db.getBalanceTransactions(userId, 200);
+        const alreadyProcessed = existing.some(t => t.description?.includes(result.id));
+        if (!alreadyProcessed) {
+          // Комиссия сервиса 1%
+          const feeKopecks  = Math.ceil(amountKopecks * 0.01);
+          const credited    = amountKopecks - feeKopecks;
+          const newBalance = await db.updateUserBalance(userId, credited);
+          await db.createBalanceTransaction({
+            userId, type: 'deposit', amount: credited,
+            balanceAfter: newBalance,
+            description: `Пополнение через ЮKassa (${result.id})`,
+          });
+          logger.info('YooKassa: баланс пополнен (polling)', { userId, credited, fee: feeKopecks, paymentId: result.id });
+        }
+      }
+    }
+
+    res.json({ status: result.status, paid: result.paid, amount: result.amount });
+  } catch (err) {
+    logger.error('payment status error', { err: err.message });
+    res.status(500).json({ error: 'Ошибка' });
   }
 });
 

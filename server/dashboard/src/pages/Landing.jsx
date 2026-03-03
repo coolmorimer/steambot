@@ -5,6 +5,8 @@ import {
   Users, Target, Rocket, ChevronDown, ArrowRight,
   Menu, X, Lock, FileText, Play, Gamepad2, Palette, DollarSign,
   TrendingUp, CheckCircle2, Timer, Send, ArrowLeftRight,
+  LayoutDashboard, Megaphone, Activity, Settings, CreditCard,
+  Wallet, Code2, ChevronRight,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,7 +34,28 @@ export default function Landing() {
   const [period, setPeriod] = useState('monthly');
   const [faqOpen, setFaqOpen] = useState(null);
   const [mobileNav, setMobileNav] = useState(false);
+  const [quickMenu, setQuickMenu] = useState(false);
   const [trades, setTrades] = useState([]);
+
+  const quickMenuItems = [
+    { to: '/',            icon: LayoutDashboard, label: 'Обзор',        emoji: '📊' },
+    { to: '/accounts',    icon: Users,           label: 'Аккаунты',     emoji: '👤' },
+    { to: '/campaigns',   icon: Megaphone,       label: 'Кампании',     emoji: '📢' },
+    { to: '/activity',    icon: Activity,        label: 'Активность',   emoji: '⚡' },
+    { to: '/trades',      icon: ArrowLeftRight,  label: 'P2P Обмен',    emoji: '🔄' },
+    { to: '/balance',     icon: Wallet,          label: 'Баланс',       emoji: '💰' },
+    { to: '/settings',    icon: Settings,        label: 'Настройки',    emoji: '⚙️' },
+    { to: '/subscription',icon: CreditCard,      label: 'Подписка',     emoji: '💎' },
+  ];
+
+  const planColors = {
+    'Free': 'from-gray-500 to-gray-400',
+    'Starter': 'from-blue-500 to-cyan-400',
+    'Pro': 'from-brand-500 to-purple-400',
+    'Business': 'from-amber-500 to-orange-400',
+  };
+  const planName = user?.subscription?.plan_name || 'Free';
+  const planGrad = planColors[planName] || planColors.Free;
 
   useEffect(() => {
     fetch(`${API}/subscriptions/plans`).then(r => r.json()).then(setPlans).catch(() => {});
@@ -102,14 +125,99 @@ export default function Landing() {
           </div>
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
-              <>
-                <Link to="/trades" className="text-sm text-gray-300 hover:text-white transition-colors px-3 py-2">
-                  P2P Обмен
-                </Link>
-                <Link to="/" className="btn-primary text-sm !py-2 !px-4">
-                  Дашборд →
-                </Link>
-              </>
+              <div className="relative">
+                <button
+                  onClick={() => setQuickMenu(o => !o)}
+                  className="flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-800/60 transition-all duration-200 group"
+                >
+                  {user?.steam_avatar ? (
+                    <img src={user.steam_avatar} className="w-8 h-8 rounded-lg object-cover ring-2 ring-gray-700/50 group-hover:ring-brand-500/40 transition-all" alt="" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center text-brand-400 text-xs font-bold ring-2 ring-gray-700/50 group-hover:ring-brand-500/40 transition-all">
+                      {(user?.name || user?.email || '?')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <div className="text-left hidden lg:block">
+                    <p className="text-sm font-medium text-white leading-tight truncate max-w-[120px]">
+                      {user?.steam_username || user?.name || user?.email?.split('@')[0]}
+                    </p>
+                    <span className={clsx(
+                      'inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-gradient-to-r text-white leading-none',
+                      planGrad
+                    )}>
+                      {planName}
+                    </span>
+                  </div>
+                  <ChevronDown className={clsx(
+                    'w-4 h-4 text-gray-400 transition-transform duration-200',
+                    quickMenu && 'rotate-180'
+                  )} />
+                </button>
+
+                {/* Quick Menu Dropdown */}
+                {quickMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setQuickMenu(false)} />
+                    <div className="absolute right-0 top-full mt-2 z-50 w-72 bg-[#111318] border border-gray-700/50 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden animate-fade-in">
+                      {/* User card */}
+                      <div className="p-4 border-b border-gray-800/60">
+                        <div className="flex items-center gap-3">
+                          {user?.steam_avatar ? (
+                            <img src={user.steam_avatar} className="w-10 h-10 rounded-xl object-cover ring-2 ring-gray-700/50" alt="" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center text-brand-400 font-bold">
+                              {(user?.name || user?.email || '?')[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">
+                              {user?.steam_username || user?.name || user?.email?.split('@')[0]}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                          </div>
+                          <span className={clsx(
+                            'text-[10px] font-bold px-2 py-1 rounded-lg bg-gradient-to-r text-white shrink-0',
+                            planGrad
+                          )}>
+                            {planName}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quick links */}
+                      <div className="p-2 max-h-[320px] overflow-y-auto">
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-3 py-1.5">Быстрый доступ</p>
+                        {quickMenuItems.map(({ to, icon: Icon, label, emoji }) => (
+                          <Link
+                            key={to}
+                            to={to}
+                            onClick={() => setQuickMenu(false)}
+                            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-300 hover:bg-brand-600/10 hover:text-white transition-all duration-150 group"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-gray-800/60 group-hover:bg-brand-600/15 flex items-center justify-center transition-colors">
+                              <Icon className="w-4 h-4 text-gray-400 group-hover:text-brand-400 transition-colors" />
+                            </div>
+                            <span className="flex-1">{label}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-gray-600 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* Dashboard button */}
+                      <div className="p-3 border-t border-gray-800/60">
+                        <Link
+                          to="/"
+                          onClick={() => setQuickMenu(false)}
+                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-sm font-semibold transition-all duration-200 shadow-lg shadow-brand-600/20 hover:shadow-brand-600/30"
+                        >
+                          <LayoutDashboard className="w-4 h-4" />
+                          Перейти в дашборд
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             ) : (
               <>
                 <Link to="/login" className="text-sm text-gray-300 hover:text-white transition-colors px-3 py-2">
@@ -128,14 +236,56 @@ export default function Landing() {
         </div>
         {/* Mobile dropdown */}
         {mobileNav && (
-          <div className="md:hidden border-t border-gray-800/50 bg-gray-950/95 backdrop-blur-xl px-4 py-4 space-y-3">
+          <div className="md:hidden border-t border-gray-800/50 bg-[#0c0e12] px-4 py-4 space-y-3">
+            {isLoggedIn && (
+              <div className="flex items-center gap-3 pb-3 border-b border-gray-800/50">
+                {user?.steam_avatar ? (
+                  <img src={user.steam_avatar} className="w-9 h-9 rounded-lg object-cover ring-2 ring-gray-700/50" alt="" />
+                ) : (
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center text-brand-400 text-sm font-bold">
+                    {(user?.name || user?.email || '?')[0].toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {user?.steam_username || user?.name || user?.email?.split('@')[0]}
+                  </p>
+                  <span className={clsx(
+                    'inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-gradient-to-r text-white',
+                    planGrad
+                  )}>
+                    {planName}
+                  </span>
+                </div>
+              </div>
+            )}
             <a href="#trades" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">P2P Обмен</a>
             <a href="#features" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Возможности</a>
             <a href="#pricing" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Тарифы</a>
             <a href="#faq" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">FAQ</a>
+            {isLoggedIn && (
+              <>
+                <div className="pt-2 border-t border-gray-800/50">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-2">Быстрый доступ</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {quickMenuItems.map(({ to, icon: Icon, label, emoji }) => (
+                      <Link
+                        key={to}
+                        to={to}
+                        onClick={() => setMobileNav(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-300 hover:bg-brand-600/10 hover:text-white transition-all"
+                      >
+                        <Icon className="w-3.5 h-3.5 text-gray-500" />
+                        <span>{label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
             <div className="flex gap-3 pt-2 border-t border-gray-800">
               {isLoggedIn ? (
-                <Link to="/" className="btn-primary text-sm flex-1 justify-center">Дашборд →</Link>
+                <Link to="/" onClick={() => setMobileNav(false)} className="btn-primary text-sm flex-1 justify-center">Дашборд →</Link>
               ) : (
                 <>
                   <Link to="/login" className="btn-ghost text-sm flex-1 justify-center">Войти</Link>
@@ -364,7 +514,7 @@ export default function Landing() {
           {trades.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {trades.map(trade => {
-                const offering = (() => { try { return JSON.parse(trade.offering_items || '[]'); } catch { return []; } })();
+                const offering = Array.isArray(trade.offering_items) ? trade.offering_items : (() => { try { return JSON.parse(trade.offering_items || '[]'); } catch { return []; } })();
                 const wanted = trade.wanted_tags || [];
                 const WANTED_LABELS = { any_knife: '🔪 Любой нож', any_gloves: '🧤 Любые перчатки', any_offers: '💬 Любые предложения' };
                 return (

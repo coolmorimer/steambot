@@ -6,9 +6,16 @@ const config    = require('../config');
 const { requireAuth, requireActiveUser } = require('../middleware/auth');
 const SubscriptionService = require('../services/SubscriptionService');
 const SbpPaymentService   = require('../services/SbpPaymentService');
+const YooKassaService     = require('../services/YooKassaService');
 
 const router = express.Router();
 const ALL    = [requireAuth, requireActiveUser];
+
+// Выбираем активный платёжный провайдер для получения цен
+function getActivePriceRub(planId, billingPeriod) {
+  if (config.yookassa.enabled) return YooKassaService.getPriceRub(planId, billingPeriod);
+  return SbpPaymentService.getPriceRub(planId, billingPeriod);
+}
 
 router.get('/plans', async (req, res, next) => {
   try {
@@ -16,8 +23,8 @@ router.get('/plans', async (req, res, next) => {
     // Добавляем рублёвые цены к каждому плану
     const enriched = plans.map(p => ({
       ...p,
-      price_monthly_rub: SbpPaymentService.getPriceRub(p.id, 'monthly'),
-      price_yearly_rub:  SbpPaymentService.getPriceRub(p.id, 'yearly'),
+      price_monthly_rub: getActivePriceRub(p.id, 'monthly'),
+      price_yearly_rub:  getActivePriceRub(p.id, 'yearly'),
     }));
     res.json(enriched);
   }
@@ -42,7 +49,7 @@ router.get('/current', ALL, async (req, res, next) => {
     }
 
     // Рублёвая цена текущего плана
-    const priceRub = SbpPaymentService.getPriceRub(sub.plan_id, sub.billing_period || 'monthly');
+    const priceRub = getActivePriceRub(sub.plan_id, sub.billing_period || 'monthly');
 
     res.json({
       id: sub.id, plan_id: sub.plan_id, plan_name: sub.plan_name,
@@ -95,7 +102,7 @@ router.post('/upgrade', ALL, async (req, res, next) => {
     const isExpired = !currentSub || currentSub.status === 'expired' || currentSub.status === 'cancelled';
     const isTrialExpired = currentSub?.status === 'trial' && currentSub.trial_ends_at && new Date(currentSub.trial_ends_at) < new Date();
 
-    const priceRub = SbpPaymentService.getPriceRub(plan_id, billing_period);
+    const priceRub = getActivePriceRub(plan_id, billing_period);
 
     // Бесплатный план — сразу переключаем
     if (priceRub <= 0) {
@@ -103,14 +110,26 @@ router.post('/upgrade', ALL, async (req, res, next) => {
       return res.json({ ok: true, message: 'Тариф активирован' });
     }
 
-    // Платный план — создаём платёж через СБП
+    // Платный план — создаём платёж (ЮKassa → Sberbank → ошибка)
     try {
-      const payment = await SbpPaymentService.createPayment({
-        userId:        req.userId,
-        planId:        plan_id,
-        billingPeriod: billing_period,
-        returnUrl:     `${config.appUrl}/subscription?payment=success`,
-      });
+      let payment;
+      if (config.yookassa.enabled) {
+        payment = await YooKassaService.createSubscriptionPayment({
+          userId:        req.userId,
+          planId:        plan_id,
+          billingPeriod: billing_period,
+          returnUrl:     `${config.appUrl}/subscription?payment=success`,
+        });
+      } else if (config.sberbank.enabled) {
+        payment = await SbpPaymentService.createPayment({
+          userId:        req.userId,
+          planId:        plan_id,
+          billingPeriod: billing_period,
+          returnUrl:     `${config.appUrl}/subscription?payment=success`,
+        });
+      } else {
+        return res.status(400).json({ error: 'Платёжная система не настроена', code: 'PAYMENT_ERROR' });
+      }
       return res.json({
         ok:               true,
         payment_required: true,

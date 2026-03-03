@@ -41,6 +41,7 @@ export default function AdminDashboard() {
         <Link to="/admin/plans"  className="badge-gray hover:bg-gray-600">Тарифы</Link>
         <Link to="/admin/payments" className="badge-gray hover:bg-gray-600">Платежи</Link>
         <Link to="/admin/withdrawals" className="badge-gray hover:bg-gray-600">Выводы</Link>
+        <Link to="/admin/partners" className="badge-gray hover:bg-gray-600">Партнёры</Link>
         <Link to="/admin/config"   className="badge-gray hover:bg-gray-600">Конфигурация</Link>
         <Link to="/admin/support" className="badge-gray hover:bg-gray-600">Поддержка</Link>
       </div>

@@ -27,7 +27,7 @@ function clientInfo(req)         { return { ip: req.ip || req.connection.remoteA
 
 router.post('/register', validate(schemas.register), async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, referral_code } = req.body;
     const existing = await db.getUserByEmail(email);
     if (existing) return res.status(409).json({ error: 'Email уже зарегистрирован' });
 
@@ -35,6 +35,43 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     const userId = await db.createUser({ email, passwordHash, name: name || '' });
 
     await db.createSubscription({ userId, planId: 'free', status: 'trial', trialDays: config.trialDays });
+
+    // ── Обработка реферального кода ──
+    if (referral_code) {
+      try {
+        const ref = await db.resolveReferralCode(referral_code);
+        if (ref) {
+          await db.setReferredBy(userId, ref.referrerId);
+
+          if (ref.type === 'user') {
+            // Обычный пользователь — бонус начислится только после оплаты приглашённым
+            await db.createReferralUse({
+              referrerId: ref.referrerId,
+              referredId: userId,
+              referralType: 'user',
+              rewardType: 'trial_days',
+              rewardAmount: 0,
+              rewardGiven: false,
+            });
+            logger.info('Реферал зарегистрирован (бонус после оплаты)', { referrerId: ref.referrerId, referredId: userId });
+          } else if (ref.type === 'partner') {
+            // Партнёр (ютубер) — записываем использование, % начислится при оплате
+            await db.createReferralUse({
+              referrerId: ref.referrerId,
+              referredId: userId,
+              referralType: 'partner',
+              partnerReferralId: ref.partner.id,
+              rewardType: 'commission',
+              rewardAmount: 0,
+              rewardGiven: false,
+            });
+            logger.info('Партнёрский реферал зарегистрирован (бонус после оплаты)', { partnerId: ref.partner.id, referredId: userId });
+          }
+        }
+      } catch (refErr) {
+        logger.warn('Referral processing error', { err: refErr.message });
+      }
+    }
 
     const user         = await db.getUserById(userId);
     const accessToken  = signAccessToken(user);

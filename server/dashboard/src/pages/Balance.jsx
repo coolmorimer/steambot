@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   Wallet, ArrowDownCircle, ArrowUpCircle, Loader2, History, CreditCard,
-  AlertCircle, CheckCircle, Clock, XCircle, Link2,
+  AlertCircle, CheckCircle, Clock, XCircle, Link2, Sparkles,
+  Shield, ExternalLink, ArrowRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
@@ -12,17 +13,17 @@ function formatRub(kopecks) {
 }
 
 const TX_TYPE_LABELS = {
-  deposit:    { label: 'Пополнение',  icon: ArrowDownCircle, color: 'text-green-400' },
-  withdrawal: { label: 'Вывод',       icon: ArrowUpCircle,   color: 'text-red-400' },
-  purchase:   { label: 'Покупка',     icon: CreditCard,      color: 'text-red-400' },
-  sale:       { label: 'Продажа',     icon: CreditCard,      color: 'text-green-400' },
-  refund:     { label: 'Возврат',     icon: CheckCircle,     color: 'text-blue-400' },
+  deposit:    { label: 'Пополнение',  icon: ArrowDownCircle, color: 'text-green-400', emoji: '💰' },
+  withdrawal: { label: 'Вывод',       icon: ArrowUpCircle,   color: 'text-red-400', emoji: '💸' },
+  purchase:   { label: 'Покупка',     icon: CreditCard,      color: 'text-red-400', emoji: '🛒' },
+  sale:       { label: 'Продажа',     icon: CreditCard,      color: 'text-green-400', emoji: '✅' },
+  refund:     { label: 'Возврат',     icon: CheckCircle,     color: 'text-blue-400', emoji: '↩️' },
 };
 
 const STATUS_BADGES = {
-  completed: { label: 'Выполнено', cls: 'bg-green-900/30 text-green-400' },
-  pending:   { label: 'Ожидание',  cls: 'bg-yellow-900/30 text-yellow-400' },
-  rejected:  { label: 'Отклонено', cls: 'bg-red-900/30 text-red-400' },
+  completed: { label: 'Выполнено', cls: 'badge-green' },
+  pending:   { label: 'Ожидание',  cls: 'badge-yellow' },
+  rejected:  { label: 'Отклонено', cls: 'badge-red' },
 };
 
 export default function Balance() {
@@ -68,6 +69,12 @@ export default function Balance() {
     setDepositing(true);
     try {
       const { data } = await api.post('/balance/deposit', { amount: amt });
+      if (data.paymentUrl) {
+        // ЮKassa: перенаправляем на страницу оплаты
+        toast.success('Перенаправляем на страницу оплаты...');
+        window.location.href = data.paymentUrl;
+        return;
+      }
       toast.success(`Баланс пополнен на ${amt}₽`);
       setBalance(data.balance);
       setDepositAmount('');
@@ -118,41 +125,51 @@ export default function Balance() {
     </div>
   );
 
+  const tabs = [
+    { id: 'overview', label: '📊 Обзор',   icon: History },
+    { id: 'deposit',  label: '💰 Пополнить', icon: ArrowDownCircle },
+    { id: 'withdraw', label: '💸 Вывести',  icon: ArrowUpCircle },
+    { id: 'profile',  label: '🎮 Профиль',  icon: Link2 },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Balance header */}
-      <div className="card bg-gradient-to-br from-brand-600/20 to-purple-600/10 border border-brand-500/20">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-brand-500/20 rounded-2xl flex items-center justify-center">
-              <Wallet className="w-7 h-7 text-brand-400" />
+    <div className="space-y-6 animate-slide-up">
+      {/* ── Balance hero ── */}
+      <div className="relative overflow-hidden rounded-2xl border border-brand-500/20 p-6 sm:p-8">
+        {/* BG gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-600/15 via-purple-600/10 to-transparent" />
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-brand-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl" />
+
+        <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 bg-gradient-to-br from-brand-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-600/30">
+              <Wallet className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-400">Баланс</p>
-              <p className="text-3xl font-bold text-white">{formatRub(balance)}</p>
+              <p className="text-sm text-gray-400 font-medium">Ваш баланс</p>
+              <p className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">{formatRub(balance)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {user?.steam_avatar && (
-              <img src={user.steam_avatar} className="w-8 h-8 rounded-full" alt="" />
+              <img src={user.steam_avatar} className="w-10 h-10 rounded-xl ring-2 ring-gray-700/50" alt="" />
             )}
-            <span className="text-sm text-gray-300">{user?.steam_username || user?.name}</span>
+            <div className="text-right">
+              <span className="text-sm text-gray-300 font-medium block">{user?.steam_username || user?.name}</span>
+              {user?.steam_id && (
+                <span className="text-xs text-gray-600">ID: {user.steam_id}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-800/50 rounded-lg p-1">
-        {[
-          { id: 'overview', label: 'Обзор' },
-          { id: 'deposit',  label: 'Пополнить' },
-          { id: 'withdraw', label: 'Вывести' },
-          { id: 'profile',  label: 'Профиль' },
-        ].map(t => (
+      {/* ── Tabs ── */}
+      <div className="tab-bar">
+        {tabs.map(t => (
           <button key={t.id}
-            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition ${
-              tab === t.id ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
-            }`}
+            className={tab === t.id ? 'tab-active' : 'tab-inactive'}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -160,27 +177,36 @@ export default function Balance() {
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* ══ Tab: Overview ══ */}
       {tab === 'overview' && (
-        <div className="card space-y-4">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+        <div className="card space-y-4 animate-scale-in">
+          <h2 className="section-title">
             <History className="w-5 h-5 text-gray-400" /> История операций
           </h2>
           {txs.length === 0 ? (
-            <p className="text-gray-500 text-sm py-8 text-center">Нет операций</p>
+            <div className="text-center py-10">
+              <div className="text-4xl mb-3">📭</div>
+              <p className="text-gray-400 font-medium">Нет операций</p>
+              <p className="text-xs text-gray-600 mt-1">Пополните баланс, чтобы начать</p>
+              <button onClick={() => setTab('deposit')} className="btn-primary text-sm mt-4">
+                💰 Пополнить баланс
+              </button>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {txs.map(tx => {
                 const meta = TX_TYPE_LABELS[tx.type] || TX_TYPE_LABELS.deposit;
                 const Icon = meta.icon;
                 return (
-                  <div key={tx.id} className="flex items-center gap-3 py-2 border-b border-gray-800 last:border-0">
-                    <Icon className={`w-5 h-5 ${meta.color} shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white">{tx.description || meta.label}</p>
-                      <p className="text-xs text-gray-500">{new Date(tx.created_at).toLocaleString('ru-RU')}</p>
+                  <div key={tx.id} className="flex items-center gap-3 py-3 px-3 rounded-xl hover:bg-gray-800/40 transition-all border-b border-gray-800/30 last:border-0">
+                    <div className={`w-9 h-9 rounded-xl ${tx.amount >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'} flex items-center justify-center shrink-0`}>
+                      <Icon className={`w-4 h-4 ${meta.color}`} />
                     </div>
-                    <span className={`text-sm font-medium ${tx.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium">{meta.emoji} {tx.description || meta.label}</p>
+                      <p className="text-xs text-gray-600">{new Date(tx.created_at).toLocaleString('ru-RU')}</p>
+                    </div>
+                    <span className={`text-sm font-bold tabular-nums ${tx.amount >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {tx.amount >= 0 ? '+' : ''}{formatRub(tx.amount)}
                     </span>
                   </div>
@@ -191,121 +217,130 @@ export default function Balance() {
         </div>
       )}
 
+      {/* ══ Tab: Deposit ══ */}
       {tab === 'deposit' && (
-        <div className="card space-y-4 max-w-md">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <ArrowDownCircle className="w-5 h-5 text-green-400" /> Пополнение
+        <div className="card space-y-5 max-w-lg mx-auto animate-scale-in">
+          <h2 className="section-title">
+            <ArrowDownCircle className="w-5 h-5 text-green-400" /> Пополнение баланса
           </h2>
+
           <div>
-            <label className="label">Сумма (₽)</label>
-            <input className="input" type="number" min="100" step="100" placeholder="1000"
+            <label className="label">💰 Сумма (₽)</label>
+            <input className="input text-lg font-bold" type="number" min="100" step="100"
+              placeholder="1000"
               value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
-            <p className="text-xs text-gray-500 mt-1">Минимум: 100₽</p>
+            <p className="text-xs text-gray-600 mt-1.5">Минимум: 100 ₽</p>
           </div>
-          <div className="flex gap-2">
+
+          {/* Quick amounts */}
+          <div className="grid grid-cols-4 gap-2">
             {[500, 1000, 2500, 5000].map(a => (
               <button key={a}
-                className="btn-secondary text-sm flex-1"
+                className={`rounded-xl py-2.5 text-sm font-bold transition-all border ${
+                  depositAmount === String(a)
+                    ? 'bg-brand-500/15 border-brand-500/30 text-brand-400'
+                    : 'bg-gray-800/50 border-gray-700/40 text-gray-400 hover:border-gray-600 hover:text-white'
+                }`}
                 onClick={() => setDepositAmount(String(a))}
               >
-                {a}₽
+                {a} ₽
               </button>
             ))}
           </div>
 
-          {/* Commission breakdown */}
+          {/* Commission */}
           {depositAmount && parseFloat(depositAmount) >= 100 && (() => {
             const amt = parseFloat(depositAmount);
-            const acquiringPct = 2.5;
-            const servicePct = 0.3;
-            const acquiringFee = Math.round(amt * acquiringPct) / 100;
-            const serviceFee = Math.round(amt * servicePct) / 100;
-            const totalFee = acquiringFee + serviceFee;
-            const credited = Math.max(0, amt - totalFee);
+            const fee = Math.ceil(amt * 100 * 0.01) / 100; // 1%
+            const credited = Math.max(0, amt - fee);
             return (
-              <div className="bg-gray-800/60 rounded-xl p-4 border border-gray-700/50 space-y-2">
+              <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/30 space-y-2.5">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Сумма пополнения</span>
-                  <span className="text-white font-medium">{amt.toLocaleString('ru-RU')} ₽</span>
+                  <span className="text-gray-400">Сумма</span>
+                  <span className="text-white font-semibold">{amt.toLocaleString('ru-RU')} ₽</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Комиссия эквайринга ({acquiringPct}%)</span>
-                  <span className="text-red-400">−{acquiringFee.toFixed(2)} ₽</span>
+                  <span className="text-gray-500">Комиссия сервиса (1%)</span>
+                  <span className="text-red-400/80">−{fee.toFixed(2)} ₽</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Комиссия сервиса ({servicePct}%)</span>
-                  <span className="text-red-400">−{serviceFee.toFixed(2)} ₽</span>
-                </div>
-                <div className="border-t border-gray-700/50 my-1" />
-                <div className="flex justify-between text-sm font-semibold">
-                  <span className="text-gray-300">На баланс</span>
-                  <span className="text-green-400">{credited.toFixed(2)} ₽</span>
+                <div className="border-t border-gray-700/30 my-1" />
+                <div className="flex justify-between text-sm font-bold">
+                  <span className="text-gray-300">✅ На баланс</span>
+                  <span className="text-green-400 text-base">{credited.toFixed(2)} ₽</span>
                 </div>
               </div>
             );
           })()}
 
-          <div className="bg-yellow-900/10 rounded-xl p-3 border border-yellow-700/20">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-yellow-400/80">
-                При пополнении удерживается комиссия платёжной системы (эквайринг ~2,5%)
-                и сервисная комиссия 0,3% от суммы пополнения.
-              </p>
-            </div>
-          </div>
-
-          <button className="btn-primary w-full" onClick={handleDeposit} disabled={depositing}>
-            {depositing ? 'Пополнение...' : 'Пополнить баланс'}
+          <button className="btn-success w-full text-base py-3" onClick={handleDeposit} disabled={depositing}>
+            {depositing ? <Loader2 className="w-5 h-5 animate-spin" /> : '💰 Пополнить баланс'}
           </button>
         </div>
       )}
 
+      {/* ══ Tab: Withdraw ══ */}
       {tab === 'withdraw' && (
-        <div className="card space-y-4 max-w-md">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+        <div className="card space-y-5 max-w-lg mx-auto animate-scale-in">
+          <h2 className="section-title">
             <ArrowUpCircle className="w-5 h-5 text-red-400" /> Вывод средств
           </h2>
+
           <div>
-            <label className="label">Сумма (₽)</label>
-            <input className="input" type="number" min="500" step="100" placeholder="1000"
+            <label className="label">💸 Сумма (₽)</label>
+            <input className="input text-lg font-bold" type="number" min="500" step="100"
+              placeholder="1000"
               value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} />
-            <p className="text-xs text-gray-500 mt-1">
-              Минимум: 500₽ | Доступно: {formatRub(balance)}
+            <p className="text-xs text-gray-600 mt-1.5">
+              Минимум: 500 ₽ · Доступно: <span className="text-white font-semibold">{formatRub(balance)}</span>
             </p>
           </div>
+
           <div>
             <label className="label">Способ вывода</label>
-            <div className="flex gap-2">
-              <button className={`flex-1 py-2 rounded-lg text-sm ${withdrawMethod === 'card' ? 'bg-brand-500 text-white' : 'bg-gray-800 text-gray-400'}`}
-                onClick={() => setWithdrawMethod('card')}>💳 Карта</button>
-              <button className={`flex-1 py-2 rounded-lg text-sm ${withdrawMethod === 'sbp' ? 'bg-brand-500 text-white' : 'bg-gray-800 text-gray-400'}`}
-                onClick={() => setWithdrawMethod('sbp')}>📱 СБП</button>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'card', label: '💳 Карта', desc: 'Visa / MasterCard' },
+                { id: 'sbp',  label: '📱 СБП',  desc: 'По номеру телефона' },
+              ].map(m => (
+                <button key={m.id}
+                  className={`rounded-xl p-3 text-left transition-all border ${
+                    withdrawMethod === m.id
+                      ? 'bg-brand-500/10 border-brand-500/30'
+                      : 'bg-gray-800/40 border-gray-700/40 hover:border-gray-600'
+                  }`}
+                  onClick={() => setWithdrawMethod(m.id)}
+                >
+                  <p className={`text-sm font-semibold ${withdrawMethod === m.id ? 'text-brand-400' : 'text-gray-300'}`}>{m.label}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{m.desc}</p>
+                </button>
+              ))}
             </div>
           </div>
+
           <div>
-            <label className="label">{withdrawMethod === 'card' ? 'Номер карты' : 'Номер телефона'}</label>
+            <label className="label">{withdrawMethod === 'card' ? '💳 Номер карты' : '📱 Номер телефона'}</label>
             <input className="input"
               placeholder={withdrawMethod === 'card' ? '0000 0000 0000 0000' : '+7 (___) ___-__-__'}
               value={withdrawCard} onChange={e => setWithdrawCard(e.target.value)} />
           </div>
-          <button className="btn-primary w-full" onClick={handleWithdraw} disabled={withdrawing}>
-            {withdrawing ? 'Отправка...' : 'Запросить вывод'}
+
+          <button className="btn-primary w-full text-base py-3" onClick={handleWithdraw} disabled={withdrawing}>
+            {withdrawing ? <Loader2 className="w-5 h-5 animate-spin" /> : '💸 Запросить вывод'}
           </button>
 
           {/* Withdrawal history */}
           {withdrawals.length > 0 && (
-            <div className="mt-6 space-y-2">
-              <h3 className="text-sm font-semibold text-gray-400">Заявки на вывод</h3>
+            <div className="mt-4 space-y-2 border-t border-gray-800/40 pt-4">
+              <h3 className="text-sm font-bold text-gray-400">📋 Заявки на вывод</h3>
               {withdrawals.map(w => {
                 const st = STATUS_BADGES[w.status] || STATUS_BADGES.pending;
                 return (
-                  <div key={w.id} className="flex items-center justify-between py-2 border-b border-gray-800">
+                  <div key={w.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-gray-800/30 transition-all">
                     <div>
-                      <p className="text-sm text-white">{formatRub(w.amount)}</p>
-                      <p className="text-xs text-gray-500">{new Date(w.created_at).toLocaleString('ru-RU')}</p>
+                      <p className="text-sm text-white font-medium">{formatRub(w.amount)}</p>
+                      <p className="text-xs text-gray-600">{new Date(w.created_at).toLocaleString('ru-RU')}</p>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                    <span className={st.cls}>{st.label}</span>
                   </div>
                 );
               })}
@@ -314,50 +349,76 @@ export default function Balance() {
         </div>
       )}
 
+      {/* ══ Tab: Profile ══ */}
       {tab === 'profile' && (
-        <div className="card space-y-4 max-w-md">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Link2 className="w-5 h-5 text-gray-400" /> Профиль маркета
+        <div className="card space-y-5 max-w-lg mx-auto animate-scale-in">
+          <h2 className="section-title">
+            <Shield className="w-5 h-5 text-brand-400" /> Профиль и Steam
           </h2>
 
-          {/* Steam link */}
+          {/* Steam linked */}
           {user?.steam_id ? (
-            <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
-              {user.steam_avatar && <img src={user.steam_avatar} className="w-10 h-10 rounded-full" alt="" />}
-              <div>
-                <p className="text-sm font-medium text-white">{user.steam_username}</p>
-                <p className="text-xs text-gray-500">Steam ID: {user.steam_id}</p>
+            <div className="relative overflow-hidden rounded-xl border border-green-500/20 bg-green-500/5 p-4">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-500/5 rounded-full blur-2xl" />
+              <div className="relative flex items-center gap-4">
+                {user.steam_avatar ? (
+                  <img src={user.steam_avatar} className="w-14 h-14 rounded-xl ring-2 ring-green-500/20 shadow-lg" alt="" />
+                ) : (
+                  <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 text-xl">🎮</div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-bold text-white">{user.steam_username}</p>
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                  </div>
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">ID: {user.steam_id}</p>
+                </div>
+                <a href={`https://steamcommunity.com/profiles/${user.steam_id}`}
+                  target="_blank" rel="noopener"
+                  className="btn-ghost text-xs px-2.5 py-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
-              <CheckCircle className="w-5 h-5 text-green-400 ml-auto" />
             </div>
           ) : (
-            <div className="border border-yellow-600/30 bg-yellow-900/10 rounded-lg p-4">
-              <p className="text-sm text-yellow-300 mb-1">Steam не привязан</p>
-              <p className="text-xs text-gray-500">Вставьте Trade URL ниже — Steam привяжется автоматически</p>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 text-center">
+              <div className="text-3xl mb-2">🎮</div>
+              <p className="text-sm text-amber-300 font-semibold">Steam не привязан</p>
+              <p className="text-xs text-gray-500 mt-1">Вставьте Trade URL ниже — система автоматически привяжет ваш Steam</p>
             </div>
           )}
 
           {/* Trade URL */}
-          <div>
-            <label className="label">Steam Trade URL</label>
-            <input className="input text-sm"
+          <div className="space-y-3">
+            <label className="label flex items-center gap-2">
+              <Link2 className="w-4 h-4 text-gray-500" /> Steam Trade URL
+            </label>
+            <input className="input"
               placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..."
               value={tradeUrl} onChange={e => setTradeUrl(e.target.value)} />
-            <p className="text-xs text-gray-500 mt-1">
+
+            <div className="flex items-center justify-between">
               <a href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url"
-                target="_blank" rel="noopener" className="text-brand-400 hover:underline">
-                Где найти Trade URL? →
+                target="_blank" rel="noopener"
+                className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors">
+                🔍 Где найти Trade URL? <ArrowRight className="w-3 h-3" />
               </a>
-            </p>
+            </div>
+
             {!user?.steam_id && tradeUrl && (
-              <p className="text-xs text-green-400/70 mt-1">✨ Steam аккаунт привяжется автоматически при сохранении</p>
+              <div className="flex items-center gap-2 text-xs text-green-400/80 bg-green-500/5 rounded-lg px-3 py-2 border border-green-500/10">
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                Steam привяжется автоматически при сохранении
+              </div>
             )}
-            <button className="btn-primary text-sm mt-2" onClick={saveTradeUrl} disabled={savingUrl}>
-              {savingUrl ? 'Сохранение...' : user?.steam_id ? 'Обновить Trade URL' : '🎮 Привязать Steam и сохранить'}
+
+            <button
+              className={`w-full text-sm py-3 ${user?.steam_id ? 'btn-secondary' : 'btn-success'}`}
+              onClick={saveTradeUrl} disabled={savingUrl}
+            >
+              {savingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : user?.steam_id ? '🔄 Обновить Trade URL' : '🎮 Привязать Steam'}
             </button>
           </div>
-
-
         </div>
       )}
     </div>

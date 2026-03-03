@@ -9,10 +9,11 @@
 
 const db     = require('../db');
 const config = require('../config');
+const logger = require('../logger');
 
 // ── Ручная активация плана (без Stripe) ───────────────────────────────────────
 
-async function activatePlan(userId, planId, billingPeriod = 'monthly', { skipTransaction = false } = {}) {
+async function activatePlan(userId, planId, billingPeriod = 'monthly', { skipTransaction = false, paymentMethod = 'yookassa' } = {}) {
   const plan = await db.getPlan(planId);
   if (!plan || !plan.is_active) throw new Error('План не найден');
 
@@ -49,11 +50,63 @@ async function activatePlan(userId, planId, billingPeriod = 'monthly', { skipTra
       status:         'completed',
       planId,
       billingPeriod,
-      paymentMethod:  'manual',
+      paymentMethod:  paymentMethod,
     });
   }
 
+  // ── Реферальные бонусы (только при первой оплате) ──────────────────────────
+  try {
+    await processReferralRewards(userId, planId, billingPeriod);
+  } catch (refErr) {
+    logger.warn('Ошибка обработки реферальных бонусов', { err: refErr.message, userId });
+  }
+
   return { subscription_id: subId, expires_at: expiresAt };
+}
+
+// ── Обработка реферальных бонусов после первой оплаты ─────────────────────────
+
+async function processReferralRewards(userId, planId, billingPeriod) {
+  // Найти запись реферала для этого пользователя
+  const refUse = await db.getReferralUseByReferredId(userId);
+  if (!refUse || refUse.reward_given) return; // нет реферала или уже начислен
+
+  const user = await db.getUserById(userId);
+  if (!user || !user.referred_by) return;
+
+  if (refUse.referral_type === 'user') {
+    // ── Обычный реферер: +7 дней к его подписке ──
+    const extended = await db.extendSubscription(refUse.referrer_id, 7);
+    await db.markReferralUseRewarded(refUse.id, 'trial_days', 7);
+    logger.info('Реферальный бонус +7 дней рефереру (после оплаты)', {
+      referrerId: refUse.referrer_id, referredId: userId, extended,
+    });
+  } else if (refUse.referral_type === 'partner') {
+    // ── Партнёр: комиссия от суммы оплаты ──
+    const SbpPaymentService = require('./SbpPaymentService');
+    const amountRub = SbpPaymentService.getPriceRub(planId, billingPeriod) || 0;
+    const partner = refUse.partner_referral_id
+      ? await db.getPartnerReferral(refUse.partner_referral_id)
+      : null;
+    const commissionPercent = partner?.commission_percent || 10;
+    const earningsKopecks = Math.round(amountRub * 100 * commissionPercent / 100); // сумма в копейках
+
+    await db.createReferralEarning({
+      partnerReferralId: refUse.partner_referral_id,
+      referralUseId: refUse.id,
+      amount: earningsKopecks,
+    });
+    await db.incrementPartnerReferralStats(refUse.partner_referral_id, earningsKopecks);
+    await db.markReferralUseRewarded(refUse.id, 'commission', earningsKopecks);
+    logger.info('Партнёрская комиссия начислена (после оплаты)', {
+      partnerId: refUse.partner_referral_id, referredId: userId,
+      amountRub, commissionPercent, earningsKopecks,
+    });
+  }
+
+  // ── Приглашённому пользователю: +3 дня в подарок ──
+  const giftExtended = await db.extendSubscription(userId, 3);
+  logger.info('Подарок приглашённому +3 дня', { userId, giftExtended });
 }
 
 // ── Stripe: создать Checkout Session ─────────────────────────────────────────
@@ -152,6 +205,13 @@ async function handleCheckoutCompleted(userId, session) {
     paymentMethod:  'stripe',
     externalId:     session.id,
   });
+
+  // ── Реферальные бонусы (только при первой оплате) ──────────────────────────
+  try {
+    await processReferralRewards(userId, planId, billingPeriod);
+  } catch (refErr) {
+    logger.warn('Ошибка обработки реферальных бонусов (Stripe)', { err: refErr.message, userId });
+  }
 }
 
 // ── Отмена подписки ────────────────────────────────────────────────────────────
