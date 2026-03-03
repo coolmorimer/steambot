@@ -11,7 +11,7 @@ import clsx from 'clsx';
 import SupportWidget from './SupportWidget';
 import OnboardingTour from './OnboardingTour';
 
-const navItems = [
+const baseNavItems = [
   { to: '/',            icon: LayoutDashboard, label: 'Обзор',         emoji: '📊', tourId: 'nav-overview'     },
   { to: '/accounts',    icon: Users,           label: 'Аккаунты',      emoji: '👤', tourId: 'nav-accounts'     },
   { to: '/campaigns',   icon: Megaphone,       label: 'Кампании',      emoji: '📢', tourId: 'nav-campaigns'    },
@@ -20,7 +20,7 @@ const navItems = [
   { to: '/api',         icon: Code2,           label: 'API',           emoji: '🔗', tourId: 'nav-api'          },
   null,
   { to: '/trades',      icon: ArrowLeftRight,  label: 'P2P Обмен',     emoji: '🔄', tourId: 'nav-trades'       },
-  { to: '/balance',     icon: Wallet,          label: 'Баланс',        emoji: '💰', tourId: 'nav-balance'      },
+  { to: '/balance',     icon: Wallet,          label: 'Баланс',        emoji: '💰', tourId: 'nav-balance', partnerOnly: true },
   null,
   { to: '/settings',    icon: Settings,        label: 'Настройки',     emoji: '⚙️', tourId: 'nav-settings'     },
   { to: '/subscription',icon: CreditCard,      label: 'Подписка',      emoji: '💎', tourId: 'nav-subscription' },
@@ -30,7 +30,7 @@ const navItems = [
 const adminItem = { to: '/admin', icon: ShieldCheck, label: 'Админ', emoji: '🛡️' };
 
 export default function Layout() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isPartner } = useAuth();
   const navigate   = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -40,6 +40,7 @@ export default function Layout() {
     navigate('/landing');
   };
 
+  const navItems = baseNavItems.filter(item => !item?.partnerOnly || isPartner || isAdmin);
   const items = isAdmin ? [...navItems, adminItem] : navItems;
 
   const planColors = {

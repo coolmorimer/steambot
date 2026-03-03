@@ -20,6 +20,16 @@ export function AdminRoute({ children }) {
   return children;
 }
 
+export function PartnerRoute({ children }) {
+  const { user, loading, isPartner, isAdmin } = useAuth();
+  const location = useLocation();
+
+  if (loading)    return <div className="flex items-center justify-center h-screen"><Spinner /></div>;
+  if (!user)      return <Navigate to="/landing" state={{ from: location }} replace />;
+  if (!isPartner && !isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
+
 function Spinner() {
   return (
     <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />

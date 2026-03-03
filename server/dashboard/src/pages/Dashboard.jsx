@@ -155,7 +155,7 @@ export default function Dashboard() {
               done={hasSteam}
               title="Привяжите Steam"
               desc="Вставьте Trade URL для привязки"
-              to="/balance"
+              to="/settings"
               btn="Привязать"
               emoji="🎮"
             />
@@ -293,7 +293,7 @@ export default function Dashboard() {
         <QuickAction to="/accounts"      icon="👤" label="Добавить аккаунт" />
         <QuickAction to="/campaigns"     icon="📢" label="Новая кампания" />
         <QuickAction to="/trades/create" icon="🔄" label="Создать обмен" />
-        <QuickAction to="/balance"       icon="💰" label="Пополнить баланс" />
+        <QuickAction to="/referrals"     icon="🎁" label="Рефералы" />
       </div>
 
       {/* ── Recent jobs ── */}

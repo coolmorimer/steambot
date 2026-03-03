@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, AdminRoute, PartnerRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
 import Landing        from './pages/Landing';
@@ -60,7 +60,7 @@ export default function App() {
           <Route path="trades"         element={<Trades />} />
           <Route path="trades/create"  element={<CreateTrade />} />
           <Route path="trades/:id"     element={<TradeView />} />
-          <Route path="balance"        element={<Balance />} />
+          <Route path="balance"        element={<PartnerRoute><Balance /></PartnerRoute>} />
           <Route path="referrals"      element={<Referrals />} />
 
           {/* Admin */}

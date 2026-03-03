@@ -179,6 +179,7 @@ router.get('/me', requireAuth, requireActiveUser, async (req, res, next) => {
   try {
     const user = req.dbUser;
     const sub  = await db.getActiveSubscription(req.userId);
+    const partnerRef = await db.getPartnerReferralByUserId(req.userId);
 
     let daysLeft = null;
     if (sub?.expires_at) {
@@ -199,6 +200,7 @@ router.get('/me', requireAuth, requireActiveUser, async (req, res, next) => {
       steam_id: user.steam_id, steam_username: user.steam_username,
       steam_avatar: user.steam_avatar, google_id: user.google_id,
       trade_url: user.trade_url, balance: user.balance || 0,
+      is_partner: !!partnerRef,
       subscription: sub ? {
         plan_id: sub.plan_id, plan_name: sub.plan_name, status: sub.status,
         expires_at: sub.expires_at, trial_ends_at: sub.trial_ends_at,
