@@ -919,7 +919,7 @@ async function getAdminUserList({ limit = 50, offset = 0, search = '' } = {}) {
   `, [like, like, limit, offset]);
 }
 
-async function getAdminTransactions({ limit = 50, offset = 0, status, method, search, dateFrom, dateTo } = {}) {
+async function getAdminTransactions({ limit = 50, offset = 0, status, method, search, dateFrom, dateTo, sortBy, sortDir } = {}) {
   let where = 'WHERE 1=1';
   const params = [];
   let idx = 1;
@@ -931,6 +931,12 @@ async function getAdminTransactions({ limit = 50, offset = 0, status, method, se
     where += ` AND (u.email ILIKE $${idx} OR u.name ILIKE $${idx} OR t.external_id ILIKE $${idx})`;
     params.push(`%${search}%`); idx++;
   }
+
+  // Sortable columns whitelist
+  const allowedSort = { created_at: 't.created_at', amount: 't.amount', status: 't.status', user_email: 'u.email' };
+  const orderCol = allowedSort[sortBy] || 't.created_at';
+  const orderDir = sortDir === 'asc' ? 'ASC' : 'DESC';
+
   const countQ = `SELECT COUNT(*) as n FROM payment_transactions t LEFT JOIN users u ON u.id = t.user_id ${where}`;
   const dataQ = `
     SELECT t.*, u.email as user_email, u.name as user_name,
@@ -939,7 +945,7 @@ async function getAdminTransactions({ limit = 50, offset = 0, status, method, se
     LEFT JOIN users u ON u.id = t.user_id
     LEFT JOIN subscription_plans p ON p.id = t.plan_id
     ${where}
-    ORDER BY t.created_at DESC
+    ORDER BY ${orderCol} ${orderDir}
     LIMIT $${idx++} OFFSET $${idx++}
   `;
   params.push(limit, offset);
@@ -984,26 +990,41 @@ async function updateTransaction(id, updates) {
 }
 
 async function getPaymentStats() {
-  const month30 = new Date(Date.now() - 30 * 86400000).toISOString();
-  const week7 = new Date(Date.now() - 7 * 86400000).toISOString();
+  const day90 = new Date(Date.now() - 90 * 86400000).toISOString();
+  const day30 = new Date(Date.now() - 30 * 86400000).toISOString();
+  const day7 = new Date(Date.now() - 7 * 86400000).toISOString();
   const today = new Date().toISOString().split('T')[0];
+  // Previous periods for trend comparison
+  const day60 = new Date(Date.now() - 60 * 86400000).toISOString();
+  const day14 = new Date(Date.now() - 14 * 86400000).toISOString();
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  const completed = "status='completed' AND payment_method != 'manual'";
+
   const [
-    [total], [completed], [pending], [failed], [refunded],
+    [total], [completedCnt], [pendingCnt], [failedCnt], [refundedCnt],
     [sumAll], [sum30], [sum7], [sumToday],
+    [sumPrev30], [sumPrev7], [sumYesterday],
     byMethod, byPlan, dailyRevenue
   ] = await Promise.all([
     getAll('SELECT COUNT(*) as n FROM payment_transactions'),
-    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='completed'"),
-    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='pending'"),
-    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='failed'"),
-    getAll("SELECT COUNT(*) as n FROM payment_transactions WHERE status='refunded'"),
-    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual'"),
-    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual' AND created_at >= $1", [month30]),
-    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual' AND created_at >= $1", [week7]),
-    getAll("SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE status='completed' AND payment_method != 'manual' AND DATE(created_at) = $1", [today]),
+    getAll(`SELECT COUNT(*) as n FROM payment_transactions WHERE status='completed'`),
+    getAll(`SELECT COUNT(*) as n FROM payment_transactions WHERE status='pending'`),
+    getAll(`SELECT COUNT(*) as n FROM payment_transactions WHERE status='failed'`),
+    getAll(`SELECT COUNT(*) as n FROM payment_transactions WHERE status='refunded'`),
+    // Revenue
+    getAll(`SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE ${completed}`),
+    getAll(`SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE ${completed} AND created_at >= $1`, [day30]),
+    getAll(`SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE ${completed} AND created_at >= $1`, [day7]),
+    getAll(`SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE ${completed} AND DATE(created_at) = $1`, [today]),
+    // Previous periods for trend
+    getAll(`SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE ${completed} AND created_at >= $1 AND created_at < $2`, [day60, day30]),
+    getAll(`SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE ${completed} AND created_at >= $1 AND created_at < $2`, [day14, day7]),
+    getAll(`SELECT COALESCE(SUM(amount),0) as n FROM payment_transactions WHERE ${completed} AND DATE(created_at) = $1`, [yesterday]),
+    // Breakdown
     getAll(`
       SELECT payment_method, COUNT(*) as count, COALESCE(SUM(amount),0) as total
-      FROM payment_transactions WHERE status='completed' AND payment_method != 'manual'
+      FROM payment_transactions WHERE ${completed}
       GROUP BY payment_method
     `),
     getAll(`
@@ -1013,26 +1034,46 @@ async function getPaymentStats() {
       WHERE t.status='completed' AND t.payment_method != 'manual'
       GROUP BY t.plan_id, p.name
     `),
+    // 90-day daily chart
     getAll(`
-      SELECT DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(amount),0) as total
+      SELECT DATE(created_at) as date,
+             COUNT(*) as count,
+             COALESCE(SUM(amount),0) as total,
+             COUNT(*) FILTER (WHERE status = 'completed') as completed,
+             COUNT(*) FILTER (WHERE status = 'failed') as failed,
+             COALESCE(SUM(amount) FILTER (WHERE status = 'completed'),0) as revenue
       FROM payment_transactions
-      WHERE status='completed' AND payment_method != 'manual' AND created_at >= $1
+      WHERE payment_method != 'manual' AND created_at >= $1
       GROUP BY DATE(created_at)
       ORDER BY date
-    `, [month30]),
+    `, [day90]),
   ]);
+
+  // Trend percentages
+  const trendCalc = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 100) : (cur > 0 ? 100 : 0);
+
   return {
     counts: {
-      total: Number(total.n), completed: Number(completed.n),
-      pending: Number(pending.n), failed: Number(failed.n), refunded: Number(refunded.n),
+      total: Number(total.n), completed: Number(completedCnt.n),
+      pending: Number(pendingCnt.n), failed: Number(failedCnt.n), refunded: Number(refundedCnt.n),
     },
     revenue: {
-      total: Number(sumAll.n), last30d: Number(sum30.n),
-      last7d: Number(sum7.n), today: Number(sumToday.n),
+      total: Number(sumAll.n),
+      last30d: Number(sum30.n),
+      last7d: Number(sum7.n),
+      today: Number(sumToday.n),
+    },
+    trends: {
+      last30d: trendCalc(Number(sum30.n), Number(sumPrev30.n)),
+      last7d: trendCalc(Number(sum7.n), Number(sumPrev7.n)),
+      today: trendCalc(Number(sumToday.n), Number(sumYesterday.n)),
     },
     byMethod: byMethod.map(r => ({ method: r.payment_method, count: Number(r.count), total: Number(r.total) })),
     byPlan: byPlan.map(r => ({ plan_id: r.plan_id, plan_name: r.plan_name, count: Number(r.count), total: Number(r.total) })),
-    dailyRevenue: dailyRevenue.map(r => ({ date: r.date, count: Number(r.count), total: Number(r.total) })),
+    dailyRevenue: dailyRevenue.map(r => ({
+      date: r.date, count: Number(r.count), total: Number(r.total),
+      completed: Number(r.completed), failed: Number(r.failed), revenue: Number(r.revenue),
+    })),
   };
 }
 

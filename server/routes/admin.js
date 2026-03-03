@@ -21,8 +21,8 @@ router.get('/payments', requireAdmin, async (req, res, next) => {
   try {
     const limit  = Math.min(parseInt(req.query.limit  || '50'), 200);
     const offset = parseInt(req.query.offset || '0');
-    const { status, method, search, date_from, date_to } = req.query;
-    const result = await db.getAdminTransactions({ limit, offset, status, method, search, dateFrom: date_from, dateTo: date_to });
+    const { status, method, search, date_from, date_to, sort_by, sort_dir } = req.query;
+    const result = await db.getAdminTransactions({ limit, offset, status, method, search, dateFrom: date_from, dateTo: date_to, sortBy: sort_by, sortDir: sort_dir });
     res.json(result);
   } catch (e) { next(e); }
 });
