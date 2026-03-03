@@ -59,8 +59,9 @@ export default function Balance() {
       setBalance(balRes.data.balance);
       setTxs(balRes.data.transactions);
       setWithdrawals(wdRes.data);
-    } catch {}
-    finally { setLoading(false); }
+    } catch (err) {
+      toast.error('Ошибка загрузки баланса');
+    } finally { setLoading(false); }
   };
 
   const handleDeposit = async () => {

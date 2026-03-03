@@ -60,7 +60,7 @@ router.post('/messages', ALL, async (req, res, next) => {
   <h3 style="color:#66c0f4;">💬 Сообщение в поддержку</h3>
   <p><b>Пользователь:</b> ${user?.name || '—'} (${user?.email || '—'})</p>
   <div style="background:#1b2838;color:#c6d4df;padding:16px;border-radius:8px;margin:12px 0;">
-    ${body.trim().replace(/\n/g, '<br>')}
+    ${body.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\n/g, '<br>')}
   </div>
   <p style="color:#888;font-size:13px;">Ответьте через панель администратора.</p>
 </div>`,
@@ -147,9 +147,9 @@ router.post('/bugs', ALL, async (req, res, next) => {
 <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
   <h3 style="color:#e74c3c;">🐛 Баг-репорт</h3>
   <p><b>Пользователь:</b> ${user?.name || '—'} (${user?.email || '—'})</p>
-  <p><b>Тема:</b> ${subject.trim()}</p>
+  <p><b>Тема:</b> ${subject.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
   <div style="background:#1b2838;color:#c6d4df;padding:16px;border-radius:8px;margin:12px 0;">
-    ${body.trim().replace(/\n/g, '<br>')}
+    ${body.trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\n/g, '<br>')}
   </div>
   ${screenshotData ? '<p style="color:#888;">📎 Скриншот прикреплён к письму</p>' : ''}
   <p style="color:#888;font-size:13px;">Steam Poster Bot — Bug Report</p>

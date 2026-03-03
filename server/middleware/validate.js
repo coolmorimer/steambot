@@ -26,9 +26,10 @@ function validate(schema) {
 
 const schemas = {
   register: z.object({
-    email:    z.string().email('Некорректный email'),
-    password: z.string().min(8, 'Пароль минимум 8 символов'),
-    name:     z.string().max(100).optional(),
+    email:         z.string().email('Некорректный email'),
+    password:      z.string().min(8, 'Пароль минимум 8 символов'),
+    name:          z.string().max(100).optional(),
+    referral_code: z.string().max(50).optional(),
   }),
 
   login: z.object({

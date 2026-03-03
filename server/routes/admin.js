@@ -106,7 +106,10 @@ router.patch('/users/:id', requireAdmin, async (req, res, next) => {
     const { is_active, role, name } = req.body;
     const updates = {};
     if (is_active !== undefined) updates.is_active = is_active ? 1 : 0;
-    if (role      !== undefined) updates.role      = role;
+    if (role      !== undefined) {
+      if (!['user', 'admin'].includes(role)) return res.status(400).json({ error: 'Недопустимая роль' });
+      updates.role = role;
+    }
     if (name      !== undefined) updates.name      = name;
 
     await db.updateUser(req.params.id, updates);
@@ -346,7 +349,7 @@ router.patch('/withdrawals/:id', requireAdmin, async (req, res, next) => {
       return res.status(400).json({ error: 'Недопустимый статус' });
     }
 
-    const wd = await db.getWithdrawalRequests ? null : null;
+    const wd = req.params.id;
     // Update withdrawal
     const updates = { status };
     if (admin_note) updates.admin_note = admin_note;
@@ -358,8 +361,7 @@ router.patch('/withdrawals/:id', requireAdmin, async (req, res, next) => {
 
     // If rejected, refund the frozen amount to user balance
     if (status === 'rejected') {
-      // Find the withdrawal to get amount and user_id
-      const rows = await db.getAllWithdrawalRequests();
+      const rows = await db.getAllWithdrawalRequests('rejected');
       const wr = rows.find(r => String(r.id) === String(id));
       if (wr) {
         await db.updateUserBalance(wr.user_id, wr.amount); // positive = refund

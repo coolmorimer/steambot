@@ -99,8 +99,6 @@ router.post('/upgrade', ALL, async (req, res, next) => {
 
     // Проверяем текущую подписку
     const currentSub = await db.getActiveSubscription(req.userId);
-    const isExpired = !currentSub || currentSub.status === 'expired' || currentSub.status === 'cancelled';
-    const isTrialExpired = currentSub?.status === 'trial' && currentSub.trial_ends_at && new Date(currentSub.trial_ends_at) < new Date();
 
     const priceRub = getActivePriceRub(plan_id, billing_period);
 

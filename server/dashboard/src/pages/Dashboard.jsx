@@ -20,16 +20,17 @@ function AnimatedNum({ value, suffix = '' }) {
   useEffect(() => {
     const n = typeof value === 'number' ? value : parseInt(value) || 0;
     if (n === 0) { setDisplay(0); return; }
-    let start = 0;
     const dur = 600;
     const t0 = performance.now();
+    let raf;
     const tick = (now) => {
       const p = Math.min((now - t0) / dur, 1);
       const eased = 1 - Math.pow(1 - p, 3);
       setDisplay(Math.round(eased * n));
-      if (p < 1) requestAnimationFrame(tick);
+      if (p < 1) raf = requestAnimationFrame(tick);
     };
-    requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick);
+    return () => { if (raf) cancelAnimationFrame(raf); };
   }, [value]);
   return <>{display}{suffix}</>;
 }
@@ -56,7 +57,7 @@ export default function Dashboard() {
 
   if (loading) return <PageSkeleton />;
 
-  const chartData = (() => {
+  const chartData = useMemo(() => {
     const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -68,7 +69,7 @@ export default function Dashboard() {
       days.push({ day: dayNames[d.getDay()], total, done });
     }
     return days;
-  })();
+  }, [jobs]);
 
   const todayJobs = jobs.filter(j => new Date(j.created_at).toDateString() === new Date().toDateString()).length;
   const successRate = jobs.length > 0 ? Math.round(jobs.filter(j => j.status === 'done').length / jobs.length * 100) : 0;

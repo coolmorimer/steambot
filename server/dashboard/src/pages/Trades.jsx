@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeftRight, Search, Plus, Loader2, Package, RefreshCw,
@@ -39,7 +39,9 @@ export default function Trades() {
   const [pages, setPages]     = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sort, setSort]       = useState('bumped');
+  const searchTimer = useRef(null);
 
   // ── Фильтры ──
   const [showFilters, setShowFilters] = useState(false);
@@ -49,6 +51,13 @@ export default function Trades() {
   const [minValue, setMinValue]         = useState('');
   const [maxValue, setMaxValue]         = useState('');
   const [hasDescription, setHasDescription] = useState(false);
+
+  // Debounce search
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [search]);
 
   const activeFilterCount = [hasKnife, hasGloves, wantedTag, minValue, maxValue, hasDescription]
     .filter(Boolean).length;
@@ -63,7 +72,7 @@ export default function Trades() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, sort });
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       if (hasKnife) params.set('has_knife', '1');
       if (hasGloves) params.set('has_gloves', '1');
       if (wantedTag) params.set('wanted_tag', wantedTag);
@@ -76,7 +85,7 @@ export default function Trades() {
       setPages(data.pages);
     } catch { toast.error('Ошибка загрузки'); }
     finally { setLoading(false); }
-  }, [page, search, sort, hasKnife, hasGloves, wantedTag, minValue, maxValue, hasDescription]);
+  }, [page, debouncedSearch, sort, hasKnife, hasGloves, wantedTag, minValue, maxValue, hasDescription]);
 
   useEffect(() => { load(); }, [load]);
 

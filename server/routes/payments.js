@@ -220,10 +220,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const invoice = event.data.object;
         const sub     = invoice.subscription;
         if (sub) {
-          const dbSub = db.getSubscriptionByStripeId(sub);
+          const dbSub = await db.getSubscriptionByStripeId(sub);
           if (dbSub) {
-            db.updateSubscription(dbSub.id, { status: 'active' });
-            db.createTransaction({
+            await db.updateSubscription(dbSub.id, { status: 'active' });
+            await db.createTransaction({
               userId:          dbSub.user_id,
               subscriptionId:  dbSub.id,
               amount:          invoice.amount_paid / 100,
@@ -232,7 +232,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
               externalId:      invoice.id,
               metadata:        { stripe_invoice_id: invoice.id },
             });
-            db.updateTransactionStatus(invoice.id, 'completed');
+            await db.updateTransactionStatus(invoice.id, 'completed');
           }
         }
         break;
@@ -242,9 +242,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         if (invoice.subscription) {
-          const dbSub = db.getSubscriptionByStripeId(invoice.subscription);
+          const dbSub = await db.getSubscriptionByStripeId(invoice.subscription);
           if (dbSub) {
-            db.updateSubscription(dbSub.id, { status: 'past_due' });
+            await db.updateSubscription(dbSub.id, { status: 'past_due' });
           }
         }
         break;
@@ -253,9 +253,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       // Подписка отменена
       case 'customer.subscription.deleted': {
         const stripeSub = event.data.object;
-        const dbSub = db.getSubscriptionByStripeId(stripeSub.id);
+        const dbSub = await db.getSubscriptionByStripeId(stripeSub.id);
         if (dbSub) {
-          db.updateSubscription(dbSub.id, {
+          await db.updateSubscription(dbSub.id, {
             status:       'cancelled',
             cancelled_at: new Date().toISOString(),
           });
@@ -266,12 +266,12 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       // Подписка обновлена (смена плана, дата окончания)
       case 'customer.subscription.updated': {
         const stripeSub = event.data.object;
-        const dbSub = db.getSubscriptionByStripeId(stripeSub.id);
+        const dbSub = await db.getSubscriptionByStripeId(stripeSub.id);
         if (dbSub) {
           const expiresAt = stripeSub.current_period_end
             ? new Date(stripeSub.current_period_end * 1000).toISOString()
             : null;
-          db.updateSubscription(dbSub.id, {
+          await db.updateSubscription(dbSub.id, {
             status:     stripeSub.status === 'active' ? 'active' : stripeSub.status,
             expires_at: expiresAt,
           });
