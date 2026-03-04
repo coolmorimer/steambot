@@ -752,7 +752,7 @@ export default function Campaigns() {
   useEffect(load, []);
 
   const handleDelete = async id => {
-    if (!confirm('Удалить кампанию?')) return;
+    if (!confirm('Удалить задачу?')) return;
     await api.delete(`/campaigns/${id}`);
     setCampaigns(c => c.filter(x => x.id !== id));
     toast.success('Удалено');
@@ -789,11 +789,11 @@ export default function Campaigns() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-brand-500/20 border border-emerald-500/20 flex items-center justify-center">
-            <span className="text-lg">📢</span>
+            <span className="text-lg">✅</span>
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">Кампании</h1>
-            <p className="text-gray-500 text-sm">{campaigns.length} / {isUnlimited ? '∞' : limit} кампаний</p>
+            <h1 className="text-xl font-extrabold text-white tracking-tight">Задачи</h1>
+            <p className="text-gray-500 text-sm">{campaigns.length} / {isUnlimited ? '∞' : limit} задач</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -819,7 +819,7 @@ export default function Campaigns() {
       {loading ? (
         <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="card h-24 animate-pulse bg-gray-800/50 rounded-2xl" />)}</div>
       ) : campaigns.length === 0 ? (
-        <EmptyState title="Нет кампаний" emoji="📢" desc="Создайте первую кампанию для автоматической публикации на Steam." />
+        <EmptyState title="Нет задач" emoji="✅" desc="Создайте первую задачу для автоматической публикации на Steam." />
       ) : (
         <div className="space-y-3">
           {campaigns.map((c, i) => (
@@ -860,7 +860,7 @@ function CampaignCard({ campaign: c, onDelete, onToggle, onEdit }) {
             <div className="flex items-center gap-2">
               <p className="font-semibold text-white truncate">{c.name}</p>
               <span className={c.is_active ? 'badge-green' : 'badge-gray'}>
-                {c.is_active ? '🟢 Активна' : 'Пауза'}
+                {c.is_active ? '🟢 Активна' : '⏸️ Пауза'}
               </span>
               {c.group_ids && c.group_ids.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-900/30 border border-indigo-800/30 text-indigo-400 text-[10px]">
@@ -979,7 +979,6 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
   const submit = async e => {
     e.preventDefault();
     if (!form.profile_ids.length)     return toast.error('Выберите хотя бы один аккаунт');
-    if (!form.schedule_times.length)  return toast.error('Добавьте хотя бы одно время публикации');
 
     setSaving(true);
     try {
@@ -1005,7 +1004,7 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
       }
 
       onSaved(saved, isEdit);
-      toast.success(isEdit ? 'Кампания обновлена' : 'Кампания создана');
+      toast.success(isEdit ? 'Задача обновлена' : 'Задача создана');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Ошибка');
     } finally {
@@ -1022,24 +1021,42 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
     <div className="card border-brand-700/50">
       <h2 className="font-bold text-white text-lg mb-5 flex items-center gap-2">
         <span className="text-xl">{isEdit ? '✏️' : '✨'}</span>
-        {isEdit ? `Редактировать: ${initial.name}` : 'Новая кампания'}
+        {isEdit ? `Редактировать: ${initial.name}` : 'Новая задача'}
       </h2>
       <form onSubmit={submit} className="space-y-4">
 
-        {/* ── Куда постить (раздел Steam-форума) ── */}
+        {/* ── Аккаунты (вверху) ── */}
         <div>
           <label className="label flex items-center gap-2">
-            <Globe className="w-4 h-4 text-brand-400" />
-            Раздел форума Steam
+            <Users className="w-4 h-4 text-brand-400" />
+            Аккаунты
+            <span className="text-gray-500 font-normal ml-1">({form.profile_ids.length} выбрано)</span>
           </label>
-          <ForumPicker
-            value={form.target_url}
-            onChange={url => setForm(p => ({ ...p, target_url: url }))}
-          />
-          {!form.target_url && (
-            <p className="text-xs text-gray-500 mt-1.5">
-              Если не выбрано — будет использоваться раздел из настроек аккаунта (по умолчанию CS2 Trading)
-            </p>
+          {profiles.length === 0 ? (
+            <p className="text-sm text-gray-500">Сначала добавьте аккаунты</p>
+          ) : (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {profiles.map(p => (
+                <button key={p.id} type="button" onClick={() => toggleProfile(p.id)}
+                  className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-all ${
+                    form.profile_ids.includes(p.id)
+                      ? 'bg-brand-600/20 border-brand-500/60 text-white ring-1 ring-brand-500/30'
+                      : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:bg-gray-800/60'
+                  }`}>
+                  {p.avatar_url ? (
+                    <img src={p.avatar_url} className="w-7 h-7 rounded-lg object-cover ring-1 ring-gray-700/50" alt="" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-lg bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-400">
+                      {(p.name || '?')[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="font-medium">{p.name}</span>
+                  {form.profile_ids.includes(p.id) && (
+                    <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
@@ -1076,8 +1093,8 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
 
         {/* Название */}
         <div>
-          <label className="label">Название кампании</label>
-          <input className="input" required value={form.name} onChange={f('name')} placeholder="Моя кампания" />
+          <label className="label">Название задачи</label>
+          <input className="input" required value={form.name} onChange={f('name')} placeholder="Моя задача" />
         </div>
 
         {/* Шаблон заголовка */}
@@ -1086,7 +1103,6 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
           <input ref={titleRef} className="input font-mono" required
             value={form.title_template} onChange={f('title_template')}
             placeholder="Напр.: Инвентарь {date} — {items_count} предметов" />
-          <VarButtons fieldRef={titleRef} onInsert={doInsert} />
         </div>
 
         {/* Шаблон тела */}
@@ -1095,60 +1111,6 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
           <textarea ref={bodyRef} className="input resize-none font-mono" rows={5} required
             value={form.body_template} onChange={f('body_template')}
             placeholder="Привет! Мой инвентарь сегодня ({date}):\nЛучший предмет: {best_item}\nВсего предметов: {items_count}\nТрейд-ссылка: {trade_url}" />
-          <VarButtons fieldRef={bodyRef} onInsert={doInsert} />
-        </div>
-
-        {/* Время публикаций */}
-        <div>
-          <label className="label">Время публикаций
-            <span className="text-gray-500 font-normal ml-1">(минимум 60 мин. между публикациями)</span>
-          </label>
-          <TimePicker
-            value={form.schedule_times}
-            onChange={times => setForm(p => ({ ...p, schedule_times: times }))}
-          />
-        </div>
-
-        {/* Окно публикации (опционально) */}
-        <div>
-          <label className="label">Окно активности
-            <span className="text-gray-500 font-normal ml-1">(опционально)</span>
-          </label>
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <input type="time" className="input w-32" value={form.window_start} onChange={f('window_start')} />
-            <span className="text-gray-500">–</span>
-            <input type="time" className="input w-32" value={form.window_end} onChange={f('window_end')} />
-            {(form.window_start || form.window_end) && (
-              <button type="button" className="btn-ghost px-2 py-1 text-xs"
-                onClick={() => setForm(p => ({ ...p, window_start: '', window_end: '' }))}>
-                Сбросить
-              </button>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Публикации будут выполняться только в указанный промежуток.</p>
-        </div>
-
-        {/* Аккаунты */}
-        <div>
-          <label className="label">Аккаунты
-            <span className="text-gray-500 font-normal ml-1">({form.profile_ids.length} выбрано)</span>
-          </label>
-          {profiles.length === 0 ? (
-            <p className="text-sm text-gray-500">Сначала добавьте аккаунты</p>
-          ) : (
-            <div className="flex flex-wrap gap-2 mt-1">
-              {profiles.map(p => (
-                <button key={p.id} type="button" onClick={() => toggleProfile(p.id)}
-                  className={`text-sm px-3 py-1 rounded-full border transition-colors ${
-                    form.profile_ids.includes(p.id)
-                      ? 'bg-brand-600 border-brand-500 text-white'
-                      : 'border-gray-700 text-gray-400 hover:border-gray-500'
-                  }`}>
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="flex gap-2 justify-end pt-1">

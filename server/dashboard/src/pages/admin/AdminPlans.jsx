@@ -73,7 +73,7 @@ export default function AdminPlans() {
               <div>Цена/мес: <span className="text-white">{plan.price_monthly.toLocaleString('ru')} ₽</span></div>
               <div>Цена/год: <span className="text-white">{plan.price_yearly.toLocaleString('ru')} ₽</span></div>
               <div>Аккаунты: <span className="text-white">{plan.max_steam_accounts === -1 ? '∞' : plan.max_steam_accounts}</span></div>
-              <div>Кампании: <span className="text-white">{plan.max_campaigns === -1 ? '∞' : plan.max_campaigns}</span></div>
+              <div>Задачи: <span className="text-white">{plan.max_campaigns === -1 ? '∞' : plan.max_campaigns}</span></div>
               <div>Постов/день: <span className="text-white">{plan.max_jobs_per_day === -1 ? '∞' : plan.max_jobs_per_day}</span></div>
               <div>TG боты: <span className="text-white">{plan.max_telegram_bots}</span></div>
               <div>Steam-групп: <span className="text-white">{plan.max_steam_groups ?? 0}</span></div>
@@ -150,7 +150,7 @@ function PlanForm({ plan, onSaved, onClose }) {
           {numField('price_monthly', 'Цена/мес (₽)', 0)}
           {numField('price_yearly',  'Цена/год (₽)',  0)}
           {numField('max_steam_accounts', 'Макс. аккаунтов (-1=∞)')}
-          {numField('max_campaigns',      'Макс. кампаний (-1=∞)')}
+          {numField('max_campaigns',      'Макс. задач (-1=∞)')}
           {numField('max_jobs_per_day',   'Постов в день (-1=∞)')}
           {numField('max_telegram_bots',  'TG ботов', 0)}
           {numField('max_steam_groups',   'Steam-групп', 0)}

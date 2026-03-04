@@ -76,7 +76,7 @@ export default function Dashboard() {
   const failedCount = jobs.filter(j => j.status === 'failed').length;
   const pendingCount = jobs.filter(j => j.status === 'pending').length;
 
-  /* ── Onboarding — показываем если нет аккаунтов или кампаний ── */
+  /* ── Onboarding — показываем если нет аккаунтов или задач ── */
   const hasAccounts  = (stats?.profiles ?? 0) > 0;
   const hasCampaigns = (stats?.campaigns ?? 0) > 0;
   const hasSteam     = !!user?.steam_id;
@@ -91,7 +91,7 @@ export default function Dashboard() {
       hint: 'Аккаунты для постинга',
     },
     {
-      icon: Megaphone, label: 'Кампании', value: stats?.campaigns ?? 0,
+      icon: Megaphone, label: 'Задачи', value: stats?.campaigns ?? 0,
       limit: sub?.limits?.max_campaigns, to: '/campaigns',
       gradient: 'from-purple-600/20 to-pink-600/10',
       iconBg: 'bg-purple-500/15', iconColor: 'text-purple-400',
@@ -171,11 +171,11 @@ export default function Dashboard() {
             <OnboardingStep
               num={3}
               done={hasCampaigns}
-              title="Создайте кампанию"
+              title="Создайте задачу"
               desc="Настройте автопостинг"
               to="/campaigns"
               btn="Создать"
-              emoji="📢"
+              emoji="✅"
             />
           </div>
         </div>
@@ -291,7 +291,7 @@ export default function Dashboard() {
       {/* ── Quick Actions ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <QuickAction to="/accounts"      icon="👤" label="Добавить аккаунт" />
-        <QuickAction to="/campaigns"     icon="📢" label="Новая кампания" />
+        <QuickAction to="/campaigns"     icon="✅" label="Новая задача" />
         <QuickAction to="/trades/create" icon="🔄" label="Создать обмен" />
         <QuickAction to="/referrals"     icon="🎁" label="Рефералы" />
       </div>
@@ -310,9 +310,9 @@ export default function Dashboard() {
           <div className="text-center py-10">
             <div className="text-4xl mb-3">📭</div>
             <p className="text-gray-400 font-medium">Заданий пока нет</p>
-            <p className="text-xs text-gray-600 mt-1">Создайте кампанию, чтобы начать автопостинг</p>
+            <p className="text-xs text-gray-600 mt-1">Создайте задачу, чтобы начать автопостинг</p>
             <Link to="/campaigns" className="btn-primary text-sm mt-4 inline-flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Создать кампанию
+              <Plus className="w-4 h-4" /> Создать задачу
             </Link>
           </div>
         ) : (
@@ -392,7 +392,7 @@ function JobRow({ job }) {
     <div className={`flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-800/40 transition-all ${statusBg[job.status] || ''}`}>
       <div className="shrink-0">{icons[job.status] || icons.pending}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-200 truncate font-medium">{job.campaign_name || 'Кампания'}</p>
+        <p className="text-sm text-gray-200 truncate font-medium">{job.campaign_name || 'Задача'}</p>
         <p className="text-xs text-gray-600">{job.profile_name || ''}</p>
       </div>
       <span className="text-xs text-gray-600 shrink-0 font-mono">

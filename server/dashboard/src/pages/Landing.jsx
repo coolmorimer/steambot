@@ -40,7 +40,7 @@ export default function Landing() {
   const quickMenuItems = [
     { to: '/',            icon: LayoutDashboard, label: 'Дашборд',      emoji: '📊' },
     { to: '/accounts',    icon: Users,           label: 'Аккаунты',     emoji: '👤' },
-    { to: '/campaigns',   icon: Megaphone,       label: 'Кампании',     emoji: '📢' },
+    { to: '/campaigns',   icon: Megaphone,       label: 'Задачи',      emoji: '✅' },
     { to: '/activity',    icon: Activity,        label: 'Активность',   emoji: '⚡' },
     { to: '/trades',      icon: ArrowLeftRight,  label: 'P2P Обмен',    emoji: '🔄' },
     { to: '/settings',    icon: Settings,        label: 'Настройки',    emoji: '⚙️' },
@@ -311,7 +311,7 @@ export default function Landing() {
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed">
-            Создавайте кампании, планируйте публикации и управляйте множеством аккаунтов.
+            Создавайте задачи, планируйте публикации и управляйте множеством аккаунтов.
             Telegram-бот для мониторинга. Всё в одном сервисе.
           </p>
           
@@ -397,7 +397,7 @@ export default function Landing() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {[
                       { label: 'Аккаунтов', value: '12', Icon: Users, color: 'text-brand-400', bg: 'bg-brand-600/10' },
-                      { label: 'Кампаний', value: '8', Icon: Target, color: 'text-purple-400', bg: 'bg-purple-600/10' },
+                      { label: 'Задач', value: '8', Icon: Target, color: 'text-purple-400', bg: 'bg-purple-600/10' },
                       { label: 'Постов сегодня', value: '156', Icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-600/10' },
                       { label: 'Успешность', value: '98.7%', Icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-600/10' },
                     ].map(s => (
@@ -597,7 +597,7 @@ export default function Landing() {
               {
                 icon: Target, color: 'purple', border: 'hover:border-purple-500/40',
                 glow: 'hover:shadow-purple-500/10',
-                title: 'Умные кампании',
+                title: 'Умные задачи',
                 desc: 'Настройте расписание, выберите форумы и темы. Бот автоматически создаст посты в нужное время.',
               },
               {
@@ -684,7 +684,7 @@ export default function Landing() {
               },
               {
                 step: '02',
-                title: 'Создайте кампанию',
+                title: 'Создайте задачу',
                 desc: 'Укажите форум, текст поста и расписание. Выберите дни недели и время публикации.',
                 Icon: FileText,
                 gradient: 'from-purple-600/20 to-transparent',
@@ -1021,7 +1021,7 @@ function buildFeatures(plan) {
   // Paid plans — all posting features + trades
   f.push('P2P обмен предметами');
   f.push(`${plan.max_steam_accounts === -1 ? '∞' : plan.max_steam_accounts} Steam аккаунтов`);
-  f.push(`${plan.max_campaigns === -1 ? '∞' : plan.max_campaigns} кампаний`);
+  f.push(`${plan.max_campaigns === -1 ? '∞' : plan.max_campaigns} задач`);
   f.push(`${plan.max_jobs_per_day === -1 ? '∞' : plan.max_jobs_per_day} постов / день`);
   if (plan.max_steam_groups > 0) f.push(`${plan.max_steam_groups} Steam-групп`);
   if (plan.max_telegram_bots > 0) f.push(`Telegram бот (${plan.max_telegram_bots})`);

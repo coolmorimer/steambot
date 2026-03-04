@@ -6,8 +6,8 @@ import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
 const PERM_LABELS = {
-  read:   { label: 'Чтение',   color: 'badge-green',  desc: 'Просмотр аккаунтов, кампаний, задач' },
-  write:  { label: 'Запись',    color: 'badge-blue',   desc: 'Изменение кампаний, управление ботом' },
+  read:   { label: 'Чтение',   color: 'badge-green',  desc: 'Просмотр аккаунтов, задач, заданий' },
+  write:  { label: 'Запись',    color: 'badge-blue',   desc: 'Изменение задач, управление ботом' },
   delete: { label: 'Удаление', color: 'badge-red',    desc: 'Удаление ресурсов' },
 };
 
@@ -293,9 +293,9 @@ function ApiDocs() {
     { method: 'GET',   path: '/me',              desc: 'Информация о пользователе и подписке' },
     { method: 'GET',   path: '/profiles',         desc: 'Список Steam аккаунтов' },
     { method: 'GET',   path: '/profiles/:id',     desc: 'Один аккаунт' },
-    { method: 'GET',   path: '/campaigns',        desc: 'Список кампаний' },
-    { method: 'GET',   path: '/campaigns/:id',    desc: 'Одна кампания' },
-    { method: 'PATCH', path: '/campaigns/:id',    desc: 'Вкл/выкл кампании (is_active)' },
+    { method: 'GET',   path: '/campaigns',        desc: 'Список задач' },
+    { method: 'GET',   path: '/campaigns/:id',    desc: 'Одна задача' },
+    { method: 'PATCH', path: '/campaigns/:id',    desc: 'Вкл/выкл задачи (is_active)' },
     { method: 'GET',   path: '/jobs',             desc: 'Задачи (limit, offset, status)' },
     { method: 'GET',   path: '/jobs/stats',       desc: 'Статистика задач' },
     { method: 'GET',   path: '/subscription',     desc: 'Текущая подписка' },

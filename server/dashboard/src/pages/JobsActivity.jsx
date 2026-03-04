@@ -162,7 +162,7 @@ export default function JobsActivity() {
             <thead>
               <tr className="border-b border-gray-800 text-xs text-gray-500">
                 <th className="text-left px-4 py-3 font-medium">Статус</th>
-                <th className="text-left px-4 py-3 font-medium">Кампания / Аккаунт</th>
+                <th className="text-left px-4 py-3 font-medium">Задача / Аккаунт</th>
                 <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Время</th>
                 <th className="text-left px-4 py-3 font-medium">Пост / Ошибка</th>
                 <th className="px-4 py-3 font-medium text-right">Действия</th>

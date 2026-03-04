@@ -14,7 +14,7 @@ import OnboardingTour from './OnboardingTour';
 const baseNavItems = [
   { to: '/',            icon: LayoutDashboard, label: 'Обзор',         emoji: '📊', tourId: 'nav-overview'     },
   { to: '/accounts',    icon: Users,           label: 'Аккаунты',      emoji: '👤', tourId: 'nav-accounts'     },
-  { to: '/campaigns',   icon: Megaphone,       label: 'Кампании',      emoji: '📢', tourId: 'nav-campaigns'    },
+  { to: '/campaigns',   icon: Megaphone,       label: 'Задачи',       emoji: '✅', tourId: 'nav-campaigns'    },
   { to: '/activity',    icon: Activity,        label: 'Активность',    emoji: '⚡', tourId: 'nav-activity'     },
   { to: '/telegram',    icon: Send,            label: 'Telegram бот',  emoji: '🤖', tourId: 'nav-telegram'     },
   { to: '/api',         icon: Code2,           label: 'API',           emoji: '🔗', tourId: 'nav-api'          },

@@ -632,7 +632,7 @@ function LimitList({ limits }) {
   if (!limits) return null;
   const items = [
     { label: 'Аккаунтов', value: limits.max_steam_accounts },
-    { label: 'Кампаний',  value: limits.max_campaigns },
+    { label: 'Задач',  value: limits.max_campaigns },
     { label: 'Заданий/день', value: limits.max_jobs_per_day },
     { label: 'Групп',     value: limits.max_steam_groups },
   ];
@@ -669,7 +669,7 @@ function buildFeatures(plan) {
   // Paid plans — all posting features + trades
   f.push('P2P обмен предметами');
   f.push(`${plan.max_steam_accounts === -1 ? 'Неограниченно' : plan.max_steam_accounts} Steam аккаунтов`);
-  f.push(`${plan.max_campaigns === -1 ? 'Неограниченно' : plan.max_campaigns} кампаний`);
+  f.push(`${plan.max_campaigns === -1 ? 'Неограничено' : plan.max_campaigns} задач`);
   f.push(`${plan.max_jobs_per_day === -1 ? 'Неограниченно' : plan.max_jobs_per_day} постов в день`);
   if (plan.max_steam_groups > 0) f.push(`${plan.max_steam_groups} Steam-групп`);
   if (plan.max_telegram_bots > 0) f.push('Telegram бот');
