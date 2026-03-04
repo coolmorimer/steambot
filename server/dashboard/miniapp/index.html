@@ -12,46 +12,45 @@
       --text:#eaeaef;--hint:#8a82a6;
       --accent:#a855f7;--accent2:#7c3aed;--accent-soft:rgba(168,85,247,.12);
       --green:#4ade80;--red:#f87171;--yellow:#facc15;--blue:#60a5fa;
-      --radius:14px;--radius-sm:10px;
+      --radius:16px;--radius-sm:12px;
     }
-    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','SF Pro',sans-serif;font-size:15px;min-height:100vh;padding-bottom:80px;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','SF Pro',sans-serif;font-size:15px;min-height:100vh;padding-bottom:90px;-webkit-tap-highlight-color:transparent}
 
-    /* ── Header ── */
-    .header{padding:20px 16px 12px;background:linear-gradient(135deg,#1a103a 0%,#2d1b69 50%,#1a103a 100%);border-bottom:1px solid rgba(168,85,247,.15)}
+    /* ══ HEADER ══ */
+    .header{padding:20px 16px 14px;background:linear-gradient(135deg,#1a103a 0%,#2d1b69 50%,#1a103a 100%);border-bottom:1px solid rgba(168,85,247,.15)}
     .header-row{display:flex;align-items:center;gap:12px}
-    .header-logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;flex-shrink:0}
+    .header-logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;flex-shrink:0}
     .header-info{flex:1;min-width:0}
-    .header-name{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .header-meta{display:flex;align-items:center;gap:8px;margin-top:2px}
-    .plan-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(124,58,237,.25));color:#c4b5fd;border:1px solid rgba(168,85,247,.2)}
-    .header-bot-status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600}
-    .header-bot-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-    .header-bot-dot.online{background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,.5)}
-    .header-bot-dot.offline{background:#f87171}
-    .refresh-indicator{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--hint);transition:opacity .3s}
-    .refresh-indicator.updating{color:var(--accent);opacity:1}
-    .refresh-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite}
-    @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+    .header-name{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .header-meta{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap}
+    .plan-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(124,58,237,.25));color:#c4b5fd;border:1px solid rgba(168,85,247,.2)}
+    .bot-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700}
+    .bot-pill.on{background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+    .bot-pill.off{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.2)}
+    .bot-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .bot-dot.on{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.5)}
+    .bot-dot.off{background:#f87171}
 
-    /* ── Tabs ── */
-    .tabs{display:flex;padding:0 12px;gap:2px;background:var(--bg);position:sticky;top:0;z-index:10;border-bottom:1px solid rgba(255,255,255,.05)}
-    .tab{flex:1;padding:12px 0;font-size:13px;font-weight:600;text-align:center;color:var(--hint);cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;transition:all .2s;position:relative}
-    .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-    .tab-icon{font-size:16px;display:block;margin-bottom:2px}
+    /* ══ BOTTOM TABS ══ */
+    .bottom-tabs{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--bg2);border-top:1px solid rgba(255,255,255,.06);display:flex;padding:6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px)}
+    .btab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;font-size:10px;font-weight:700;color:var(--hint);cursor:pointer;background:none;border:none;transition:color .15s;position:relative}
+    .btab.active{color:var(--accent)}
+    .btab-icon{font-size:22px;line-height:1}
+    .btab-badge{position:absolute;top:2px;right:50%;transform:translateX(14px);min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
 
-    /* ── Pages ── */
-    .page{display:none;padding:14px 16px;animation:pageIn .25s ease}
+    /* ══ PAGES ══ */
+    .page{display:none;padding:16px;animation:pageIn .2s ease}
     .page.active{display:block}
-    @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-    /* ── Cards ── */
-    .card{background:var(--bg2);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.04)}
-    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-    .card-title{font-weight:700;font-size:15px}
+    /* ══ CARDS ══ */
+    .card{background:var(--bg2);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.04)}
+    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .card-title{font-weight:800;font-size:16px}
     .card-sub{font-size:13px;color:var(--hint)}
 
-    /* ── Badges ── */
-    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+    /* ══ BADGES ══ */
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
     .badge-green{background:rgba(34,197,94,.12);color:#4ade80}
     .badge-red{background:rgba(239,68,68,.12);color:#f87171}
     .badge-yellow{background:rgba(234,179,8,.12);color:#facc15}
@@ -59,261 +58,285 @@
     .badge-purple{background:rgba(168,85,247,.12);color:#c4b5fd}
     .badge-gray{background:rgba(107,114,128,.12);color:#9ca3af}
 
-    /* ── Stat grid ── */
-    .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
-    .stat-card{background:var(--bg2);border-radius:var(--radius-sm);padding:14px 10px;text-align:center;border:1px solid rgba(255,255,255,.04)}
-    .stat-icon{font-size:20px;margin-bottom:4px}
-    .stat-val{font-size:22px;font-weight:800;background:linear-gradient(135deg,#c4b5fd,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .stat-lbl{font-size:11px;color:var(--hint);margin-top:2px}
+    /* ══ STAT GRID ══ */
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+    .stat-card{background:var(--bg2);border-radius:var(--radius-sm);padding:16px 10px;text-align:center;border:1px solid rgba(255,255,255,.04);cursor:pointer;transition:transform .1s}
+    .stat-card:active{transform:scale(.96)}
+    .stat-icon{font-size:28px;margin-bottom:6px}
+    .stat-val{font-size:26px;font-weight:900;background:linear-gradient(135deg,#c4b5fd,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .stat-lbl{font-size:11px;color:var(--hint);margin-top:3px;font-weight:600}
 
-    /* ── Quick actions ── */
-    .actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-    .action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px 8px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:12px;font-weight:600;transition:all .15s}
-    .action-btn:active{transform:scale(.96);background:var(--bg3)}
-    .action-btn .action-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
-    .action-icon-purple{background:rgba(168,85,247,.15);color:#a855f7}
-    .action-icon-green{background:rgba(34,197,94,.15);color:#4ade80}
-    .action-icon-blue{background:rgba(96,165,250,.15);color:#60a5fa}
-    .action-icon-red{background:rgba(239,68,68,.15);color:#f87171}
+    /* ══ BIG BUTTONS ══ */
+    .big-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+    .big-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 10px;border-radius:var(--radius);background:var(--bg2);border:1px solid rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:13px;font-weight:700;transition:all .1s;min-height:90px}
+    .big-btn:active{transform:scale(.96);background:var(--bg3)}
+    .big-btn .big-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px}
+    .big-icon-green{background:rgba(34,197,94,.15);color:#4ade80}
+    .big-icon-red{background:rgba(239,68,68,.15);color:#f87171}
+    .big-icon-blue{background:rgba(96,165,250,.15);color:#60a5fa}
+    .big-icon-purple{background:rgba(168,85,247,.15);color:#a855f7}
+    .big-icon-yellow{background:rgba(234,179,8,.15);color:#facc15}
+    .big-btn-full{grid-column:1/-1}
 
-    /* ── Bot status ── */
-    .bot-status{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);margin-bottom:14px}
-    .bot-status.online{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.15)}
-    .bot-status.offline{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15)}
-    .bot-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-    .bot-dot.online{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.5)}
-    .bot-dot.offline{background:#f87171}
-    .bot-info{flex:1}
-    .bot-label{font-size:14px;font-weight:600}
-    .bot-meta{font-size:12px;color:var(--hint)}
+    /* ══ BOT STATUS ══ */
+    .bot-status-card{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--radius);margin-bottom:16px}
+    .bot-status-card.on{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15)}
+    .bot-status-card.off{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.15)}
+    .bot-status-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+    .bot-status-dot.on{background:#4ade80;box-shadow:0 0 10px rgba(74,222,128,.5)}
+    .bot-status-dot.off{background:#f87171}
+    .bot-status-info{flex:1}
+    .bot-status-title{font-size:16px;font-weight:800}
+    .bot-status-sub{font-size:12px;color:var(--hint);margin-top:2px}
 
-    /* ── Toggle switch ── */
-    .toggle{position:relative;width:44px;height:24px;flex-shrink:0;background:rgba(255,255,255,.1);border-radius:12px;cursor:pointer;transition:background .2s;border:none;padding:0}
+    /* ══ TOGGLE ══ */
+    .toggle{position:relative;width:50px;height:28px;flex-shrink:0;background:rgba(255,255,255,.1);border-radius:14px;cursor:pointer;transition:background .2s;border:none;padding:0}
     .toggle.on{background:var(--accent)}
-    .toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
-    .toggle.on::after{transform:translateX(20px)}
+    .toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .toggle.on::after{transform:translateX(22px)}
 
-    /* ── Rows ── */
-    .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
-    .row:last-child{border-bottom:none}
+    /* ══ HELP TIP ══ */
+    .tip{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.12);font-size:13px;color:#93c5fd;margin-bottom:14px;line-height:1.5}
+    .tip-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+    .tip b{color:var(--text)}
+    .tip-close{margin-left:auto;cursor:pointer;font-size:16px;opacity:.5;flex-shrink:0;background:none;border:none;color:#93c5fd}
 
-    /* ── Progress bar ── */
-    .progress-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);margin:8px 0}
+    /* ══ PROGRESS BAR ══ */
+    .progress-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);margin:10px 0}
     .progress-seg{height:100%;transition:width .3s}
 
-    /* ── Job stats ── */
-    .job-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
-    .job-stat{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:500}
-    .job-dot{width:8px;height:8px;border-radius:50%}
+    /* ══ LIST ITEM ══ */
+    .list-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg2);border-radius:var(--radius);margin-bottom:10px;border:1px solid rgba(255,255,255,.04)}
+    .list-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .list-info{flex:1;min-width:0}
+    .list-name{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .list-sub{font-size:12px;color:var(--hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .list-actions{display:flex;gap:6px;flex-shrink:0}
 
-    /* ── Account card ── */
-    .account-card{background:var(--bg2);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.04)}
-    .account-row{display:flex;align-items:center;gap:12px}
-    .account-avatar{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent-soft),rgba(124,58,237,.15));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-    .account-info{flex:1;min-width:0}
-    .account-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .account-url{font-size:12px;color:var(--accent);text-decoration:none}
-
-    /* ── Campaign card ── */
-    .campaign-card{background:var(--bg2);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.04)}
-    .campaign-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .campaign-info{flex:1;min-width:0}
-    .campaign-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .campaign-tpl{font-size:12px;color:var(--hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .campaign-details{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--hint)}
-    .campaign-details dt{color:var(--hint);font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:8px}
-    .campaign-details dt:first-child{margin-top:0}
-    .campaign-details dd{color:var(--text);margin-top:2px;word-break:break-word}
-    .campaign-btns{display:flex;gap:6px;flex-shrink:0}
-
-    /* ── Skeleton ── */
-    .skeleton{border-radius:var(--radius-sm);background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;margin-bottom:10px}
-    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-    .sk-stat{height:80px;border-radius:var(--radius-sm)}
-    .sk-card{height:72px}
-
-    /* ── Buttons ── */
-    .btn{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:var(--radius-sm);padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:8px;transition:all .15s}
+    /* ══ BUTTONS ══ */
+    .btn{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:var(--radius-sm);padding:14px 20px;font-size:16px;font-weight:800;cursor:pointer;width:100%;margin-top:8px;transition:all .1s}
     .btn:active{transform:scale(.97)}
     .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-    .btn-sm{padding:8px 16px;font-size:13px;width:auto;margin:0}
-    .btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-weight:600;transition:all .15s}
+    .btn-sm{padding:10px 18px;font-size:14px;width:auto;margin:0}
+    .btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626)}
+    .btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:12px 18px;font-size:14px;cursor:pointer;font-weight:700;transition:all .1s}
     .btn-ghost:active{background:rgba(255,255,255,.1)}
-    .btn-icon{width:34px;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+    .btn-icon{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;transition:all .1s;flex-shrink:0}
     .btn-icon:active{background:rgba(255,255,255,.1);transform:scale(.95)}
     .btn-icon.danger:active{background:rgba(239,68,68,.15);color:var(--red)}
 
-    /* ── Forms ── */
-    .input{width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s}
+    /* ══ FORMS ══ */
+    .input{width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:12px 16px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s}
     .input:focus{border-color:var(--accent)}
     .input::placeholder{color:rgba(138,130,166,.5)}
-    textarea.input{resize:vertical;min-height:60px;font-family:monospace;font-size:13px;line-height:1.5}
-    .label{display:block;font-size:12px;font-weight:600;color:var(--hint);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
-    .form-group{margin-bottom:14px}
+    textarea.input{resize:vertical;min-height:80px;font-family:monospace;font-size:14px;line-height:1.5}
+    .label{display:block;font-size:13px;font-weight:700;color:var(--hint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+    .form-group{margin-bottom:16px}
+    .label-hint{font-weight:400;color:rgba(138,130,166,.7);text-transform:none;letter-spacing:0}
 
-    /* ── Toast ── */
-    .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid rgba(168,85,247,.2);color:white;padding:10px 18px;border-radius:24px;font-size:14px;font-weight:500;z-index:999;animation:toastIn .3s cubic-bezier(.2,1,.3,1);box-shadow:0 8px 32px rgba(0,0,0,.4);max-width:90vw}
-    .toast-icon{font-size:16px;flex-shrink:0}
+    /* ══ SKELETON ══ */
+    .skeleton{border-radius:var(--radius-sm);background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;margin-bottom:10px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .sk-stat{height:90px;border-radius:var(--radius-sm)}
+    .sk-card{height:80px}
+
+    /* ══ EMPTY STATE ══ */
+    .empty{text-align:center;padding:50px 20px;color:var(--hint)}
+    .empty-icon{font-size:56px;margin-bottom:12px;opacity:.6}
+    .empty-title{font-size:17px;font-weight:800;margin-bottom:6px;color:var(--text)}
+    .empty-text{font-size:14px;line-height:1.5;max-width:260px;margin:0 auto}
+
+    /* ══ TOAST ══ */
+    .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid rgba(168,85,247,.2);color:white;padding:12px 20px;border-radius:24px;font-size:15px;font-weight:600;z-index:999;animation:toastIn .3s cubic-bezier(.2,1,.3,1);box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:90vw}
+    .toast-icon{font-size:18px;flex-shrink:0}
     @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.9)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
 
-    /* ── Empty ── */
-    .empty{text-align:center;padding:40px 20px;color:var(--hint)}
-    .empty-icon{font-size:44px;margin-bottom:10px;opacity:.6}
-    .empty-title{font-size:15px;font-weight:600;margin-bottom:4px;color:var(--text)}
-    .empty-text{font-size:13px}
-
-    /* ── Error banner ── */
-    .error-banner{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);font-size:13px;color:#fca5a5;margin-bottom:10px}
-
-    /* ── Section ── */
-    .section-title{font-size:13px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;padding-left:2px}
-    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-
-    /* ── Modal ── */
+    /* ══ MODAL ══ */
     .modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s ease}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    .modal{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:0;animation:slideUp .3s cubic-bezier(.2,1,.3,1)}
+    .modal{background:var(--bg);border-radius:22px 22px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:0;animation:slideUp .3s cubic-bezier(.2,1,.3,1)}
     @keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
-    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 10px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:var(--bg);z-index:2}
-    .modal-title{font-size:16px;font-weight:700}
-    .modal-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.06);border:none;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:var(--bg);z-index:2}
+    .modal-title{font-size:18px;font-weight:800}
+    .modal-close{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);border:none;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px}
     .modal-body{padding:16px}
 
-    /* ── Chips ── */
-    .chip{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--hint);transition:all .15s}
+    /* ══ CHIPS ══ */
+    .chip{display:inline-flex;align-items:center;gap:4px;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--hint);transition:all .15s}
     .chip.selected{background:var(--accent-soft);color:var(--accent);border-color:rgba(168,85,247,.3)}
     .chip:active{transform:scale(.96)}
 
-    /* ── Time chips ── */
-    .time-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:16px;font-size:12px;font-weight:600;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#c4b5fd}
-    .time-chip-remove{cursor:pointer;opacity:.6;font-size:14px}
+    /* ══ TIME CHIPS ══ */
+    .time-chip{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:16px;font-size:13px;font-weight:700;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#c4b5fd}
+    .time-chip-remove{cursor:pointer;opacity:.6;font-size:16px}
     .time-chip-remove:active{opacity:1}
 
-    /* ── Game grid ── */
-    .game-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}
-    .game-btn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.04);cursor:pointer;color:var(--text);font-size:11px;font-weight:600;text-align:center;transition:all .15s}
+    /* ══ GAME GRID ══ */
+    .game-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:10px 0}
+    .game-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.04);cursor:pointer;color:var(--text);font-size:12px;font-weight:700;text-align:center;transition:all .1s}
     .game-btn:active{transform:scale(.96);border-color:rgba(168,85,247,.3)}
-    .game-emoji{font-size:22px}
-    .forum-btn{text-align:left;padding:10px 14px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.04);cursor:pointer;color:var(--text);font-size:13px;font-weight:600;margin-bottom:6px;transition:all .15s}
+    .game-emoji{font-size:28px}
+    .forum-btn{text-align:left;padding:14px 16px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.04);cursor:pointer;color:var(--text);font-size:14px;font-weight:700;margin-bottom:8px;transition:all .1s}
     .forum-btn:active{transform:scale(.96);border-color:rgba(168,85,247,.3)}
-    .forum-btn-sub{font-size:11px;color:var(--hint);margin-top:2px;font-weight:400}
+    .forum-btn-sub{font-size:12px;color:var(--hint);margin-top:3px;font-weight:400}
 
-    /* ── Filter bar ── */
-    .filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
+    /* ══ VAR BTNS ══ */
+    .var-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+    .var-btn{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);color:var(--hint);cursor:pointer;font-family:monospace;transition:all .15s}
+    .var-btn:active{background:var(--accent-soft);color:var(--accent)}
+
+    /* ══ SELECTED FORUM ══ */
+    .selected-forum{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.2)}
+    .selected-forum-info{flex:1;min-width:0}
+    .selected-forum-name{font-size:14px;font-weight:700}
+    .selected-forum-url{font-size:12px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* ══ FILTER BAR ══ */
+    .filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch}
     .filter-bar::-webkit-scrollbar{display:none}
-    .filter-chip{white-space:nowrap;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);transition:all .15s;flex-shrink:0}
+    .filter-chip{white-space:nowrap;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);transition:all .15s;flex-shrink:0}
     .filter-chip.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(168,85,247,.3)}
     .filter-chip:active{transform:scale(.96)}
 
-    /* ── Pagination ── */
-    .pagination{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:14px;padding:8px 0}
-    .page-btn{padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s}
+    /* ══ PAGINATION ══ */
+    .pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:16px;padding:10px 0}
+    .page-btn{padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);cursor:pointer;font-size:14px;font-weight:700;transition:all .15s}
     .page-btn:active{transform:scale(.96)}
     .page-btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
-    .page-info{font-size:12px;color:var(--hint)}
 
-    /* ── QR box ── */
-    .qr-box{background:#fff;border-radius:16px;padding:12px;margin:12px auto;max-width:250px}
+    /* ══ JOB STATS ══ */
+    .job-stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+    .job-stat{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+    .job-dot{width:10px;height:10px;border-radius:50%}
+
+    /* ══ QR ══ */
+    .qr-box{background:#fff;border-radius:18px;padding:14px;margin:14px auto;max-width:260px}
     .qr-box img{width:100%;image-rendering:pixelated}
 
-    /* ── Loading spinner ── */
-    .spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+    /* ══ SPINNER ══ */
+    .spinner{display:inline-block;width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .spinner-lg{width:40px;height:40px;border-width:3px}
-    .loading-center{display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 0}
+    .spinner-lg{width:44px;height:44px;border-width:3px}
+    .loading-center{display:flex;flex-direction:column;align-items:center;gap:14px;padding:50px 0}
 
-    /* ── Selected forum display ── */
-    .selected-forum{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2)}
-    .selected-forum-info{flex:1;min-width:0}
-    .selected-forum-name{font-size:13px;font-weight:600}
-    .selected-forum-url{font-size:11px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* ══ SECTION ══ */
+    .section-title{font-size:14px;font-weight:800;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px;padding-left:2px}
+    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 
-    /* ── Var buttons ── */
-    .var-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-    .var-btn{font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);color:var(--hint);cursor:pointer;font-family:monospace;transition:all .15s}
-    .var-btn:active{background:var(--accent-soft);color:var(--accent)}
+    /* ══ ERROR ══ */
+    .error-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);font-size:14px;color:#fca5a5;margin-bottom:12px}
 
-    /* ── Info banner ── */
-    .info-banner{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);font-size:12px;color:#93c5fd;margin-bottom:12px}
+    /* ══ MISC ══ */
+    .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .row:last-child{border-bottom:none}
+    .text-center{text-align:center}
+    .mt-2{margin-top:8px}
+    .mt-4{margin-top:16px}
+    .mb-2{margin-bottom:8px}
   </style>
 </head>
 <body>
 
+<!-- ══════════════════ HEADER ══════════════════ -->
 <div class="header">
   <div class="header-row">
-    <div class="header-logo">SP</div>
+    <div class="header-logo">🎮</div>
     <div class="header-info">
       <div class="header-name" id="user-name">Загрузка...</div>
       <div class="header-meta">
         <span class="plan-badge" id="plan-badge">⏳ ...</span>
-        <span class="header-bot-status" id="header-bot-status"></span>
-        <span class="refresh-indicator" id="refresh-indicator"><div class="refresh-dot"></div></span>
+        <span class="bot-pill off" id="header-bot-pill"><span class="bot-dot off"></span>Бот</span>
       </div>
     </div>
   </div>
 </div>
 
-<div class="tabs">
-  <button class="tab active" data-page="overview"><span class="tab-icon">📊</span>Обзор</button>
-  <button class="tab" data-page="campaigns"><span class="tab-icon">📢</span>Кампании</button>
-  <button class="tab" data-page="accounts"><span class="tab-icon">👤</span>Аккаунты</button>
-  <button class="tab" data-page="jobs"><span class="tab-icon">📋</span>Задания</button>
-</div>
+<!-- ══════════════════ PAGES ══════════════════ -->
 
-<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<!-- ─── OVERVIEW ─── -->
 <div id="page-overview" class="page active">
   <div id="overview-skeleton">
     <div class="stat-grid"><div class="skeleton sk-stat"></div><div class="skeleton sk-stat"></div><div class="skeleton sk-stat"></div></div>
     <div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>
   </div>
   <div id="overview-content" style="display:none">
-    <div id="bot-status-card"></div>
-    <div id="error-alert"></div>
+    <div id="bot-status-el"></div>
+
+    <div id="tip-overview" class="tip">
+      <span class="tip-icon">💡</span>
+      <span>Это <b>главный экран</b>. Здесь видно состояние бота, статистику и быстрые действия. Нажмите на любую карточку для перехода.</span>
+      <button class="tip-close" onclick="hideTip('overview')">✕</button>
+    </div>
+
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-icon">👤</div><div class="stat-val" id="stat-accounts">–</div><div class="stat-lbl">Аккаунты</div></div>
-      <div class="stat-card"><div class="stat-icon">📢</div><div class="stat-val" id="stat-campaigns">–</div><div class="stat-lbl">Кампании</div></div>
-      <div class="stat-card"><div class="stat-icon">📤</div><div class="stat-val" id="stat-jobs-today">–</div><div class="stat-lbl">Сегодня</div></div>
+      <div class="stat-card" onclick="showPage('accounts')"><div class="stat-icon">👤</div><div class="stat-val" id="stat-accounts">–</div><div class="stat-lbl">Аккаунты</div></div>
+      <div class="stat-card" onclick="showPage('campaigns')"><div class="stat-icon">📢</div><div class="stat-val" id="stat-campaigns">–</div><div class="stat-lbl">Кампании</div></div>
+      <div class="stat-card" onclick="showPage('jobs')"><div class="stat-icon">📤</div><div class="stat-val" id="stat-today">–</div><div class="stat-lbl">Сегодня</div></div>
     </div>
-    <div class="section-title">Быстрые действия</div>
-    <div class="actions-grid">
-      <button class="action-btn" onclick="botAction('start')"><div class="action-icon action-icon-green">▶</div>Запустить бота</button>
-      <button class="action-btn" onclick="botAction('stop')"><div class="action-icon action-icon-red">⏹</div>Остановить бота</button>
-      <button class="action-btn" onclick="refreshAll()"><div class="action-icon action-icon-blue">🔄</div>Обновить</button>
-      <button class="action-btn" onclick="showPage('campaigns')"><div class="action-icon action-icon-purple">📢</div>Кампании</button>
+
+    <div class="big-actions" id="quick-actions">
+      <button class="big-btn" id="btn-bot-toggle" onclick="botToggle()">
+        <div class="big-icon big-icon-green">▶️</div>Запустить бота
+      </button>
+      <button class="big-btn" onclick="refreshAll()">
+        <div class="big-icon big-icon-blue">🔄</div>Обновить всё
+      </button>
+      <button class="big-btn" onclick="showPage('accounts');openAddAccount()">
+        <div class="big-icon big-icon-purple">➕</div>Добавить аккаунт
+      </button>
+      <button class="big-btn" onclick="showPage('campaigns');openCampaignForm(null)">
+        <div class="big-icon big-icon-yellow">📢</div>Новая кампания
+      </button>
     </div>
-    <div class="section-title">Последние задания</div>
-    <div class="card"><div id="recent-jobs"></div></div>
+
+    <div class="section-title">📋 Последние задания</div>
+    <div id="recent-jobs"><div class="card"><div style="padding:16px 0;text-align:center;color:var(--hint)">Загрузка...</div></div></div>
   </div>
 </div>
 
-<!-- ═══════════════ CAMPAIGNS ═══════════════ -->
-<div id="page-campaigns" class="page">
-  <div id="campaigns-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
-  <div id="campaigns-content" style="display:none">
-    <div class="section-header">
-      <span class="section-title" style="margin:0">Кампании</span>
-      <button class="btn-sm btn" onclick="openCampaignForm(null)">＋ Создать</button>
-    </div>
-    <div id="campaigns-list"></div>
-  </div>
-</div>
-
-<!-- ═══════════════ ACCOUNTS ═══════════════ -->
+<!-- ─── ACCOUNTS ─── -->
 <div id="page-accounts" class="page">
   <div id="accounts-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
   <div id="accounts-content" style="display:none">
+    <div id="tip-accounts" class="tip">
+      <span class="tip-icon">💡</span>
+      <span><b>Аккаунты</b> — это ваши Steam-профили. Бот будет постить от их имени. Нажмите ➕ чтобы добавить.</span>
+      <button class="tip-close" onclick="hideTip('accounts')">✕</button>
+    </div>
     <div class="section-header">
-      <span class="section-title" style="margin:0">Аккаунты</span>
-      <button class="btn-sm btn" onclick="openAddAccount()">＋ Добавить</button>
+      <span style="font-size:18px;font-weight:800">👤 Аккаунты</span>
+      <button class="btn-sm btn" onclick="openAddAccount()">➕ Добавить</button>
     </div>
     <div id="accounts-list"></div>
   </div>
 </div>
 
-<!-- ═══════════════ JOBS ═══════════════ -->
+<!-- ─── CAMPAIGNS ─── -->
+<div id="page-campaigns" class="page">
+  <div id="campaigns-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+  <div id="campaigns-content" style="display:none">
+    <div id="tip-campaigns" class="tip">
+      <span class="tip-icon">💡</span>
+      <span><b>Кампания</b> — это расписание постов. Укажите <b>аккаунт</b>, <b>форум Steam</b>, <b>шаблон</b> и <b>время</b> — бот опубликует автоматически!</span>
+      <button class="tip-close" onclick="hideTip('campaigns')">✕</button>
+    </div>
+    <div class="section-header">
+      <span style="font-size:18px;font-weight:800">📢 Кампании</span>
+      <button class="btn-sm btn" onclick="openCampaignForm(null)">➕ Создать</button>
+    </div>
+    <div id="campaigns-list"></div>
+  </div>
+</div>
+
+<!-- ─── JOBS ─── -->
 <div id="page-jobs" class="page">
   <div id="jobs-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
   <div id="jobs-content" style="display:none">
+    <div id="tip-jobs" class="tip">
+      <span class="tip-icon">💡</span>
+      <span><b>Задания</b> — история всех публикаций. ✅ — опубликовано, ❌ — ошибка, ⏳ — ожидает.</span>
+      <button class="tip-close" onclick="hideTip('jobs')">✕</button>
+    </div>
     <div id="jobs-stats-bar"></div>
     <div id="jobs-filter-bar"></div>
     <div id="jobs-list"></div>
@@ -321,10 +344,48 @@
   </div>
 </div>
 
-<!-- ═══════════════ MODAL CONTAINER ═══════════════ -->
+<!-- ─── TRADES ─── -->
+<div id="page-trades" class="page">
+  <div id="trades-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+  <div id="trades-content" style="display:none">
+    <div id="tip-trades" class="tip">
+      <span class="tip-icon">💡</span>
+      <span><b>P2P Трейды</b> — обменивайте предметы Steam напрямую с другими пользователями. Создайте своё предложение или откликнитесь на чужое!</span>
+      <button class="tip-close" onclick="hideTip('trades')">✕</button>
+    </div>
+    <div class="section-header">
+      <span style="font-size:18px;font-weight:800">🔄 Маркетплейс</span>
+      <button class="btn-sm btn" onclick="openCreateTrade()">➕ Создать трейд</button>
+    </div>
+    <div class="big-actions mb-2">
+      <button class="big-btn" onclick="loadTradesMy()" style="min-height:70px">
+        <div class="big-icon big-icon-purple">📦</div>Мои трейды
+      </button>
+      <button class="big-btn" onclick="loadTradesProposals()" style="min-height:70px">
+        <div class="big-icon big-icon-blue">📨</div><span id="proposals-btn-label">Предложения</span>
+      </button>
+    </div>
+    <div id="trades-list"></div>
+    <div id="trades-pagination"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL ══════════════════ -->
 <div id="modal-root"></div>
 
+<!-- ══════════════════ BOTTOM TABS ══════════════════ -->
+<div class="bottom-tabs">
+  <button class="btab active" data-page="overview"><span class="btab-icon">🏠</span>Обзор</button>
+  <button class="btab" data-page="accounts"><span class="btab-icon">👤</span>Аккаунты</button>
+  <button class="btab" data-page="campaigns"><span class="btab-icon">📢</span>Кампании</button>
+  <button class="btab" data-page="jobs"><span class="btab-icon">📋</span>Задания</button>
+  <button class="btab" data-page="trades"><span class="btab-icon">🔄</span>Трейды</button>
+</div>
+
 <script>
+/* ═══════════════════════════════════════════════════
+   INIT & AUTH
+   ═══════════════════════════════════════════════════ */
 const tg = window.Telegram?.WebApp;
 tg?.expand(); tg?.ready();
 tg?.setHeaderColor?.('#0f0a1a'); tg?.setBackgroundColor?.('#0f0a1a');
@@ -334,51 +395,53 @@ let token = null, me = null, subData = null;
 let _autoRefreshTimer = null;
 const AUTO_REFRESH_MS = 30000;
 
-/* ── Caches ── */
 let _profiles = [], _campaigns = [];
 let _jobsFilter = 'all', _jobsOffset = 0;
 const JOBS_LIMIT = 20;
+let _botRunning = false;
 
-/* ── Steam games for ForumPicker ── */
+let _tradesView = 'browse', _tradesPage = 1;
+
+/* ── Steam games ── */
 const STEAM_GAMES = [
   { appId:730,    name:'Counter-Strike 2', short:'CS2', emoji:'🎯', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/730/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/730/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/app/730/discussions/0/' }]},
   { appId:570,    name:'Dota 2', short:'Dota 2', emoji:'⚔️', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/570/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/570/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/app/570/discussions/0/' }]},
   { appId:440,    name:'Team Fortress 2', short:'TF2', emoji:'🎩', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/440/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/440/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/app/440/discussions/0/' }]},
   { appId:252490, name:'Rust', short:'Rust', emoji:'🔧', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/252490/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/252490/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/app/252490/discussions/0/' }]},
   { appId:578080, name:'PUBG', short:'PUBG', emoji:'🪖', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/578080/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/578080/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/app/578080/discussions/0/' }]},
   { appId:753,    name:'Steam', short:'Steam', emoji:'🎮', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/753/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/753/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/discussions/forum/0/' }]},
   { appId:304930, name:'Unturned', short:'Unturned', emoji:'🧟', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/304930/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/304930/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/app/304930/discussions/0/' }]},
   { appId:322330, name:"Don't Starve Together", short:'DST', emoji:'🔥', forums:[
-    { name:'Trading Forum',      url:'https://steamcommunity.com/app/322330/tradingforum/' },
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/322330/tradingforum/' },
     { name:'General Discussions', url:'https://steamcommunity.com/app/322330/discussions/0/' }]},
 ];
 
 const TEMPLATE_VARS = [
-  { v:'{date}', h:'дата' }, { v:'{time}', h:'время' }, { v:'{day}', h:'день' },
-  { v:'{num}', h:'номер' }, { v:'{profile}', h:'аккаунт' },
-  { v:'{items_count}', h:'предметы' }, { v:'{best_item}', h:'лучший' },
-  { v:'{top_items}', h:'топ-5' }, { v:'{stattrak_count}', h:'ST' },
-  { v:'{knives_count}', h:'ножи' }, { v:'{trade_url}', h:'трейд' },
-  { v:'{full_inventory_post}', h:'⭐ весь пост' },
+  { v:'{date}', h:'дата' }, { v:'{time}', h:'время' }, { v:'{day}', h:'день недели' },
+  { v:'{num}', h:'номер поста' }, { v:'{profile}', h:'имя аккаунта' },
+  { v:'{items_count}', h:'кол-во предметов' }, { v:'{best_item}', h:'лучший предмет' },
+  { v:'{top_items}', h:'топ-5 предметов' }, { v:'{stattrak_count}', h:'StatTrak' },
+  { v:'{knives_count}', h:'ножи' }, { v:'{trade_url}', h:'ссылка на обмен' },
+  { v:'{full_inventory_post}', h:'⭐ готовый пост' },
 ];
 
-/* ══════════════════════════════════════════════════════════════
-   UTILITIES
-   ══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   UTILS
+   ═══════════════════════════════════════════════════ */
 function haptic(t='light'){try{tg?.HapticFeedback?.impactOccurred?.(t)}catch{}}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function show(id){const e=document.getElementById(id);if(e)e.style.display=''}
@@ -392,10 +455,13 @@ function showToast(msg,icon='ℹ️'){
   document.querySelectorAll('.toast').forEach(t=>t.remove());
   const el=document.createElement('div');el.className='toast';
   el.innerHTML=`<span class="toast-icon">${icon}</span><span>${esc(msg)}</span>`;
-  document.body.appendChild(el);
-  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s'},2500);
-  setTimeout(()=>el.remove(),2800);
+  document.body.appendChild(el);haptic('light');
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s'},2800);
+  setTimeout(()=>el.remove(),3100);
 }
+
+function hideTip(id){const e=document.getElementById('tip-'+id);if(e)e.style.display='none';try{localStorage.setItem('tip_'+id,'1')}catch{}}
+function checkTips(){['overview','accounts','campaigns','jobs','trades'].forEach(id=>{try{if(localStorage.getItem('tip_'+id))hide('tip-'+id)}catch{}})}
 
 /* ── API ── */
 async function api(path,opts={}){
@@ -406,11 +472,13 @@ async function api(path,opts={}){
     headers:{'Content-Type':'application/json','Cache-Control':'no-cache',...(token?{Authorization:'Bearer '+token}:{})},
     ...opts, body:opts.body?JSON.stringify(opts.body):undefined,
   });
-  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.error||res.statusText)}
+  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.error||d.message||res.statusText)}
   return res.json();
 }
 
-/* ── Modal helpers ── */
+/* ── Modal ── */
+let _loginSessionId=null, _loginPollTimer=null, _qrPollTimer=null, _loginMode='qr';
+
 function openModal(title,bodyHtml){
   const root=document.getElementById('modal-root');
   root.innerHTML=`
@@ -433,9 +501,9 @@ function closeModal(){
 }
 function setModalBody(html){const el=document.getElementById('modal-body');if(el)el.innerHTML=html}
 
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    AUTH
-   ══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 async function authInit(){
   const initData=tg?.initData;
   if(!initData){
@@ -447,7 +515,7 @@ async function authInit(){
     const data=await api('/bot/miniapp/auth',{method:'POST',body:{init_data:initData}});
     token=data.access_token; me=data.user; subData=data.subscription;
     const name=me.name||me.email?.split('@')[0]||'Пользователь';
-    document.getElementById('user-name').textContent=`Привет, ${name}!`;
+    document.getElementById('user-name').textContent=`👋 ${name}`;
     document.getElementById('plan-badge').textContent='✨ '+(subData?.plan_name||'Free');
     return true;
   }catch(e){
@@ -457,53 +525,49 @@ async function authInit(){
   }
 }
 
-/* ══════════════════════════════════════════════════════════════
-   TABS & NAVIGATION
-   ══════════════════════════════════════════════════════════════ */
-document.querySelectorAll('.tab').forEach(tab=>{
+/* ═══════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════ */
+document.querySelectorAll('.btab').forEach(tab=>{
   tab.addEventListener('click',()=>{
     haptic('light');
-    const page=tab.dataset.page;
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.getElementById('page-'+page).classList.add('active');
-    tab.classList.add('active');
-    loadPage(page);
+    showPage(tab.dataset.page);
   });
 });
 
 function showPage(name){
-  haptic('light');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  document.querySelector(`.tab[data-page="${name}"]`)?.classList.add('active');
+  document.querySelectorAll('.btab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  document.querySelector(`.btab[data-page="${name}"]`)?.classList.add('active');
   loadPage(name);
 }
 
 function loadPage(name,silent=false){
   if(!token)return;
-  const loaders={overview:loadOverview,campaigns:loadCampaigns,accounts:loadAccounts,jobs:loadJobs};
-  loaders[name]?.(silent);
+  const m={overview:loadOverview,campaigns:loadCampaigns,accounts:loadAccounts,jobs:loadJobs,trades:loadTrades};
+  m[name]?.(silent);
 }
 
-function flashRefreshIndicator(){
-  const el=document.getElementById('refresh-indicator');
-  if(!el)return;el.classList.add('updating');
-  setTimeout(()=>el.classList.remove('updating'),1500);
-}
-function updateHeaderBotStatus(s){
-  const el=document.getElementById('header-bot-status');if(!el)return;
-  if(s&&s.running===true){el.innerHTML='<span class="header-bot-dot online"></span> Бот активен';el.style.color='var(--green)'}
-  else{el.innerHTML='<span class="header-bot-dot offline"></span> Бот остановлен';el.style.color='var(--red)'}
+function updateBotPill(on){
+  _botRunning=on;
+  const el=document.getElementById('header-bot-pill');
+  if(!el)return;
+  el.className='bot-pill '+(on?'on':'off');
+  el.innerHTML=`<span class="bot-dot ${on?'on':'off'}"></span>${on?'Работает':'Стоп'}`;
+  const btn=document.getElementById('btn-bot-toggle');
+  if(btn){
+    btn.innerHTML=on
+      ?'<div class="big-icon big-icon-red">⏹</div>Остановить бота'
+      :'<div class="big-icon big-icon-green">▶️</div>Запустить бота';
+  }
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    OVERVIEW
-   ══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 async function loadOverview(silent=false){
   if(!silent){show('overview-skeleton');hide('overview-content')}
-  flashRefreshIndicator();
   try{
     const [profiles,campaigns,jobsData,botStatus]=await Promise.all([
       api('/profiles'),api('/campaigns'),api('/jobs?limit=5'),api('/bot/status').catch(()=>null)
@@ -513,48 +577,53 @@ async function loadOverview(silent=false){
     const today=jobs.filter(j=>isToday(j.scheduled_at||j.created_at)).length;
     setText('stat-accounts',profiles.length);
     setText('stat-campaigns',campaigns.length);
-    setText('stat-jobs-today',today);
-    updateHeaderBotStatus(botStatus);
+    setText('stat-today',today);
 
-    const bs=document.getElementById('bot-status-card');
-    if(botStatus){
-      const on=botStatus.running===true;
-      bs.innerHTML=`<div class="bot-status ${on?'online':'offline'}"><div class="bot-dot ${on?'online':'offline'}"></div><div class="bot-info"><div class="bot-label">Steam бот ${on?'активен':'остановлен'}</div><div class="bot-meta">${on?'Работает нормально':'Нажмите "Запустить" для старта'}</div></div><button class="btn-ghost" onclick="botAction('${on?'stop':'start'}')">${on?'⏹ Стоп':'▶ Старт'}</button></div>`;
-    }else{bs.innerHTML=''}
+    const on=botStatus?.running===true;
+    updateBotPill(on);
 
-    const ea=document.getElementById('error-alert');
-    const failedJobs=jobs.filter(j=>j.status==='failed');
-    ea.innerHTML=failedJobs.length?`<div class="error-banner">⚠️ ${failedJobs.length} заданий завершились с ошибкой</div>`:'';
+    setHtml('bot-status-el',`
+      <div class="bot-status-card ${on?'on':'off'}">
+        <div class="bot-status-dot ${on?'on':'off'}"></div>
+        <div class="bot-status-info">
+          <div class="bot-status-title">${on?'🟢 Бот работает':'🔴 Бот остановлен'}</div>
+          <div class="bot-status-sub">${on?'Публикации идут по расписанию':'Нажмите «Запустить» чтобы начать'}</div>
+        </div>
+      </div>`
+    );
 
-    const rj=document.getElementById('recent-jobs');
-    rj.innerHTML=jobs.length===0?'<div class="empty" style="padding:20px 0"><div class="empty-text">Заданий пока нет</div></div>':jobs.map(jobRow).join('');
+    setHtml('recent-jobs',jobs.length===0
+      ?'<div class="card"><div class="empty" style="padding:20px 0"><div class="empty-icon">📭</div><div class="empty-text">Заданий пока нет.<br>Создайте кампанию и запустите бота!</div></div></div>'
+      :'<div class="card">'+jobs.map(jobRowCompact).join('')+'</div>');
+
     hide('overview-skeleton');show('overview-content');
   }catch(e){showToast('Ошибка: '+e.message,'❌');hide('overview-skeleton')}
 }
 
-async function botAction(action){
+async function botToggle(){
   haptic('medium');
+  const action=_botRunning?'stop':'start';
   try{
-    showToast(action==='start'?'Запуск бота...':'Остановка бота...','⏳');
+    showToast(action==='start'?'Запуск бота...':'Останавливаю...','⏳');
     await api('/bot/'+action,{method:'POST'});
-    showToast(action==='start'?'Бот запущен!':'Бот остановлен',action==='start'?'✅':'⏹');
-    updateHeaderBotStatus({running:action==='start'});
+    const on=action==='start';
+    updateBotPill(on);
+    showToast(on?'✅ Бот запущен!':'⏹ Бот остановлен',on?'✅':'⏹');
     setTimeout(()=>loadOverview(true),1000);
   }catch(e){showToast('Ошибка: '+e.message,'❌');haptic('error')}
 }
 
 function refreshAll(){
-  haptic('light');showToast('Обновление...','🔄');
+  haptic('light');showToast('Обновляю...','🔄');
   const ap=document.querySelector('.page.active')?.id?.replace('page-','');
   loadPage(ap||'overview',false);
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    ACCOUNTS
-   ══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 async function loadAccounts(silent=false){
   if(!silent){show('accounts-skeleton');hide('accounts-content')}
-  flashRefreshIndicator();
   try{
     _profiles=await api('/profiles');
     renderAccounts();
@@ -565,29 +634,29 @@ async function loadAccounts(silent=false){
 function renderAccounts(){
   const el=document.getElementById('accounts-list');
   if(!_profiles.length){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">👤</div><div class="empty-title">Аккаунтов нет</div><div class="empty-text">Добавьте Steam аккаунт</div><button class="btn" style="width:auto;margin:16px auto 0;display:block" onclick="openAddAccount()">＋ Добавить аккаунт</button></div>`;
+    el.innerHTML=`<div class="empty">
+      <div class="empty-icon">👤</div>
+      <div class="empty-title">Нет аккаунтов</div>
+      <div class="empty-text">Добавьте свой Steam аккаунт.<br>Бот будет постить от его имени.</div>
+      <button class="btn" style="width:auto;margin:20px auto 0;display:block;padding:16px 32px;font-size:18px" onclick="openAddAccount()">➕ Добавить аккаунт</button>
+    </div>`;
     return;
   }
-  el.innerHTML=_profiles.map(p=>{
-    const active=p.is_active;
-    const statusBadge=active?'<span class="badge badge-green">Активен</span>':'<span class="badge badge-red">Невалид</span>';
-    return `
-    <div class="account-card">
-      <div class="account-row">
-        <div class="account-avatar">🎮</div>
-        <div class="account-info">
-          <div class="account-name">${esc(p.name)}</div>
-          ${p.target_url?`<a class="account-url" href="${esc(p.target_url)}" target="_blank">Профиль ↗</a>`:'<span class="card-sub">URL не указан</span>'}
-        </div>
-        ${statusBadge}
+  el.innerHTML=_profiles.map(p=>`
+    <div class="list-item">
+      <div class="list-avatar" style="background:${p.is_active?'rgba(74,222,128,.12)':'rgba(248,113,113,.12)'}">
+        ${p.is_active?'🟢':'🔴'}
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
-        <button class="btn-icon" onclick="checkAccount('${p.id}')" title="Проверить сессию">🔍</button>
-        <button class="btn-icon" onclick="toggleAccount('${p.id}',${!active})" title="${active?'Отключить':'Включить'}">${active?'⏸':'▶'}</button>
+      <div class="list-info">
+        <div class="list-name">${esc(p.name)}</div>
+        <div class="list-sub">${p.is_active?'✅ Активен':'❌ Неактивен'}${p.target_url?' · 🔗 Форум привязан':''}</div>
+      </div>
+      <div class="list-actions">
+        <button class="btn-icon" onclick="checkAccount('${p.id}')" title="Проверить">🔍</button>
+        <button class="btn-icon" onclick="toggleAccount('${p.id}',${!p.is_active})" title="${p.is_active?'Выключить':'Включить'}">${p.is_active?'⏸':'▶️'}</button>
         <button class="btn-icon danger" onclick="deleteAccount('${p.id}','${esc(p.name)}')" title="Удалить">🗑</button>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
 async function checkAccount(id){
@@ -595,7 +664,7 @@ async function checkAccount(id){
   try{
     const data=await api('/profiles/'+id+'/check',{method:'POST'});
     if(data.valid){showToast('Сессия активна!','✅')}
-    else{showToast('Сессия недействительна'+(data.reason?': '+data.reason:''),'❌')}
+    else{showToast('Сессия истекла'+(data.reason?': '+data.reason:''),'❌');haptic('error')}
     loadAccounts(true);
   }catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
@@ -604,54 +673,56 @@ async function toggleAccount(id,active){
   haptic('medium');
   try{
     await api('/profiles/'+id+'/toggle',{method:'POST'});
-    showToast(active?'Аккаунт включён':'Аккаунт отключён',active?'✅':'⏸');
+    showToast(active?'Аккаунт включён ✅':'Аккаунт отключён ⏸',active?'✅':'⏸');
     loadAccounts(true);
   }catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
 
 async function deleteAccount(id,name){
   haptic('medium');
-  openModal('Удалить аккаунт?',`
-    <p style="color:var(--hint);margin-bottom:16px">Вы уверены, что хотите удалить аккаунт <strong style="color:var(--text)">${name}</strong>?</p>
-    <div style="display:flex;gap:8px">
-      <button class="btn-ghost" style="flex:1" onclick="closeModal()">Отмена</button>
-      <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#dc2626)" onclick="confirmDeleteAccount('${id}')">Удалить</button>
+  openModal('🗑 Удалить аккаунт?',`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+      <p style="font-size:16px;color:var(--hint)">Вы уверены что хотите удалить<br><strong style="color:var(--text);font-size:18px">${name}</strong>?</p>
+      <p style="font-size:13px;color:var(--red);margin-top:8px">Это действие нельзя отменить!</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-danger" style="flex:1;margin:0" onclick="confirmDeleteAccount('${id}')">🗑 Удалить</button>
     </div>
   `);
 }
 
 async function confirmDeleteAccount(id){
   closeModal();
-  try{
-    await api('/profiles/'+id,{method:'DELETE'});
-    showToast('Аккаунт удалён','✅');
-    loadAccounts(true);
-  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+  try{await api('/profiles/'+id,{method:'DELETE'});showToast('Аккаунт удалён','✅');loadAccounts(true)}
+  catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
 
-/* ── Add Account (Login Flow) ── */
-let _loginSessionId=null, _loginPollTimer=null, _qrPollTimer=null, _loginMode='qr';
-
+/* ── Add Account ── */
 function openAddAccount(){
   _loginSessionId=null; _loginMode='qr';
-  openModal('Добавить аккаунт',`
-    <div class="form-group">
-      <label class="label">Название аккаунта *</label>
-      <input class="input" id="login-name" placeholder="my_steam_account" />
+  openModal('➕ Добавить Steam аккаунт',`
+    <div class="tip mb-2">
+      <span class="tip-icon">ℹ️</span>
+      <span>Вход происходит через <b>браузер на сервере</b>. Ваши данные в безопасности и <b>не сохраняются</b>.</span>
     </div>
     <div class="form-group">
-      <label class="label">URL форума <span style="color:var(--hint);font-weight:400">(необязательно)</span></label>
+      <label class="label">📝 Название аккаунта</label>
+      <input class="input" id="login-name" placeholder="Например: my_steam" style="font-size:16px" />
+    </div>
+    <div class="form-group">
+      <label class="label">🔗 URL форума <span class="label-hint">(можно потом)</span></label>
       <input class="input" id="login-url" placeholder="https://steamcommunity.com/app/..." />
     </div>
     <div class="form-group">
-      <label class="label">Способ входа</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button type="button" class="chip selected" id="mode-qr" onclick="selectLoginMode('qr')">📱 QR-код</button>
-        <button type="button" class="chip" id="mode-credentials" onclick="selectLoginMode('credentials')">🔑 Логин/Пароль</button>
+      <label class="label">🔐 Способ входа</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button type="button" class="chip selected" id="mode-qr" onclick="selectLoginMode('qr')" style="justify-content:center;padding:14px">📱 QR-код</button>
+        <button type="button" class="chip" id="mode-credentials" onclick="selectLoginMode('credentials')" style="justify-content:center;padding:14px">🔑 Логин/пароль</button>
       </div>
     </div>
-    <div class="info-banner" id="login-info">📱 Для QR-кода откройте Steam на <strong>другом устройстве</strong> → Настройки → Войти через QR</div>
-    <button class="btn" onclick="startLogin()">Продолжить</button>
+    <button class="btn" onclick="startLogin()" style="font-size:18px;padding:16px">Продолжить ➡️</button>
   `);
 }
 
@@ -659,19 +730,13 @@ function selectLoginMode(mode){
   _loginMode=mode;
   document.getElementById('mode-qr')?.classList.toggle('selected',mode==='qr');
   document.getElementById('mode-credentials')?.classList.toggle('selected',mode==='credentials');
-  const info=document.getElementById('login-info');
-  if(info){
-    info.innerHTML=mode==='qr'
-      ?'📱 Для QR-кода откройте Steam на <strong>другом устройстве</strong> → Настройки → Войти через QR'
-      :'🔑 Данные будут введены в браузер на сервере — они не сохраняются';
-  }
 }
 
 async function startLogin(){
   const name=document.getElementById('login-name')?.value?.trim();
-  if(!name){showToast('Введите имя аккаунта','⚠️');return}
+  if(!name){showToast('Введите имя аккаунта','⚠️');haptic('error');return}
   const targetUrl=document.getElementById('login-url')?.value?.trim()||undefined;
-  setModalBody('<div class="loading-center"><div class="spinner spinner-lg"></div><p style="color:var(--hint)">Запускаем браузер…</p></div>');
+  setModalBody('<div class="loading-center"><div class="spinner spinner-lg"></div><p style="color:var(--hint);font-size:16px">Запускаем браузер…</p></div>');
   try{
     const data=await api('/profiles/login/start',{method:'POST',body:{name,target_url:targetUrl,mode:_loginMode}});
     _loginSessionId=data.sessionId;
@@ -689,9 +754,9 @@ function startStatusPoll(sid){
         clearInterval(_loginPollTimer);_loginPollTimer=null;
         clearInterval(_qrPollTimer);_qrPollTimer=null;
         _loginSessionId=null;
-        setModalBody('<div class="loading-center"><div style="font-size:48px">✅</div><p style="color:var(--green);font-weight:700;font-size:16px">Аккаунт добавлен!</p></div>');
-        showToast('Аккаунт Steam добавлен!','✅');
-        setTimeout(()=>{closeModal();loadAccounts(true)},1500);
+        setModalBody(`<div class="loading-center"><div style="font-size:64px">🎉</div><p style="color:var(--green);font-weight:800;font-size:20px">Аккаунт добавлен!</p><p style="color:var(--hint);font-size:14px;margin-top:4px">Теперь создайте кампанию для постинга</p></div>`);
+        haptic('success');
+        setTimeout(()=>{closeModal();loadAccounts(true)},2000);
       }else if(['expired','cancelled'].includes(data.status)){
         clearInterval(_loginPollTimer);_loginPollTimer=null;
         clearInterval(_qrPollTimer);_qrPollTimer=null;
@@ -723,24 +788,27 @@ function showQRCode(qrBase64){
     return;
   }
   setModalBody(`
-    <p style="text-align:center;color:var(--hint);font-size:13px;margin-bottom:8px">Откройте <strong style="color:var(--text)">Steam</strong> на другом устройстве:<br><span style="color:var(--hint)">Настройки → Войти через QR-код</span></p>
+    <div style="text-align:center;margin-bottom:10px">
+      <p style="font-size:16px;font-weight:700;margin-bottom:6px">📱 Отсканируйте QR-код</p>
+      <p style="font-size:13px;color:var(--hint)">Откройте <b style="color:var(--text)">Steam</b> на телефоне →<br>Настройки → Войти через QR-код</p>
+    </div>
     <div class="qr-box"><img id="qr-img" src="data:image/png;base64,${qrBase64}" alt="QR" /></div>
-    <p style="text-align:center;font-size:12px;color:var(--hint)"><span class="spinner" style="width:14px;height:14px;vertical-align:middle;margin-right:6px"></span>Ожидаем сканирования…</p>
+    <p style="text-align:center;font-size:13px;color:var(--hint)"><span class="spinner" style="width:14px;height:14px;vertical-align:middle;margin-right:6px"></span>Ожидаем сканирования…</p>
   `);
 }
 
 function showCredentialsForm(){
   setModalBody(`
-    <div class="info-banner">🖥 Сервер готов. Введите данные — они будут переданы браузеру.</div>
+    <div class="tip mb-2"><span class="tip-icon">🖥</span><span>Сервер готов. Введите данные вашего Steam аккаунта.</span></div>
     <div class="form-group">
-      <label class="label">Логин Steam</label>
-      <input class="input" id="cred-username" placeholder="username" autocomplete="username" />
+      <label class="label">👤 Логин Steam</label>
+      <input class="input" id="cred-username" placeholder="username" autocomplete="username" style="font-size:16px" />
     </div>
     <div class="form-group">
-      <label class="label">Пароль</label>
-      <input class="input" id="cred-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+      <label class="label">🔑 Пароль</label>
+      <input class="input" id="cred-password" type="password" placeholder="••••••••" autocomplete="current-password" style="font-size:16px" />
     </div>
-    <button class="btn" id="cred-submit-btn" onclick="submitCredentials()">Войти</button>
+    <button class="btn" id="cred-submit-btn" onclick="submitCredentials()" style="font-size:18px;padding:16px">🔐 Войти</button>
   `);
 }
 
@@ -755,21 +823,21 @@ async function submitCredentials(){
     if(data.needsGuard||data.needsMobileConfirm){showGuardForm()}
   }catch(e){
     showToast(e.message||'Ошибка входа','❌');
-    if(btn){btn.disabled=false;btn.textContent='Войти'}
+    if(btn){btn.disabled=false;btn.textContent='🔐 Войти'}
   }
 }
 
 function showGuardForm(){
   if(document.getElementById('guard-input'))return;
   setModalBody(`
-    <div style="text-align:center;margin-bottom:12px">
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(96,165,250,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:28px">🛡</div>
-      <p style="font-weight:700;font-size:15px">Подтвердите вход</p>
-      <p style="font-size:12px;color:var(--hint);margin-top:4px">Введите код с <strong style="color:var(--text)">почты</strong> / из <strong style="color:var(--text)">Steam Guard</strong><br>или подтвердите в <strong style="color:var(--text)">мобильном приложении</strong></p>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:56px;margin-bottom:8px">🛡</div>
+      <p style="font-weight:800;font-size:18px">Подтвердите вход</p>
+      <p style="font-size:14px;color:var(--hint);margin-top:6px">Введите код с <b style="color:var(--text)">почты</b> или из <b style="color:var(--text)">Steam Guard</b></p>
     </div>
-    <input class="input" id="guard-input" placeholder="XXXXX" maxlength="8" style="text-align:center;font-size:22px;font-family:monospace;letter-spacing:4px" />
-    <button class="btn" id="guard-submit-btn" onclick="submitGuard()" style="margin-top:10px">Отправить код</button>
-    <p style="text-align:center;font-size:11px;color:var(--hint);margin-top:8px"><span class="spinner" style="width:12px;height:12px;vertical-align:middle;margin-right:4px"></span>или ожидаем подтверждения с телефона…</p>
+    <input class="input" id="guard-input" placeholder="XXXXX" maxlength="8" style="text-align:center;font-size:28px;font-family:monospace;letter-spacing:6px;padding:16px" />
+    <button class="btn" id="guard-submit-btn" onclick="submitGuard()" style="margin-top:12px;font-size:18px;padding:16px">✅ Отправить код</button>
+    <p style="text-align:center;font-size:12px;color:var(--hint);margin-top:10px"><span class="spinner" style="width:12px;height:12px;vertical-align:middle;margin-right:4px"></span>или ожидаем подтверждения с телефона…</p>
   `);
   setTimeout(()=>{
     const gi=document.getElementById('guard-input');
@@ -786,16 +854,15 @@ async function submitGuard(){
     await api('/profiles/login/'+_loginSessionId+'/guard',{method:'POST',body:{code}});
   }catch(e){
     showToast(e.message||'Неверный код','❌');
-    if(btn){btn.disabled=false;btn.textContent='Отправить код'}
+    if(btn){btn.disabled=false;btn.textContent='✅ Отправить код'}
   }
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    CAMPAIGNS
-   ══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 async function loadCampaigns(silent=false){
   if(!silent){show('campaigns-skeleton');hide('campaigns-content')}
-  flashRefreshIndicator();
   try{
     [_campaigns,_profiles]=await Promise.all([api('/campaigns'),api('/profiles')]);
     renderCampaigns();
@@ -806,66 +873,77 @@ async function loadCampaigns(silent=false){
 function renderCampaigns(){
   const el=document.getElementById('campaigns-list');
   if(!_campaigns.length){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">📢</div><div class="empty-title">Кампаний нет</div><div class="empty-text">Создайте первую кампанию</div><button class="btn" style="width:auto;margin:16px auto 0;display:block" onclick="openCampaignForm(null)">＋ Создать кампанию</button></div>`;
+    el.innerHTML=`<div class="empty">
+      <div class="empty-icon">📢</div>
+      <div class="empty-title">Нет кампаний</div>
+      <div class="empty-text">Кампания — это расписание постов.<br>Создайте первую!</div>
+      <button class="btn" style="width:auto;margin:20px auto 0;display:block;padding:16px 32px;font-size:18px" onclick="openCampaignForm(null)">➕ Создать кампанию</button>
+    </div>`;
     return;
   }
   el.innerHTML=_campaigns.map(c=>{
     const times=parseTimes(c.schedule_times);
-    const scheduleLabel=times.length?times.join(', '):(c.schedule_minutes?`Каждые ${c.schedule_minutes} мин.`:'Не задано');
+    const schedLbl=times.length?times.join(', '):(c.schedule_minutes?`Каждые ${c.schedule_minutes} мин.`:'—');
     const game=STEAM_GAMES.find(g=>g.forums.some(f=>f.url===c.target_url));
-    const forumInfo=game?`${game.emoji} ${game.short}`:(c.target_url?'🌐 Кастомный':'');
     return `
-    <div class="campaign-card" id="camp-${c.id}">
-      <div class="campaign-row">
-        <div class="campaign-info">
-          <div class="campaign-name">${esc(c.name)}</div>
-          <div class="campaign-tpl">${esc(c.title_template||'—')}</div>
-        </div>
-        <span class="badge ${c.is_active?'badge-green':'badge-gray'}">${c.is_active?'Активна':'Пауза'}</span>
+    <div class="list-item" style="flex-wrap:wrap">
+      <div class="list-avatar" style="background:${c.is_active?'rgba(74,222,128,.12)':'rgba(107,114,128,.12)'}">
+        ${c.is_active?'📢':'⏸'}
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">
-        <div style="font-size:12px;color:var(--hint)">⏰ ${esc(scheduleLabel)}${forumInfo?' · '+forumInfo:''}</div>
-        <div class="campaign-btns">
-          <button class="btn-icon" onclick="toggleCampaign('${c.id}',${!c.is_active})" title="${c.is_active?'Пауза':'Запустить'}">${c.is_active?'⏸':'▶'}</button>
-          <button class="btn-icon" onclick="expandCampaign('${c.id}')" title="Подробнее">📋</button>
-          <button class="btn-icon" onclick="openCampaignForm('${c.id}')" title="Редактировать">✏️</button>
-          <button class="btn-icon danger" onclick="deleteCampaign('${c.id}','${esc(c.name)}')" title="Удалить">🗑</button>
-        </div>
+      <div class="list-info">
+        <div class="list-name">${esc(c.name)}</div>
+        <div class="list-sub">⏰ ${esc(schedLbl)}${game?' · '+game.emoji+' '+game.short:''}</div>
       </div>
-      <div class="campaign-details" id="camp-details-${c.id}" style="display:none">
-        <dt>Заголовок</dt><dd>${esc(c.title_template)}</dd>
-        <dt>Тело</dt><dd style="white-space:pre-wrap;max-height:120px;overflow-y:auto">${esc(c.body_template||'—')}</dd>
-        <dt>Расписание</dt><dd>${esc(scheduleLabel)}</dd>
-        ${c.window_start&&c.window_end?`<dt>Окно</dt><dd>${esc(c.window_start)} – ${esc(c.window_end)}</dd>`:''}
-        ${c.target_url?`<dt>Форум</dt><dd style="word-break:break-all">${esc(c.target_url)}</dd>`:''}
-        ${c.profile_ids?.length?`<dt>Аккаунты</dt><dd>${c.profile_ids.map(pid=>{const p=_profiles.find(x=>x.id===pid);return p?esc(p.name):pid}).join(', ')}</dd>`:''}
+      <span class="badge ${c.is_active?'badge-green':'badge-gray'}" style="margin-right:4px">${c.is_active?'Активна':'Пауза'}</span>
+      <div style="width:100%;display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
+        <button class="btn-icon" onclick="toggleCampaign('${c.id}',${!c.is_active})" title="${c.is_active?'Пауза':'Запустить'}">${c.is_active?'⏸':'▶️'}</button>
+        <button class="btn-icon" onclick="viewCampaign('${c.id}')" title="Подробнее">👁</button>
+        <button class="btn-icon" onclick="openCampaignForm('${c.id}')" title="Редактировать">✏️</button>
+        <button class="btn-icon danger" onclick="deleteCampaign('${c.id}','${esc(c.name)}')" title="Удалить">🗑</button>
       </div>
     </div>`;
   }).join('');
-}
-
-function expandCampaign(id){
-  haptic('light');
-  const el=document.getElementById('camp-details-'+id);
-  if(el)el.style.display=el.style.display==='none'?'':'none';
 }
 
 async function toggleCampaign(id,active){
   haptic('medium');
   try{
     await api('/campaigns/'+id,{method:'PATCH',body:{is_active:active}});
-    showToast(active?'Кампания запущена':'Кампания на паузе',active?'▶':'⏸');
+    showToast(active?'Кампания запущена ▶️':'Кампания на паузе ⏸',active?'▶️':'⏸');
     loadCampaigns(true);
   }catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
 
+function viewCampaign(id){
+  const c=_campaigns.find(x=>x.id===id);if(!c)return;
+  const times=parseTimes(c.schedule_times);
+  const schedLbl=times.length?times.join(', '):'—';
+  const game=STEAM_GAMES.find(g=>g.forums.some(f=>f.url===c.target_url));
+  const profNames=(c.profile_ids||[]).map(pid=>{const p=_profiles.find(x=>x.id===pid);return p?esc(p.name):pid}).join(', ')||'Не выбраны';
+
+  openModal('📋 '+esc(c.name),`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card"><div class="card-sub">СТАТУС</div><span class="badge ${c.is_active?'badge-green':'badge-gray'}" style="font-size:14px">${c.is_active?'🟢 Активна':'⏸ На паузе'}</span></div>
+      <div class="card"><div class="card-sub">ФОРУМ</div><div style="margin-top:4px;font-weight:600">${game?game.emoji+' '+esc(game.name):'🌐 Кастомный'}</div><div style="font-size:12px;color:var(--hint);word-break:break-all;margin-top:2px">${esc(c.target_url||'—')}</div></div>
+      <div class="card"><div class="card-sub">ЗАГОЛОВОК</div><div style="margin-top:4px;font-family:monospace;font-size:13px;word-break:break-word">${esc(c.title_template)}</div></div>
+      <div class="card"><div class="card-sub">ТЕЛО ПОСТА</div><div style="margin-top:4px;font-family:monospace;font-size:13px;white-space:pre-wrap;max-height:150px;overflow-y:auto;word-break:break-word">${esc(c.body_template||'—')}</div></div>
+      <div class="card"><div class="card-sub">РАСПИСАНИЕ</div><div style="margin-top:4px;font-weight:600">⏰ ${esc(schedLbl)}</div>${c.window_start&&c.window_end?`<div style="font-size:13px;color:var(--hint);margin-top:2px">Окно: ${esc(c.window_start)} – ${esc(c.window_end)}</div>`:''}</div>
+      <div class="card"><div class="card-sub">АККАУНТЫ</div><div style="margin-top:4px;font-weight:600">👤 ${profNames}</div></div>
+    </div>
+  `);
+}
+
 async function deleteCampaign(id,name){
   haptic('medium');
-  openModal('Удалить кампанию?',`
-    <p style="color:var(--hint);margin-bottom:16px">Удалить кампанию <strong style="color:var(--text)">${name}</strong>? Все связанные pending-задания тоже будут удалены.</p>
-    <div style="display:flex;gap:8px">
-      <button class="btn-ghost" style="flex:1" onclick="closeModal()">Отмена</button>
-      <button class="btn" style="flex:1;background:linear-gradient(135deg,#ef4444,#dc2626)" onclick="confirmDeleteCampaign('${id}')">Удалить</button>
+  openModal('🗑 Удалить кампанию?',`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+      <p style="font-size:16px;color:var(--hint)">Удалить кампанию<br><strong style="color:var(--text);font-size:18px">${name}</strong>?</p>
+      <p style="font-size:13px;color:var(--red);margin-top:8px">Все ожидающие задания тоже удалятся!</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-danger" style="flex:1;margin:0" onclick="confirmDeleteCampaign('${id}')">🗑 Удалить</button>
     </div>
   `);
 }
@@ -875,7 +953,7 @@ async function confirmDeleteCampaign(id){
   catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
 
-/* ── Campaign Form (Create / Edit) ── */
+/* ── Campaign Form ── */
 let _editingCampaign=null, _formForumUrl='', _formTimes=[], _formProfileIds=[];
 
 function openCampaignForm(campaignId){
@@ -885,14 +963,13 @@ function openCampaignForm(campaignId){
   _formForumUrl=c?.target_url||'';
   _formTimes=parseTimes(c?.schedule_times)||[];
   _formProfileIds=c?.profile_ids?[...c.profile_ids]:[];
-
-  openModal(c?'Редактировать кампанию':'Новая кампания',buildCampaignFormHtml(c));
+  openModal(c?'✏️ Редактировать кампанию':'➕ Новая кампания',buildCampaignFormHtml(c));
 }
 
 function buildCampaignFormHtml(c){
   const profileChips=_profiles.map(p=>{
     const sel=_formProfileIds.includes(p.id);
-    return `<button type="button" class="chip ${sel?'selected':''}" onclick="toggleFormProfile('${p.id}',this)">${esc(p.name)}</button>`;
+    return `<button type="button" class="chip ${sel?'selected':''}" onclick="toggleFormProfile('${p.id}',this)" style="padding:10px 16px">${p.is_active?'🟢':'🔴'} ${esc(p.name)}</button>`;
   }).join('');
   const timesHtml=_formTimes.map(t=>`<span class="time-chip">${t} <span class="time-chip-remove" onclick="removeFormTime('${t}')">✕</span></span>`).join('');
   const forumHtml=_formForumUrl?buildSelectedForumHtml(_formForumUrl):buildForumPickerHtml();
@@ -901,47 +978,49 @@ function buildCampaignFormHtml(c){
 
   return `
     <form onsubmit="submitCampaignForm(event)">
+      <div class="tip mb-2"><span class="tip-icon">📖</span><span>Заполните поля шаг за шагом. Поля со <b>звёздочкой *</b> — обязательные.</span></div>
+
       <div class="form-group">
-        <label class="label">Раздел форума Steam</label>
+        <label class="label">1️⃣ Выберите форум Steam *</label>
         <div id="forum-picker-container">${forumHtml}</div>
       </div>
       <div class="form-group">
-        <label class="label">Название кампании *</label>
-        <input class="input" id="form-name" required value="${esc(c?.name||'')}" placeholder="Моя кампания" />
+        <label class="label">2️⃣ Название кампании *</label>
+        <input class="input" id="form-name" required value="${esc(c?.name||'')}" placeholder="Например: Трейд CS2" style="font-size:16px" />
       </div>
       <div class="form-group">
-        <label class="label">Шаблон заголовка *</label>
-        <input class="input" id="form-title" required value="${esc(c?.title_template||'')}" placeholder="{full_inventory_post}" style="font-family:monospace;font-size:13px" />
+        <label class="label">3️⃣ Заголовок поста * <span class="label-hint">(нажмите переменную ↓)</span></label>
+        <input class="input" id="form-title" required value="${esc(c?.title_template||'')}" placeholder="{full_inventory_post}" style="font-family:monospace;font-size:14px" />
         <div class="var-row">${varBtns}</div>
       </div>
       <div class="form-group">
-        <label class="label">Тело публикации *</label>
+        <label class="label">4️⃣ Текст поста * <span class="label-hint">(нажмите переменную ↓)</span></label>
         <textarea class="input" id="form-body" rows="4" required placeholder="Напр.: {full_inventory_post}">${esc(c?.body_template||'')}</textarea>
         <div class="var-row">${varBtnsBody}</div>
       </div>
       <div class="form-group">
-        <label class="label">Время публикаций * <span style="color:var(--hint);font-weight:400">(мин. 60 мин. между)</span></label>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input type="time" class="input" id="form-time-input" style="width:130px" />
-          <button type="button" class="btn-sm btn" onclick="addFormTime()">＋</button>
+        <label class="label">5️⃣ Время публикаций * <span class="label-hint">(мин. 60 мин. между)</span></label>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="time" class="input" id="form-time-input" style="width:140px;font-size:16px" />
+          <button type="button" class="btn-sm btn" onclick="addFormTime()" style="font-size:16px">➕</button>
         </div>
         <div id="form-times-list" style="display:flex;flex-wrap:wrap;gap:6px">${timesHtml}</div>
       </div>
       <div class="form-group">
-        <label class="label">Окно активности <span style="color:var(--hint);font-weight:400">(необязательно)</span></label>
+        <label class="label">⏰ Окно активности <span class="label-hint">(необязательно)</span></label>
         <div style="display:flex;gap:8px;align-items:center">
-          <input type="time" class="input" id="form-window-start" style="width:120px" value="${esc(c?.window_start||'')}" />
-          <span style="color:var(--hint)">–</span>
-          <input type="time" class="input" id="form-window-end" style="width:120px" value="${esc(c?.window_end||'')}" />
+          <input type="time" class="input" id="form-window-start" style="width:130px" value="${esc(c?.window_start||'')}" />
+          <span style="color:var(--hint);font-size:18px">→</span>
+          <input type="time" class="input" id="form-window-end" style="width:130px" value="${esc(c?.window_end||'')}" />
         </div>
       </div>
       <div class="form-group">
-        <label class="label">Аккаунты * <span style="color:var(--hint);font-weight:400">(${_formProfileIds.length} выбрано)</span></label>
-        ${_profiles.length?`<div style="display:flex;flex-wrap:wrap;gap:6px" id="form-profiles">${profileChips}</div>`:'<p style="font-size:13px;color:var(--hint)">Сначала добавьте аккаунты</p>'}
+        <label class="label">6️⃣ Аккаунты * <span class="label-hint">(${_formProfileIds.length} выбрано)</span></label>
+        ${_profiles.length?`<div style="display:flex;flex-wrap:wrap;gap:8px" id="form-profiles">${profileChips}</div>`:'<p style="font-size:14px;color:var(--hint)">⚠️ Сначала добавьте аккаунты</p>'}
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button type="button" class="btn-ghost" style="flex:1" onclick="closeModal()">Отмена</button>
-        <button type="submit" class="btn" style="flex:1;margin:0" id="campaign-submit-btn">${c?'Сохранить':'Создать'}</button>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button type="button" class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
+        <button type="submit" class="btn" style="flex:1;margin:0;font-size:16px" id="campaign-submit-btn">${c?'💾 Сохранить':'✅ Создать'}</button>
       </div>
     </form>
   `;
@@ -952,6 +1031,7 @@ function insertVarTo(fieldId,varStr){
   const start=el.selectionStart,end=el.selectionEnd,val=el.value;
   el.value=val.slice(0,start)+varStr+val.slice(end);
   el.focus();el.setSelectionRange(start+varStr.length,start+varStr.length);
+  haptic('light');
 }
 
 function toggleFormProfile(id,btn){
@@ -963,11 +1043,11 @@ function toggleFormProfile(id,btn){
 
 function addFormTime(){
   const input=document.getElementById('form-time-input');
-  const t=input?.value;if(!t)return;
+  const t=input?.value;if(!t){showToast('Выберите время','⚠️');return}
   if(_formTimes.includes(t)){showToast('Это время уже добавлено','⚠️');return}
   const next=[..._formTimes,t].sort();
   if(!validateTimes(next)){showToast('Мин. 60 минут между публикациями','⚠️');return}
-  _formTimes=next;input.value='';renderFormTimes();
+  _formTimes=next;input.value='';renderFormTimes();haptic('light');
 }
 function removeFormTime(t){_formTimes=_formTimes.filter(x=>x!==t);renderFormTimes()}
 function renderFormTimes(){
@@ -987,7 +1067,7 @@ function buildForumPickerHtml(){
     <div class="game-grid">
       ${STEAM_GAMES.map(g=>`<button type="button" class="game-btn" onclick="selectGame(${g.appId})"><span class="game-emoji">${g.emoji}</span>${g.short}</button>`).join('')}
     </div>
-    <button type="button" style="font-size:12px;color:var(--hint);background:none;border:none;cursor:pointer;margin-top:4px" onclick="showCustomUrlInput()">🌐 Указать URL вручную</button>
+    <button type="button" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:6px;font-weight:600" onclick="showCustomUrlInput()">🌐 Ввести URL вручную</button>
   `;
 }
 function buildSelectedForumHtml(url){
@@ -995,22 +1075,21 @@ function buildSelectedForumHtml(url){
   const forum=game?.forums.find(f=>f.url===url);
   return `
     <div class="selected-forum">
-      <div style="font-size:22px">${game?.emoji||'🌐'}</div>
+      <div style="font-size:26px">${game?.emoji||'🌐'}</div>
       <div class="selected-forum-info">
         <div class="selected-forum-name">${game?esc(game.name):'Кастомный URL'}${forum?' → '+esc(forum.name):''}</div>
         <div class="selected-forum-url">${esc(url)}</div>
       </div>
       <button type="button" class="btn-icon" onclick="clearForumSelection()" title="Изменить">✏️</button>
-    </div>
-  `;
+    </div>`;
 }
 function selectGame(appId){
   haptic('light');
   const game=STEAM_GAMES.find(g=>g.appId===appId);if(!game)return;
   const container=document.getElementById('forum-picker-container');
   container.innerHTML=`
-    <button type="button" style="font-size:12px;color:var(--hint);background:none;border:none;cursor:pointer;margin-bottom:8px" onclick="clearForumSelection()">← Все игры</button>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">${game.emoji}</span><strong>${esc(game.name)}</strong></div>
+    <button type="button" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;margin-bottom:10px;font-weight:600" onclick="clearForumSelection()">← Все игры</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:24px">${game.emoji}</span><strong style="font-size:16px">${esc(game.name)}</strong></div>
     ${game.forums.map(f=>`<div class="forum-btn" onclick="selectForum('${esc(f.url)}')">${esc(f.name)}<div class="forum-btn-sub">${esc(f.url.replace('https://steamcommunity.com',''))}</div></div>`).join('')}
   `;
 }
@@ -1019,15 +1098,15 @@ function clearForumSelection(){_formForumUrl='';document.getElementById('forum-p
 function showCustomUrlInput(){
   document.getElementById('forum-picker-container').innerHTML=`
     <div style="display:flex;gap:8px">
-      <input class="input" id="custom-forum-url" placeholder="https://steamcommunity.com/app/730/tradingforum/" style="flex:1;font-family:monospace;font-size:12px" />
+      <input class="input" id="custom-forum-url" placeholder="https://steamcommunity.com/app/730/tradingforum/" style="flex:1;font-family:monospace;font-size:13px" />
       <button type="button" class="btn-sm btn" onclick="applyCustomUrl()">OK</button>
     </div>
-    <button type="button" style="font-size:12px;color:var(--hint);background:none;border:none;cursor:pointer;margin-top:4px" onclick="clearForumSelection()">← Выбрать из списка</button>
+    <button type="button" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:6px;font-weight:600" onclick="clearForumSelection()">← Выбрать из списка</button>
   `;
 }
 function applyCustomUrl(){const url=document.getElementById('custom-forum-url')?.value?.trim();if(!url){showToast('Введите URL','⚠️');return}selectForum(url)}
 
-/* ── Submit Campaign Form ── */
+/* ── Submit Form ── */
 async function submitCampaignForm(e){
   e.preventDefault();
   const name=document.getElementById('form-name')?.value?.trim();
@@ -1036,9 +1115,9 @@ async function submitCampaignForm(e){
   const window_start=document.getElementById('form-window-start')?.value||null;
   const window_end=document.getElementById('form-window-end')?.value||null;
 
-  if(!name||!title_template||!body_template){showToast('Заполните все обязательные поля','⚠️');return}
-  if(!_formProfileIds.length){showToast('Выберите хотя бы один аккаунт','⚠️');return}
-  if(!_formTimes.length){showToast('Добавьте хотя бы одно время публикации','⚠️');return}
+  if(!name||!title_template||!body_template){showToast('Заполните все поля со *','⚠️');haptic('error');return}
+  if(!_formProfileIds.length){showToast('Выберите хотя бы 1 аккаунт','⚠️');haptic('error');return}
+  if(!_formTimes.length){showToast('Добавьте время публикации','⚠️');haptic('error');return}
 
   const btn=document.getElementById('campaign-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='Сохраняю...'}
@@ -1048,43 +1127,39 @@ async function submitCampaignForm(e){
   try{
     if(_editingCampaign){
       await api('/campaigns/'+_editingCampaign.id,{method:'PATCH',body:payload});
-      showToast('Кампания обновлена','✅');
+      showToast('Кампания обновлена! ✅','✅');
     }else{
       await api('/campaigns',{method:'POST',body:payload});
-      showToast('Кампания создана','✅');
+      showToast('Кампания создана! 🎉','✅');haptic('success');
     }
     closeModal();loadCampaigns(true);
   }catch(e){
     showToast('Ошибка: '+e.message,'❌');
-    if(btn){btn.disabled=false;btn.textContent=_editingCampaign?'Сохранить':'Создать'}
+    if(btn){btn.disabled=false;btn.textContent=_editingCampaign?'💾 Сохранить':'✅ Создать'}
   }
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    JOBS
-   ══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 async function loadJobs(silent=false){
   if(!silent){show('jobs-skeleton');hide('jobs-content')}
-  flashRefreshIndicator();
   try{
     const statusParam=_jobsFilter!=='all'?`&status=${_jobsFilter}`:'';
     const {jobs,total}=await api(`/jobs?limit=${JOBS_LIMIT}&offset=${_jobsOffset}${statusParam}`);
     const stats=await api('/jobs/stats').catch(()=>({pending:0,running:0,done:0,failed:0,today:0}));
 
-    // Filter bar
     setHtml('jobs-filter-bar',`
       <div class="filter-bar">
         ${[['all','Все'],['pending','⏳ Ждёт'],['running','🔄 Идёт'],['done','✅ Готово'],['failed','❌ Ошибка'],['cancelled','⛔ Отмена']].map(([v,l])=>
           `<button class="filter-chip ${_jobsFilter===v?'active':''}" onclick="setJobsFilter('${v}')">${l}</button>`
         ).join('')}
-      </div>
-    `);
+      </div>`);
 
-    // Stats bar
     const tot=(stats.pending||0)+(stats.running||0)+(stats.done||0)+(stats.failed||0)+(stats.cancelled||0)||1;
     setHtml('jobs-stats-bar',`
-      <div class="card" style="margin-bottom:14px">
-        <div class="card-header"><span class="card-title">Статистика</span><span class="card-sub">Всего: ${total} · Сегодня: ${stats.today||0}</span></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 Статистика</span><span class="card-sub">Сегодня: ${stats.today||0}</span></div>
         <div class="progress-bar">
           <div class="progress-seg" style="width:${(stats.done||0)/tot*100}%;background:var(--green)"></div>
           <div class="progress-seg" style="width:${(stats.running||0)/tot*100}%;background:var(--blue)"></div>
@@ -1092,17 +1167,15 @@ async function loadJobs(silent=false){
           <div class="progress-seg" style="width:${(stats.failed||0)/tot*100}%;background:var(--red)"></div>
         </div>
         <div class="job-stats">
-          <div class="job-stat"><div class="job-dot" style="background:var(--green)"></div>Готово ${stats.done||0}</div>
-          <div class="job-stat"><div class="job-dot" style="background:var(--blue)"></div>Идёт ${stats.running||0}</div>
-          <div class="job-stat"><div class="job-dot" style="background:var(--yellow)"></div>Ждёт ${stats.pending||0}</div>
-          <div class="job-stat"><div class="job-dot" style="background:var(--red)"></div>Ошибка ${stats.failed||0}</div>
+          <div class="job-stat"><div class="job-dot" style="background:var(--green)"></div>✅ ${stats.done||0}</div>
+          <div class="job-stat"><div class="job-dot" style="background:var(--blue)"></div>🔄 ${stats.running||0}</div>
+          <div class="job-stat"><div class="job-dot" style="background:var(--yellow)"></div>⏳ ${stats.pending||0}</div>
+          <div class="job-stat"><div class="job-dot" style="background:var(--red)"></div>❌ ${stats.failed||0}</div>
         </div>
-      </div>
-    `);
+      </div>`);
 
-    // Jobs list
     if(!jobs?.length){
-      setHtml('jobs-list',`<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Заданий нет</div></div>`);
+      setHtml('jobs-list',`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Заданий нет</div><div class="empty-text">Они появятся когда бот начнёт публикации</div></div>`);
       setHtml('jobs-pagination','');
     }else{
       setHtml('jobs-list',jobs.map(jobRowFull).join(''));
@@ -1111,10 +1184,9 @@ async function loadJobs(silent=false){
       setHtml('jobs-pagination',totalPages>1?`
         <div class="pagination">
           <button class="page-btn" onclick="jobsPage(${_jobsOffset-JOBS_LIMIT})" ${_jobsOffset<=0?'disabled':''}>← Назад</button>
-          <span class="page-info">${currentPage} / ${totalPages}</span>
+          <span style="font-size:14px;color:var(--hint);font-weight:700">${currentPage} / ${totalPages}</span>
           <button class="page-btn" onclick="jobsPage(${_jobsOffset+JOBS_LIMIT})" ${_jobsOffset+JOBS_LIMIT>=total?'disabled':''}>Вперёд →</button>
-        </div>
-      `:'');
+        </div>`:'');
     }
     hide('jobs-skeleton');show('jobs-content');
   }catch(e){showToast('Ошибка: '+e.message,'❌');hide('jobs-skeleton')}
@@ -1124,50 +1196,235 @@ function setJobsFilter(filter){haptic('light');_jobsFilter=filter;_jobsOffset=0;
 function jobsPage(offset){haptic('light');_jobsOffset=Math.max(0,offset);loadJobs(true)}
 
 function jobRowFull(j){
-  const cfg={done:{icon:'✅',label:'Готово',badge:'badge-green'},failed:{icon:'❌',label:'Ошибка',badge:'badge-red'},pending:{icon:'⏳',label:'Ждёт',badge:'badge-yellow'},running:{icon:'🔄',label:'Идёт',badge:'badge-blue'},cancelled:{icon:'⛔',label:'Отмена',badge:'badge-gray'}};
-  const c=cfg[j.status]||{icon:'⏳',label:j.status,badge:'badge-gray'};
+  const cfg={done:{icon:'✅',badge:'badge-green'},failed:{icon:'❌',badge:'badge-red'},pending:{icon:'⏳',badge:'badge-yellow'},running:{icon:'🔄',badge:'badge-blue'},cancelled:{icon:'⛔',badge:'badge-gray'}};
+  const c=cfg[j.status]||{icon:'·',badge:'badge-gray'};
   const time=fmtTime(j.scheduled_at||j.created_at);
-  const errText=j.error_message||j.error||'';
+  const err=j.error_message||j.error||'';
   const actions=[];
   if(j.status==='pending')actions.push(`<button class="btn-icon" onclick="cancelJob('${j.id}')" title="Отменить">⛔</button>`);
   if(['done','failed','cancelled'].includes(j.status))actions.push(`<button class="btn-icon danger" onclick="deleteJob('${j.id}')" title="Удалить">🗑</button>`);
   return `
-    <div class="card" style="padding:12px 14px">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:14px;font-weight:600">${c.icon} ${esc(j.campaign_name||'Кампания')}</div>
-          <div style="font-size:12px;color:var(--hint);margin-top:1px">${esc(j.profile_name||'')} · ${time}</div>
-          ${errText?`<div style="font-size:11px;color:var(--red);margin-top:3px;word-break:break-word">${esc(errText)}</div>`:''}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          ${actions.join('')}
-          <span class="badge ${c.badge}">${c.label}</span>
-        </div>
+    <div class="list-item" style="flex-wrap:wrap">
+      <div class="list-avatar" style="background:rgba(255,255,255,.04);font-size:20px">${c.icon}</div>
+      <div class="list-info">
+        <div class="list-name">${esc(j.campaign_name||'Кампания')}</div>
+        <div class="list-sub">👤 ${esc(j.profile_name||'?')} · ${time}</div>
+        ${err?`<div style="font-size:12px;color:var(--red);margin-top:3px;word-break:break-word">⚠️ ${esc(err)}</div>`:''}
+      </div>
+      <div class="list-actions">${actions.join('')}</div>
+    </div>`;
+}
+
+function jobRowCompact(j){
+  const cfg={done:'✅',failed:'❌',pending:'⏳',running:'🔄',cancelled:'⛔'};
+  const icon=cfg[j.status]||'·';
+  const time=fmtTime(j.scheduled_at||j.created_at);
+  return `<div class="row"><div style="flex:1;min-width:0"><div style="font-weight:700">${icon} ${esc(j.campaign_name||'Кампания')}</div><div style="font-size:12px;color:var(--hint);margin-top:2px">${esc(j.profile_name||'')} · ${time}</div></div></div>`;
+}
+
+async function cancelJob(id){haptic('medium');try{await api('/jobs/'+id+'/cancel',{method:'POST'});showToast('Задание отменено','⛔');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
+async function deleteJob(id){haptic('medium');try{await api('/jobs/'+id,{method:'DELETE'});showToast('Удалено','✅');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
+
+/* ═══════════════════════════════════════════════════
+   TRADES (P2P)
+   ═══════════════════════════════════════════════════ */
+async function loadTrades(silent=false){
+  if(!silent){show('trades-skeleton');hide('trades-content')}
+  try{
+    const data=await api(`/trades?page=${_tradesPage}&limit=20&sort=bumped`);
+    const trades=data.trades||data||[];
+
+    // check proposals count
+    api('/trades/my/proposals/pending-count').then(d=>{
+      const cnt=d?.count||0;
+      const lbl=document.getElementById('proposals-btn-label');
+      if(lbl)lbl.textContent=cnt?`Предложения (${cnt})`:'Предложения';
+      const badge=document.querySelector('.btab[data-page="trades"] .btab-badge');
+      if(cnt>0&&!badge){
+        const b=document.createElement('span');b.className='btab-badge';b.textContent=cnt;
+        document.querySelector('.btab[data-page="trades"]').appendChild(b);
+      }else if(badge){badge.textContent=cnt;badge.style.display=cnt?'':'none'}
+    }).catch(()=>{});
+
+    if(!Array.isArray(trades)||!trades.length){
+      setHtml('trades-list',`<div class="empty"><div class="empty-icon">🔄</div><div class="empty-title">Нет трейдов</div><div class="empty-text">Создайте первое предложение обмена!</div></div>`);
+    }else{
+      setHtml('trades-list',trades.map(tradeCard).join(''));
+    }
+    setHtml('trades-pagination',data.total>20?`
+      <div class="pagination">
+        <button class="page-btn" onclick="tradesPageGo(${_tradesPage-1})" ${_tradesPage<=1?'disabled':''}>←</button>
+        <span style="font-size:14px;color:var(--hint);font-weight:700">${_tradesPage}</span>
+        <button class="page-btn" onclick="tradesPageGo(${_tradesPage+1})" ${_tradesPage*20>=data.total?'disabled':''}>→</button>
+      </div>`:'');
+    hide('trades-skeleton');show('trades-content');
+  }catch(e){showToast('Ошибка: '+e.message,'❌');hide('trades-skeleton')}
+}
+
+function tradesPageGo(p){haptic('light');_tradesPage=Math.max(1,p);loadTrades(true)}
+
+function tradeCard(t){
+  const items=(t.offering_items||[]).slice(0,4);
+  const imgs=items.map(i=>`<div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden">${i.image?`<img src="${esc(i.image)}" style="width:100%;height:100%;object-fit:contain">`:'🎮'}</div>`).join('');
+  const extra=(t.offering_items||[]).length-4;
+  return `
+    <div class="list-item" style="flex-wrap:wrap;cursor:pointer" onclick="viewTrade('${t.id}')">
+      <div style="display:flex;gap:6px;margin-bottom:8px;width:100%">${imgs}${extra>0?`<div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--hint)">+${extra}</div>`:''}</div>
+      <div class="list-info" style="width:100%">
+        <div class="list-name">${esc(t.title||'Трейд')}</div>
+        <div class="list-sub">${t.total_value?'💰 '+t.total_value+'₽':''}${t.wanted_tags?.length?' · 🔍 Ищет: '+t.wanted_tags.join(', '):''}</div>
       </div>
     </div>`;
 }
 
-async function cancelJob(id){haptic('medium');try{await api('/jobs/'+id+'/cancel',{method:'POST'});showToast('Задание отменено','⛔');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
-async function deleteJob(id){haptic('medium');try{await api('/jobs/'+id,{method:'DELETE'});showToast('Задание удалено','✅');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
+async function viewTrade(id){
+  try{
+    const t=await api('/trades/'+id);
+    const offeringHtml=(t.offering_items||[]).map(i=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div style="width:48px;height:48px;border-radius:10px;background:rgba(255,255,255,.06);overflow:hidden">${i.image?`<img src="${esc(i.image)}" style="width:100%;height:100%;object-fit:contain">`:'🎮'}</div>
+        <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">${esc(i.name)}</div>${i.exterior?`<div style="font-size:12px;color:var(--hint)">${esc(i.exterior)}</div>`:''}</div>
+      </div>`).join('');
 
-/* ── Overview job row (compact) ── */
-function jobRow(j){
-  const cfg={done:{icon:'✅',label:'Готово',badge:'badge-green'},failed:{icon:'❌',label:'Ошибка',badge:'badge-red'},pending:{icon:'⏳',label:'Ждёт',badge:'badge-yellow'},running:{icon:'🔄',label:'Идёт',badge:'badge-blue'}};
-  const c=cfg[j.status]||{icon:'⏳',label:j.status,badge:'badge-gray'};
-  const time=fmtTime(j.scheduled_at||j.created_at);
-  const errText=j.error_message||j.error||'';
-  return `<div class="row"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">${c.icon} ${esc(j.campaign_name||'Кампания')}</div><div style="font-size:12px;color:var(--hint);margin-top:1px">${esc(j.profile_name||'')} · ${time}</div>${errText?`<div style="font-size:11px;color:var(--red);margin-top:3px;word-break:break-word">${esc(errText)}</div>`:''}</div><span class="badge ${c.badge}">${c.label}</span></div>`;
+    openModal('🔄 Трейд',`
+      <div class="card"><div class="card-title">${esc(t.title)}</div>${t.description?`<div style="margin-top:8px;font-size:14px;color:var(--hint)">${esc(t.description)}</div>`:''}</div>
+      ${t.total_value?`<div class="card"><div class="card-sub">СТОИМОСТЬ</div><div style="font-size:22px;font-weight:900;margin-top:4px">💰 ${t.total_value} ₽</div></div>`:''}
+      <div class="section-title">📦 Предлагает</div>
+      <div class="card">${offeringHtml||'<div style="color:var(--hint)">Нет предметов</div>'}</div>
+      ${t.wanted_tags?.length?`<div class="section-title">🔍 Хочет получить</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${t.wanted_tags.map(tg=>`<span class="badge badge-purple">${esc(tg)}</span>`).join('')}</div>`:''}
+      ${t.user_id!==me?.id?`<button class="btn" style="font-size:18px;padding:16px" onclick="closeModal();openProposeTrade('${t.id}')">📨 Предложить обмен</button>`:`<button class="btn btn-danger" style="font-size:16px" onclick="closeModal();deleteTrade('${t.id}')">🗑 Удалить трейд</button>`}
+    `);
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
 
+async function loadTradesMy(){
+  haptic('light');
+  try{
+    const trades=await api('/trades/my/offers');
+    if(!trades?.length){showToast('У вас нет активных трейдов','ℹ️');return}
+    openModal('📦 Мои трейды',trades.map(t=>`
+      <div class="list-item" style="cursor:pointer" onclick="closeModal();viewTrade('${t.id}')">
+        <div class="list-avatar" style="background:rgba(168,85,247,.12)">📦</div>
+        <div class="list-info">
+          <div class="list-name">${esc(t.title)}</div>
+          <div class="list-sub">${t.total_value?'💰 '+t.total_value+'₽':''}</div>
+        </div>
+        <button class="btn-icon" onclick="event.stopPropagation();closeModal();bumpTrade('${t.id}')" title="Поднять">⬆️</button>
+      </div>`).join(''));
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+async function loadTradesProposals(){
+  haptic('light');
+  try{
+    const incoming=await api('/trades/my/proposals/incoming');
+    if(!incoming?.length){showToast('Нет входящих предложений','ℹ️');return}
+    openModal('📨 Входящие предложения',incoming.map(p=>`
+      <div class="list-item" style="flex-wrap:wrap">
+        <div class="list-avatar" style="background:rgba(96,165,250,.12)">📨</div>
+        <div class="list-info">
+          <div class="list-name">${esc(p.trade_title||'Предложение')}</div>
+          <div class="list-sub">${p.message?esc(p.message):'Без сообщения'}</div>
+        </div>
+        <div style="width:100%;display:flex;gap:8px;margin-top:8px">
+          <button class="btn" style="flex:1;margin:0;background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="acceptProposal('${p.id}')">✅ Принять</button>
+          <button class="btn btn-danger" style="flex:1;margin:0" onclick="declineProposal('${p.id}')">❌ Отклонить</button>
+        </div>
+      </div>`).join(''));
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+async function bumpTrade(id){
+  haptic('medium');
+  try{await api('/trades/'+id+'/bump',{method:'POST'});showToast('Трейд поднят! ⬆️','✅')}
+  catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+async function deleteTrade(id){
+  haptic('medium');
+  try{await api('/trades/'+id,{method:'DELETE'});showToast('Трейд удалён','✅');loadTrades(true)}
+  catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+async function acceptProposal(id){
+  haptic('medium');closeModal();
+  try{await api('/trades/proposals/'+id+'/accept',{method:'PATCH'});showToast('Предложение принято! 🤝','✅')}
+  catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+async function declineProposal(id){
+  haptic('medium');closeModal();
+  try{await api('/trades/proposals/'+id+'/decline',{method:'PATCH'});showToast('Предложение отклонено','❌')}
+  catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+function openCreateTrade(){
+  openModal('➕ Создать трейд',`
+    <div class="tip mb-2"><span class="tip-icon">💡</span><span>Опишите что <b>предлагаете</b> и что <b>хотите получить</b>. Другие пользователи увидят ваш трейд.</span></div>
+    <div class="form-group">
+      <label class="label">📝 Заголовок *</label>
+      <input class="input" id="trade-title" placeholder="Например: Обмен ножа на перчатки" style="font-size:16px" />
+    </div>
+    <div class="form-group">
+      <label class="label">📄 Описание</label>
+      <textarea class="input" id="trade-desc" rows="3" placeholder="Подробности обмена..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="label">🔍 Что ищу <span class="label-hint">(теги через запятую)</span></label>
+      <input class="input" id="trade-wanted" placeholder="knife, gloves, ak-47" />
+    </div>
+    <div class="form-group">
+      <label class="label">💰 Примерная стоимость (₽)</label>
+      <input class="input" id="trade-value" type="number" placeholder="0" />
+    </div>
+    <button class="btn" onclick="submitCreateTrade()" style="font-size:18px;padding:16px">✅ Опубликовать</button>
+  `);
+}
+
+async function submitCreateTrade(){
+  const title=document.getElementById('trade-title')?.value?.trim();
+  if(!title){showToast('Введите заголовок','⚠️');return}
+  const description=document.getElementById('trade-desc')?.value?.trim()||'';
+  const wantedRaw=document.getElementById('trade-wanted')?.value?.trim()||'';
+  const wanted_tags=wantedRaw?wantedRaw.split(',').map(s=>s.trim()).filter(Boolean):[];
+  const total_value=parseInt(document.getElementById('trade-value')?.value)||0;
+
+  try{
+    await api('/trades',{method:'POST',body:{title,description,wanted_tags,total_value,offering_items:[],wanted_items:[]}});
+    closeModal();showToast('Трейд опубликован! 🎉','✅');haptic('success');loadTrades(true);
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+function openProposeTrade(tradeId){
+  openModal('📨 Предложить обмен',`
+    <div class="form-group">
+      <label class="label">💬 Сообщение продавцу</label>
+      <textarea class="input" id="proposal-msg" rows="3" placeholder="Опишите ваше предложение..."></textarea>
+    </div>
+    <button class="btn" onclick="submitProposal('${tradeId}')" style="font-size:18px;padding:16px">📨 Отправить</button>
+  `);
+}
+
+async function submitProposal(tradeId){
+  const message=document.getElementById('proposal-msg')?.value?.trim()||'';
+  try{
+    await api('/trades/'+tradeId+'/proposals',{method:'POST',body:{message,offering_items:[]}});
+    closeModal();showToast('Предложение отправлено! 📨','✅');haptic('success');
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+/* ═══════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════ */
 function parseTimes(raw){
   if(!raw)return[];
   if(Array.isArray(raw))return raw;
   try{const v=JSON.parse(raw);return Array.isArray(v)?v:[]}catch{return[]}
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    AUTO-REFRESH
-   ══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 function startAutoRefresh(){
   stopAutoRefresh();
   _autoRefreshTimer=setInterval(()=>{
@@ -1186,10 +1443,11 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
-/* ══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    INIT
-   ══════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════ */
 (async()=>{
+  checkTips();
   const ok=await authInit();
   if(ok){await loadOverview();startAutoRefresh()}
 })();
