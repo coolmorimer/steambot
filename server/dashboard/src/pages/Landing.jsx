@@ -471,25 +471,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ══ STATS BAR ══ */}
-      <section className="relative z-10 border-y border-gray-800/50 bg-gray-900/20 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {[
-            { value: '10K+', label: 'Постов опубликовано', Icon: Send },
-            { value: '500+', label: 'Активных аккаунтов', Icon: Users },
-            { value: '99.5%', label: 'Успешность доставки', Icon: CheckCircle2 },
-            { value: '24/7', label: 'Мониторинг Telegram', Icon: Bot },
-          ].map(s => (
-            <div key={s.label} className="flex flex-col items-center">
-              <s.Icon className="w-6 h-6 text-gray-500 mb-2" />
-              <p className="text-3xl md:text-4xl font-extrabold text-white">{s.value}</p>
-              <p className="text-sm text-gray-400 mt-1">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      {/* ══ MARKETPLACE ══ */}
       {/* ══ TRADES ══ */}
       <section id="trades" className="relative z-10 py-14 md:py-20 bg-gray-900/20">
         <div className="max-w-6xl mx-auto px-4">

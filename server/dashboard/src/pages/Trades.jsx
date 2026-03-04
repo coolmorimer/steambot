@@ -405,18 +405,18 @@ function TradeCard({ trade, user, onBump, idx }) {
 
       {/* Actions */}
       <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-800/40">
-        {!isOwner && (
-          <Link to={`/trades/${trade.id}`}
+        <Link to={`/trades/${trade.id}`}
+          className="btn-secondary text-sm flex items-center gap-1.5">
+          <Package className="w-4 h-4" /> Подробнее
+        </Link>
+        {!isOwner && trade.creator_trade_url && (
+          <a href={trade.creator_trade_url} target="_blank" rel="noopener"
             className="btn-primary text-sm flex-1 justify-center flex items-center gap-1.5">
-            <ArrowRight className="w-4 h-4" /> Перейти к обмену
-          </Link>
+            <ArrowRight className="w-4 h-4" /> Обменять в Steam
+          </a>
         )}
         {isOwner && (
           <>
-            <Link to={`/trades/${trade.id}`}
-              className="btn-secondary text-sm flex items-center gap-1.5">
-              <Package className="w-4 h-4" /> Предложения
-            </Link>
             <button className="btn-secondary text-sm flex items-center gap-1.5" onClick={() => onBump(trade.id)}>
               <RefreshCw className="w-4 h-4" /> ⚡ Поднять
             </button>

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowLeftRight, ArrowRight, Loader2, Package, Plus, Search,
-  RefreshCw, Check, X, MessageSquare, Clock, CheckCircle, XCircle,
-  ExternalLink, Send, User, Inbox, ChevronDown, ChevronUp,
+  ArrowLeft, ArrowRight, Loader2, Package,
+  RefreshCw, X, MessageSquare, Clock, CheckCircle, XCircle,
+  ExternalLink, User, Inbox, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
@@ -39,17 +39,6 @@ export default function TradeView() {
   const [proposals, setProposals] = useState([]);
   const [loadingProposals, setLoadingProposals] = useState(false);
 
-  // Proposal form
-  const [showForm, setShowForm]         = useState(false);
-  const [selectedItems, setSelectedItems] = useState([]);
-  const [message, setMessage]           = useState('');
-  const [submitting, setSubmitting]     = useState(false);
-
-  // Inventory
-  const [inventory, setInventory]   = useState([]);
-  const [loadingInv, setLoadingInv] = useState(false);
-  const [invSearch, setInvSearch]   = useState('');
-
   const isOwner = user?.id === trade?.creator_id;
 
   /* ── Load trade ── */
@@ -80,48 +69,6 @@ export default function TradeView() {
     } catch { /* ignore */ }
     finally { setLoadingProposals(false); }
   };
-
-  /* ── Load inventory ── */
-  const loadInventory = useCallback(async () => {
-    if (!user?.steam_id) return;
-    setLoadingInv(true);
-    try {
-      const { data } = await api.get(`/steam-inventory/${user.steam_id}`);
-      setInventory(data.items || []);
-    } catch { toast.error('Ошибка загрузки инвентаря'); }
-    finally { setLoadingInv(false); }
-  }, [user?.steam_id]);
-
-  useEffect(() => {
-    if (showForm && user?.steam_id && inventory.length === 0) loadInventory();
-  }, [showForm, user?.steam_id]);
-
-  /* ── Select item ── */
-  const addItem = (item) => {
-    if (selectedItems.find(i => i.asset_id === item.asset_id)) return;
-    setSelectedItems(prev => [...prev, {
-      name: item.name, image: item.image, exterior: item.exterior,
-      type: item.type, rarity: item.rarity, asset_id: item.asset_id,
-    }]);
-  };
-  const removeItem = (idx) => setSelectedItems(prev => prev.filter((_, i) => i !== idx));
-
-  /* ── Submit proposal ── */
-  const submitProposal = async () => {
-    if (!selectedItems.length) return toast.error('Выберите предметы для обмена');
-    setSubmitting(true);
-    try {
-      await api.post(`/trades/${id}/proposals`, { items: selectedItems, message });
-      toast.success('Предложение отправлено! 🎉');
-      setShowForm(false);
-      setSelectedItems([]);
-      setMessage('');
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Ошибка');
-    } finally { setSubmitting(false); }
-  };
-
-  /* ── Accept / Decline ── */
   const acceptProposal = async (proposalId) => {
     try {
       const { data } = await api.patch(`/trades/proposals/${proposalId}/accept`);
@@ -147,11 +94,6 @@ export default function TradeView() {
       toast.error(err.response?.data?.error || 'Ошибка');
     }
   };
-
-  const filteredInv = inventory.filter(i =>
-    !selectedItems.find(s => s.asset_id === i.asset_id) &&
-    i.name.toLowerCase().includes(invSearch.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -251,133 +193,23 @@ export default function TradeView() {
       </div>
 
       {/* ═══════════════════════════════════════════════
-          NOT OWNER → SEND PROPOSAL
+          NOT OWNER → OPEN STEAM TRADE
           ═══════════════════════════════════════════════ */}
       {!isOwner && trade.status === 'active' && (
-        <div className="space-y-4">
-          {!showForm ? (
-            <button onClick={() => setShowForm(true)}
+        <div className="space-y-3">
+          {trade.creator_trade_url ? (
+            <a href={trade.creator_trade_url} target="_blank" rel="noopener"
               className="btn-primary w-full py-3.5 text-base flex items-center justify-center gap-2 group">
-              <Send className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-              Предложить обмен
-            </button>
+              <ExternalLink className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+              Открыть обмен в Steam
+            </a>
           ) : (
-            <div className="card border-brand-500/20 space-y-5 animate-scale-in">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center">
-                    <Send className="w-4 h-4 text-brand-400" />
-                  </div>
-                  Ваше предложение
-                </h2>
-                <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-white transition">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Selected items */}
-              {selectedItems.length > 0 && (
-                <div>
-                  <p className="text-xs font-bold text-green-400 mb-2 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-green-400" />
-                    Вы предлагаете ({selectedItems.length})
-                  </p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {selectedItems.map((item, idx) => (
-                      <div key={idx} className="relative group rounded-lg border border-green-500/30 bg-green-500/5 p-1.5">
-                        <button onClick={() => removeItem(idx)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition z-10 hover:bg-red-500">
-                          <X className="w-3 h-3 text-white" />
-                        </button>
-                        <img src={item.image} alt={item.name} className="w-full h-14 object-contain" />
-                        <p className="text-[9px] text-gray-300 truncate mt-1">{item.name}</p>
-                        {item.exterior && (
-                          <span className={clsx('text-[8px] font-bold', EXTERIOR_COLOR[item.exterior])}>
-                            {EXTERIOR_SHORT[item.exterior]}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Inventory picker */}
-              {user?.steam_id ? (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                      <input className="input pl-10 text-sm" placeholder="Поиск в инвентаре..."
-                        value={invSearch} onChange={e => setInvSearch(e.target.value)} />
-                    </div>
-                    <button className="btn-secondary !p-2" onClick={loadInventory} title="Обновить">
-                      <RefreshCw className={clsx('w-4 h-4', loadingInv && 'animate-spin')} />
-                    </button>
-                  </div>
-
-                  {loadingInv ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 text-brand-500 animate-spin" />
-                    </div>
-                  ) : filteredInv.length === 0 ? (
-                    <div className="text-center py-6 text-gray-500 text-sm">
-                      {inventory.length === 0 ? 'Инвентарь пуст или недоступен' : 'Ничего не найдено'}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-64 overflow-y-auto pr-1">
-                      {filteredInv.map((item, i) => (
-                        <button key={i}
-                          className="group relative bg-gray-800/50 rounded-lg border border-gray-700/50 hover:border-green-500/50 transition-all p-1.5 text-left"
-                          onClick={() => addItem(item)}>
-                          <div className="absolute inset-0 bg-green-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition" />
-                          <img src={item.image} alt={item.name} className="w-full h-14 object-contain mb-1" />
-                          <p className="text-[9px] text-gray-300 truncate leading-tight">{item.name}</p>
-                          {item.exterior && (
-                            <span className={clsx('text-[8px] font-medium', EXTERIOR_COLOR[item.exterior])}>
-                              {EXTERIOR_SHORT[item.exterior]}
-                            </span>
-                          )}
-                          <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-green-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                            <Plus className="w-2.5 h-2.5 text-white" />
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="py-6 text-center text-gray-500 text-sm space-y-2">
-                  <Package className="w-8 h-8 mx-auto text-gray-600" />
-                  <p>Привяжите Steam аккаунт в <Link to="/settings" className="text-brand-400 hover:underline">настройках</Link></p>
-                </div>
-              )}
-
-              {/* Message */}
-              <div>
-                <textarea className="input text-sm" rows={2}
-                  placeholder="Сообщение (необязательно)..."
-                  value={message} onChange={e => setMessage(e.target.value)} />
-              </div>
-
-              {/* Submit */}
-              <button onClick={submitProposal}
-                disabled={submitting || !selectedItems.length}
-                className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-base">
-                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                {submitting ? 'Отправка...' : `Отправить предложение (${selectedItems.length} предм.)`}
-              </button>
+            <div className="card text-center py-6">
+              <Package className="w-8 h-8 mx-auto text-gray-600 mb-2" />
+              <p className="text-sm text-gray-500">У продавца не указана ссылка на обмен Steam</p>
             </div>
           )}
         </div>
-      )}
-
-      {/* External trade URL for non-owners */}
-      {!isOwner && trade.creator_trade_url && trade.status === 'active' && (
-        <a href={trade.creator_trade_url} target="_blank" rel="noopener"
-          className="btn-secondary w-full py-3 text-sm flex items-center justify-center gap-2">
-          <ExternalLink className="w-4 h-4" /> Открыть обмен в Steam (напрямую)
-        </a>
       )}
 
       {/* ═══════════════════════════════════════════════
