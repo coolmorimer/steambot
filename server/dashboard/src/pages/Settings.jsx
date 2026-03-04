@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { RestartTourButton } from '../components/OnboardingTour';
 import { resetAllHints } from '../components/PageHint';
-import PageHint from '../components/PageHint';
+import PageGuide from '../components/PageGuide';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 
@@ -53,11 +53,24 @@ export default function Settings() {
         <h1 className="text-xl font-extrabold text-white tracking-tight">Профиль</h1>
       </div>
 
-      <PageHint id="settings-intro" emoji="👤" title="Здесь можно настроить ваш профиль"
-        steps={[
-          'Измените имя или смените пароль',
-          'Перезапустите обучение или покажите все подсказки заново',
-        ]} />
+      <PageGuide id="settings-guide" emoji="👤" title="📖 Инструкция: Профиль" sections={[
+        {
+          icon: '🎯', heading: 'Для чего эта страница',
+          text: 'Здесь вы можете изменить имя, сменить пароль, посмотреть информацию об аккаунте и перезапустить обучение.',
+        },
+        {
+          icon: '⚙️', heading: 'Настройки профиля',
+          items: [
+            { label: 'Email', desc: 'ваш адрес эл. почты (нельзя изменить)' },
+            { label: 'Имя', desc: 'отображаемое имя в системе' },
+            { label: 'Пароль', desc: 'измените текущий пароль на новый (мин. 8 символов)' },
+          ],
+        },
+        {
+          icon: '🎓', heading: 'Обучение',
+          text: 'В блоке «Обучение» можно перезапустить интерактивный тур или показать все подсказки заново.',
+        },
+      ]} />
 
       {/* Profile */}
       <section className="card-glass space-y-4">

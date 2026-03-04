@@ -4,7 +4,7 @@ import {
   Trash2, XCircle, ExternalLink,
 } from 'lucide-react';
 import api from '../api/client';
-import PageHint from '../components/PageHint';
+import PageGuide from '../components/PageGuide';
 import toast from 'react-hot-toast';
 
 const STATUS_ICONS = {
@@ -89,10 +89,31 @@ export default function JobsActivity() {
         </button>
       </div>
 
-      <PageHint id="activity-intro" emoji="📋" title="Здесь история всех заданий">
-        Каждая публикация отображается здесь со статусом: успешно, ошибка или в очереди.
-        Используйте фильтры сверху для быстрого поиска.
-      </PageHint>
+      <PageGuide id="activity-guide" emoji="📋" title="📖 Инструкция: История" sections={[
+        {
+          icon: '🎯', heading: 'Для чего эта страница',
+          text: 'Здесь отображается каждое задание (публикация), которое бот выполнил или пытался выполнить. Это лог всех действий.',
+        },
+        {
+          icon: '📊', heading: 'Статусы заданий',
+          items: [
+            { label: 'Выполнено (зелёный)', desc: 'публикация прошла успешно' },
+            { label: 'Ошибка (красный)', desc: 'что-то пошло не так — проверьте сессию аккаунта' },
+            { label: 'В очереди (жёлтый)', desc: 'задание ждёт своей очереди' },
+            { label: 'Выполняется (синий)', desc: 'бот сейчас работает над этим заданием' },
+            { label: 'Отменено (серый)', desc: 'задание было отменено вручную' },
+          ],
+        },
+        {
+          icon: '🛠️', heading: 'Действия',
+          items: [
+            { label: 'Фильтры', desc: 'используйте кнопки сверху для фильтрации по статусу' },
+            { label: 'Отменить', desc: 'можно отменить задание, которое ещё не выполнено' },
+            { label: 'Удалить', desc: 'удалить задание из истории' },
+          ],
+          tip: 'Страница обновляется автоматически каждые 10 секунд.',
+        },
+      ]} />
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">

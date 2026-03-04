@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Send, Play, Square, Trash2, RefreshCw, AlertTriangle, Copy, Smartphone, ChevronDown, ChevronUp, ExternalLink, ClipboardCopy, BookOpen, CheckCircle2 } from 'lucide-react';
+import { Send, Play, Square, Trash2, RefreshCw, Copy, Smartphone, ChevronDown, ChevronUp, ExternalLink, ClipboardCopy, BookOpen, CheckCircle2 } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { EmptyState } from './Accounts';
-import PageHint from '../components/PageHint';
+import PageGuide from '../components/PageGuide';
 import toast from 'react-hot-toast';
 
 export default function Telegram() {
@@ -76,33 +76,38 @@ export default function Telegram() {
         </div>
       </div>
 
-      <PageHint id="telegram-intro" emoji="🔔" title="Настройте Telegram-уведомления"
-        steps={[
-          'Создайте бота в @BotFather и скопируйте токен',
-          'Узнайте ваш Chat ID через @userinfobot (t.me/userinfobot)',
-          'Вставьте токен и Chat ID ниже — бот будет слать уведомления',
-        ]} />
-
-      {/* Как узнать Telegram User ID */}
-      <section className="card-glass space-y-3">
-        <h2 className="font-bold text-white flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-blue-400" />
-          Как узнать Telegram User ID (Chat ID)
-        </h2>
-        <p className="text-sm text-gray-400">
-          User ID нужен для поля «Chat IDs» ниже.
-          Это число вида <code className="bg-gray-800 px-1.5 py-0.5 rounded text-brand-400 text-xs">123456789</code>.
-        </p>
-        <div className="rounded-xl bg-blue-900/10 border border-blue-700/20 p-3 space-y-1">
-          <p className="text-sm text-blue-300 font-medium">Через бота @userinfobot:</p>
-          <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300 font-medium transition-colors">
-            <ExternalLink className="w-4 h-4" />
-            Открыть @userinfobot в Telegram
-          </a>
-          <p className="text-xs text-gray-500">Нажмите Start — бот покажет ваш User ID. Скопируйте число и вставьте в поле Chat IDs.</p>
-        </div>
-      </section>
+      <PageGuide id="telegram-guide" emoji="🔔" title="📖 Инструкция: Уведомления" sections={[
+        {
+          icon: '🎯', heading: 'Для чего эта страница',
+          text: 'Здесь вы подключаете Telegram-бота, который будет присылать уведомления об ошибках, успешных публикациях и истекших сессиях.',
+        },
+        {
+          icon: '➕', heading: 'Как подключить бота',
+          steps: [
+            { title: 'Создайте бота в @BotFather', desc: 'откройте t.me/BotFather, отправьте /newbot, следуйте инструкциям' },
+            { title: 'Скопируйте токен', desc: 'BotFather даст токен вида 123456789:ABC-DEF...' },
+            { title: 'Узнайте свой Chat ID', desc: 'откройте @userinfobot в Telegram, нажмите Start — он покажет ваш ID' },
+            { title: 'Вставьте токен и Chat ID', desc: 'в форму ниже и нажмите «Сохранить»' },
+            { title: 'Запустите бота', desc: 'нажмите кнопку «Старт» — бот начнёт присылать уведомления' },
+          ],
+          link: { url: 'https://t.me/userinfobot', text: '🔍 Открыть @userinfobot для получения Chat ID' },
+        },
+        {
+          icon: '⚙️', heading: 'Настройки бота',
+          items: [
+            { label: 'Bot Token', desc: 'токен от @BotFather — идентифицирует вашего бота' },
+            { label: 'Chat IDs', desc: 'список Telegram User ID, кому слать уведомления. Пусто = всем' },
+            { label: 'Уведомлять об ошибках', desc: 'прислать сообщение, если публикация не удалась' },
+            { label: 'Уведомлять об успехе', desc: 'прислать подтверждение каждой успешной публикации' },
+            { label: 'Уведомлять об истекших', desc: 'прислать, если сессия аккаунта истекла' },
+          ],
+          tip: 'Chat ID — это число вида 123456789. Узнайте его через @userinfobot в Telegram.',
+        },
+        {
+          icon: '📱', heading: 'Mini App (опционально)',
+          text: 'После подключения бота можно настроить Mini App — мини-приложение прямо в чате бота для быстрого управления. Инструкция появится после подключения.',
+        },
+      ]} />
 
       {loading ? <div className="card h-40 animate-pulse bg-gray-800" /> :
         !bot ? (

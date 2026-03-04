@@ -8,7 +8,7 @@ import {
   ChevronUp, Banknote, Smartphone, RefreshCw,
 } from 'lucide-react';
 import clsx from 'clsx';
-import PageHint from '../components/PageHint';
+import PageGuide from '../components/PageGuide';
 
 const PLAN_ICONS = { free: Zap, starter: Zap, pro: Crown, enterprise: Building2 };
 const PLAN_COLORS = {
@@ -131,12 +131,33 @@ export default function Subscription() {
         </button>
       </div>
 
-      <PageHint id="subscription-intro" emoji="💎" title="Выберите подходящий тариф"
-        steps={[
-          'Пробный период — 3 дня бесплатно сразу после регистрации',
-          'Выберите тариф и оплатите картой или через СБП',
-          'Подписка активируется мгновенно после оплаты',
-        ]} />
+      <PageGuide id="subscription-guide" emoji="💎" title="📖 Инструкция: Тариф" sections={[
+        {
+          icon: '🎯', heading: 'Для чего эта страница',
+          text: 'Здесь вы видите текущий тариф, можете сменить его или оплатить подписку. Также здесь история платежей.',
+        },
+        {
+          icon: '🎁', heading: 'Пробный период',
+          text: 'При регистрации вы получаете 3 дня бесплатно с полным доступом к функциям Starter-тарифа.',
+        },
+        {
+          icon: '💳', heading: 'Как оплатить',
+          steps: [
+            { title: 'Выберите тариф', desc: 'Starter, Pro или Enterprise — чем выше, тем больше аккаунтов и задач' },
+            { title: 'Выберите период', desc: 'месячная или годовая оплата (скидка)' },
+            { title: 'Оплатите', desc: 'банковской картой или через СБП' },
+          ],
+        },
+        {
+          icon: '📋', heading: 'Тарифы и лимиты',
+          items: [
+            { label: 'Starter', desc: 'базовые лимиты, идеален для старта' },
+            { label: 'Pro', desc: 'больше аккаунтов, задач и Telegram-бот' },
+            { label: 'Enterprise', desc: 'без лимитов, API-доступ, приоритетная поддержка' },
+          ],
+          tip: 'Подписка активируется мгновенно после оплаты. Отменить можно в любой момент.',
+        },
+      ]} />
 
       {/* ═══ Current plan card ═══ */}
       {cs && <CurrentPlanCard cs={cs} daysLeft={daysLeft} isTrialActive={isTrialActive} isActive={isActive} onCancel={handleCancel} />}

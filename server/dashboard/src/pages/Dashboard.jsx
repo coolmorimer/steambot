@@ -13,7 +13,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
-import PageHint from '../components/PageHint';
+import PageGuide from '../components/PageGuide';
 
 /* ══ Animated counter ══ */
 function AnimatedNum({ value, suffix = '' }) {
@@ -143,13 +143,29 @@ export default function Dashboard() {
       {/* ── Email verification ── */}
       {user && !user.email_verified && <EmailVerificationBanner />}
 
-      <PageHint id="dashboard-welcome" emoji="🏠" title="Это ваша главная страница"
-        steps={[
-          { title: 'Добавьте Steam-аккаунт', desc: 'перейдите в «Мои аккаунты» и войдите через QR или логин' },
-          { title: 'Создайте задачу автопостинга', desc: 'перейдите в «Автопостинг» и настройте шаблон поста' },
-          { title: 'Бот сделает остальное', desc: 'публикации пойдут автоматически, результаты — в «Истории»' },
-        ]}
-      />
+      <PageGuide id="dashboard-welcome" emoji="🏠" title="📖 Инструкция: Главная страница" sections={[
+        {
+          icon: '🎯', heading: 'Что здесь показывается',
+          text: 'Это обзорная панель. Здесь вы видите: сколько аккаунтов подключено, сколько задач активно, статистику публикаций за неделю и последние задания.',
+        },
+        {
+          icon: '🚀', heading: 'Быстрый старт за 3 шага',
+          steps: [
+            { title: 'Добавьте Steam-аккаунт', desc: 'Перейдите в «Мои аккаунты» и войдите через QR-код или логин/пароль. Бот запомнит сессию.' },
+            { title: 'Создайте задачу автопостинга', desc: 'Перейдите в «Автопостинг», выберите аккаунт, форум и время публикации.' },
+            { title: 'Бот сделает остальное', desc: 'Публикации пойдут автоматически. Результаты видны в «Истории».' },
+          ],
+        },
+        {
+          icon: '📊', heading: 'Что означают карточки сверху',
+          items: [
+            { label: 'Steam аккаунты', desc: 'кол-во подключённых аккаунтов / лимит по тарифу' },
+            { label: 'Задачи', desc: 'сколько задач автопостинга создано' },
+            { label: 'Заданий сегодня', desc: 'сколько публикаций выполнено за сегодня' },
+          ],
+          tip: 'График показывает статистику за последние 7 дней. Если есть ошибки — проверьте сессии аккаунтов в «Мои аккаунты».',
+        },
+      ]} />
 
       {/* ── Onboarding steps ── */}
       {showOnboarding && (
