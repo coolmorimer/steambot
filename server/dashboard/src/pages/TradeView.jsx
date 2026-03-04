@@ -10,6 +10,17 @@ import toast from 'react-hot-toast';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 
+/* ── Price helpers ── */
+const tvPriceCache = new Map();
+function parseRubPrice(text) {
+  if (!text) return 0;
+  const n = text.replace(/[^\d,\.]/g, '').replace(',', '.');
+  return parseFloat(n) || 0;
+}
+function formatRub(num) {
+  return num.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' \u20BD';
+}
+
 const EXTERIOR_SHORT = {
   'Factory New': 'FN', 'Minimal Wear': 'MW', 'Field-Tested': 'FT',
   'Well-Worn': 'WW', 'Battle-Scarred': 'BS',
@@ -38,6 +49,7 @@ export default function TradeView() {
   const [loading, setLoading]   = useState(true);
   const [proposals, setProposals] = useState([]);
   const [loadingProposals, setLoadingProposals] = useState(false);
+  const [prices, setPrices] = useState({});
 
   const isOwner = user?.id === trade?.creator_id;
 
@@ -60,6 +72,34 @@ export default function TradeView() {
     if (!trade || !isOwner) return;
     loadProposals();
   }, [trade, isOwner]);
+
+  /* ── Load prices ── */
+  useEffect(() => {
+    if (!trade) return;
+    const allItems = [...(trade.offering_items || []), ...(trade.wanted_items || [])];
+    const names = [...new Set(allItems.map(i => i.name).filter(Boolean))];
+    const missing = names.filter(n => !tvPriceCache.has(n));
+    if (!missing.length) {
+      const cached = {};
+      names.forEach(n => { cached[n] = tvPriceCache.get(n) || 0; });
+      setPrices(cached);
+      return;
+    }
+    (async () => {
+      try {
+        const { data } = await api.post('/steam-items/prices', { names: missing });
+        const next = {};
+        names.forEach(n => {
+          if (tvPriceCache.has(n)) { next[n] = tvPriceCache.get(n); return; }
+          const p = data[n];
+          const val = p?.success ? (parseRubPrice(p.lowest_price) || parseRubPrice(p.median_price)) : 0;
+          tvPriceCache.set(n, val);
+          next[n] = val;
+        });
+        setPrices(next);
+      } catch { /* ignore */ }
+    })();
+  }, [trade]);
 
   const loadProposals = async () => {
     setLoadingProposals(true);
@@ -109,6 +149,8 @@ export default function TradeView() {
   const offering = trade.offering_items || [];
   const wanted   = trade.wanted_items || [];
   const tags     = trade.wanted_tags || [];
+  const totalOffer = offering.reduce((s, it) => s + (prices[it.name] || 0), 0);
+  const totalWant  = wanted.reduce((s, it) => s + (prices[it.name] || 0), 0);
 
   return (
     <div className="space-y-6 animate-slide-up max-w-4xl mx-auto">
@@ -147,9 +189,10 @@ export default function TradeView() {
           <div>
             <p className="text-xs font-bold mb-3 flex items-center gap-1.5 text-green-400">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> Предлагает
+              {totalOffer > 0 && <span className="ml-auto text-[10px] font-semibold text-green-400/80">≈ {formatRub(totalOffer)}</span>}
             </p>
             <div className="flex flex-wrap gap-2">
-              {offering.map((item, i) => <SkinCard key={i} item={item} />)}
+              {offering.map((item, i) => <SkinCard key={i} item={item} price={prices[item.name]} />)}
             </div>
           </div>
 
@@ -169,9 +212,10 @@ export default function TradeView() {
           <div>
             <p className="text-xs font-bold mb-3 flex items-center gap-1.5 text-purple-400">
               <span className="w-2 h-2 rounded-full bg-purple-400" /> Хочет получить
+              {totalWant > 0 && <span className="ml-auto text-[10px] font-semibold text-purple-400/80">≈ {formatRub(totalWant)}</span>}
             </p>
             <div className="flex flex-wrap gap-2">
-              {wanted.map((item, i) => <SkinCard key={`w-${i}`} item={item} variant="purple" />)}
+              {wanted.map((item, i) => <SkinCard key={`w-${i}`} item={item} variant="purple" price={prices[item.name]} />)}
               {tags.map(tag => (
                 <div key={tag} className="flex items-center gap-1 px-3 py-2 bg-purple-500/5 border border-purple-500/15 rounded-xl">
                   <span className="text-xs text-purple-300 font-medium">{WANTED_TAG_LABELS[tag] || tag}</span>
@@ -373,7 +417,7 @@ function ProposalCard({ proposal: p, idx, onAccept, onDecline }) {
 }
 
 /* ═══════ Skin Card ═══════ */
-function SkinCard({ item, variant = 'green' }) {
+function SkinCard({ item, variant = 'green', price }) {
   const extShort = EXTERIOR_SHORT[item.exterior] || '';
   const borderColor = variant === 'purple'
     ? 'border-purple-500/15 hover:border-purple-500/30'
@@ -397,6 +441,9 @@ function SkinCard({ item, variant = 'green' }) {
         <span className={clsx('text-[8px] sm:text-[9px] font-bold', EXTERIOR_COLOR[item.exterior])}>
           {extShort}
         </span>
+      )}
+      {price > 0 && (
+        <p className="text-[8px] sm:text-[9px] text-emerald-400/90 font-medium">≈ {formatRub(price)}</p>
       )}
     </div>
   );

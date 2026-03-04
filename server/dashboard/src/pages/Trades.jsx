@@ -31,6 +31,21 @@ const WANTED_TAG_LABELS = {
   any_offers: '💬 Любые предложения',
 };
 
+// ── Глобальный кэш цен на скины ──
+const priceCache = new Map();
+
+function parseRubPrice(text) {
+  if (!text) return 0;
+  // "1 234,56 pуб." or "1 234,56₽" → 1234.56
+  const cleaned = text.replace(/[^\d,.\s]/g, '').replace(/\s/g, '').replace(',', '.');
+  return parseFloat(cleaned) || 0;
+}
+
+function formatRub(num) {
+  if (!num || num === 0) return null;
+  return num.toLocaleString('ru', { maximumFractionDigits: 0 }) + ' ₽';
+}
+
 export default function Trades() {
   const { user } = useAuth();
   const [items, setItems]     = useState([]);
@@ -41,6 +56,7 @@ export default function Trades() {
   const [search, setSearch]   = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sort, setSort]       = useState('bumped');
+  const [prices, setPrices]   = useState({});  // { "AK-47 | Redline (FT)": 1234, ... }
   const searchTimer = useRef(null);
 
   // ── Фильтры ──
@@ -88,6 +104,47 @@ export default function Trades() {
   }, [page, debouncedSearch, sort, hasKnife, hasGloves, wantedTag, minValue, maxValue, hasDescription]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ── Подгрузка цен после загрузки трейдов ──
+  useEffect(() => {
+    if (!items.length) return;
+    // Собираем все уникальные названия скинов
+    const allNames = new Set();
+    for (const trade of items) {
+      for (const item of (trade.offering_items || [])) {
+        if (item.name && !priceCache.has(item.name)) allNames.add(item.name);
+      }
+      for (const item of (trade.wanted_items || [])) {
+        if (item.name && !priceCache.has(item.name)) allNames.add(item.name);
+      }
+    }
+    // Уже закэшированные цены — сразу применим
+    const cached = {};
+    for (const trade of items) {
+      for (const item of [...(trade.offering_items || []), ...(trade.wanted_items || [])]) {
+        if (item.name && priceCache.has(item.name)) {
+          cached[item.name] = priceCache.get(item.name);
+        }
+      }
+    }
+    if (Object.keys(cached).length) setPrices(prev => ({ ...prev, ...cached }));
+    if (!allNames.size) return;
+
+    // Загружаем недостающие
+    const fetchPrices = async () => {
+      try {
+        const { data } = await api.post('/steam-items/prices', { names: [...allNames] });
+        const parsed = {};
+        for (const [name, info] of Object.entries(data)) {
+          const price = parseRubPrice(info.lowest_price) || parseRubPrice(info.median_price);
+          priceCache.set(name, price);
+          parsed[name] = price;
+        }
+        setPrices(prev => ({ ...prev, ...parsed }));
+      } catch { /* silent */ }
+    };
+    fetchPrices();
+  }, [items]);
 
   const bump = async (id) => {
     try {
@@ -295,7 +352,7 @@ export default function Trades() {
       ) : (
         <div className="space-y-4">
           {items.map((trade, i) => (
-            <TradeCard key={trade.id} trade={trade} user={user} onBump={bump} idx={i} />
+            <TradeCard key={trade.id} trade={trade} user={user} onBump={bump} idx={i} prices={prices} />
           ))}
         </div>
       )}
@@ -319,10 +376,12 @@ export default function Trades() {
 }
 
 /* ═══════ Trade Card ═══════ */
-function TradeCard({ trade, user, onBump, idx }) {
+function TradeCard({ trade, user, onBump, idx, prices }) {
   const isOwner = user?.id === trade.creator_id;
   const offering = trade.offering_items || [];
   const wanted   = trade.wanted_items || [];
+  const totalOffer = offering.reduce((s, it) => s + (prices?.[it.name] || 0), 0);
+  const totalWant  = wanted.reduce((s, it) => s + (prices?.[it.name] || 0), 0);
   const tags     = trade.wanted_tags || [];
 
   return (
@@ -355,10 +414,11 @@ function TradeCard({ trade, user, onBump, idx }) {
         <div>
           <p className="text-xs font-bold mb-2.5 flex items-center gap-1.5 text-green-400">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> Предлагает
+            {totalOffer > 0 && <span className="ml-auto text-[10px] font-semibold text-green-400/80">≈ {formatRub(totalOffer)}</span>}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {offering.map((item, i) => (
-              <SkinCard key={i} item={item} />
+              <SkinCard key={i} item={item} price={prices?.[item.name]} />
             ))}
           </div>
         </div>
@@ -379,10 +439,11 @@ function TradeCard({ trade, user, onBump, idx }) {
         <div>
           <p className="text-xs font-bold mb-2.5 flex items-center gap-1.5 text-purple-400">
             <span className="w-2 h-2 rounded-full bg-purple-400" /> Хочет получить
+            {totalWant > 0 && <span className="ml-auto text-[10px] font-semibold text-purple-400/80">≈ {formatRub(totalWant)}</span>}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {wanted.map((item, i) => (
-              <SkinCard key={`w-${i}`} item={item} variant="purple" />
+              <SkinCard key={`w-${i}`} item={item} variant="purple" price={prices?.[item.name]} />
             ))}
             {tags.map(tag => (
               <div key={tag} className="flex items-center gap-1 px-3 py-2 bg-purple-500/5 border border-purple-500/15 rounded-xl">
@@ -429,7 +490,7 @@ function TradeCard({ trade, user, onBump, idx }) {
 }
 
 /* ═══════ Skin Card ═══════ */
-function SkinCard({ item, variant = 'green' }) {
+function SkinCard({ item, variant = 'green', price }) {
   const extShort = EXTERIOR_SHORT[item.exterior] || '';
   const extColorClass = EXTERIOR_COLOR[item.exterior] || '';
   const borderColor = variant === 'purple'
@@ -455,8 +516,8 @@ function SkinCard({ item, variant = 'green' }) {
           {extShort}
         </span>
       )}
-      {item.sell_price_text && (
-        <p className="text-[8px] sm:text-[9px] text-green-400 font-medium">{item.sell_price_text}</p>
+      {price > 0 && (
+        <p className="text-[8px] sm:text-[9px] text-emerald-400/90 font-medium">≈ {formatRub(price)}</p>
       )}
     </div>
   );

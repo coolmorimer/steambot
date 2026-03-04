@@ -130,6 +130,54 @@ router.get('/price', requireAuth, async (req, res) => {
   }
 });
 
+/** Batch price lookup — up to 50 items at once */
+router.post('/prices', requireAuth, async (req, res) => {
+  try {
+    const { names } = req.body;
+    if (!Array.isArray(names) || !names.length) return res.json({});
+    const uniqueNames = [...new Set(names)].slice(0, 50);
+
+    const results = {};
+    const toFetch = [];
+
+    for (const name of uniqueNames) {
+      const cacheKey = `price:${name}`;
+      const cached = cache.get(cacheKey);
+      if (cached && Date.now() - cached.ts < CACHE_TTL) {
+        results[name] = cached.data;
+      } else {
+        toFetch.push(name);
+      }
+    }
+
+    // Fetch missing prices sequentially with small delay to avoid Steam rate limits
+    for (const name of toFetch) {
+      try {
+        const url = `https://steamcommunity.com/market/priceoverview/?appid=730&currency=5&market_hash_name=${encodeURIComponent(name)}`;
+        const data = await fetchJSON(url);
+        const result = {
+          success: data?.success || false,
+          lowest_price: data?.lowest_price || null,
+          median_price: data?.median_price || null,
+          volume: data?.volume || null,
+        };
+        cache.set(`price:${name}`, { ts: Date.now(), data: result });
+        results[name] = result;
+        // Small delay to avoid rate limiting (Steam allows ~20 requests per minute)
+        if (toFetch.indexOf(name) < toFetch.length - 1) {
+          await new Promise(r => setTimeout(r, 200));
+        }
+      } catch {
+        results[name] = { success: false, lowest_price: null, median_price: null, volume: null };
+      }
+    }
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка получения цен' });
+  }
+});
+
 function extractExterior(name) {
   const match = name.match(/\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)/);
   return match ? match[1] : '';
