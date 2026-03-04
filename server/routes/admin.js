@@ -108,6 +108,14 @@ router.patch('/users/:id', requireAdmin, async (req, res, next) => {
     if (is_active !== undefined) updates.is_active = is_active ? 1 : 0;
     if (role      !== undefined) {
       if (!['user', 'admin'].includes(role)) return res.status(400).json({ error: 'Недопустимая роль' });
+      // Only sysadmin (seed admin) can change roles
+      if (req.dbUser.email !== config.admin.email) {
+        return res.status(403).json({ error: 'Только системный администратор может изменять роли' });
+      }
+      // Can't change sysadmin's own role
+      if (user.email === config.admin.email) {
+        return res.status(400).json({ error: 'Нельзя изменить роль системного администратора' });
+      }
       updates.role = role;
     }
     if (name      !== undefined) updates.name      = name;

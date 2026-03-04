@@ -185,23 +185,16 @@
 
 /* ═══ Onboarding Tour ═══ */
 .onboarding-overlay {
-  animation: onboarding-fade-in 0.4s ease-out;
-}
-.onboarding-card {
-  animation: onboarding-pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: onboarding-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .onboarding-bounce {
-  animation: onboarding-bounce 2s ease-in-out infinite;
+  animation: onboarding-bounce 2.5s ease-in-out infinite;
 }
 @keyframes onboarding-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-@keyframes onboarding-pop-in {
-  from { opacity: 0; transform: scale(0.85) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
 @keyframes onboarding-bounce {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px); }
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-6px) scale(1.02); }
 }

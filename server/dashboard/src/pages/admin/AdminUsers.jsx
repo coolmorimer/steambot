@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, UserX, UserCheck, Key } from 'lucide-react';
+import { Search, UserX, UserCheck, Key, ShieldCheck, Shield } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
 
@@ -12,6 +13,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [subModal, setSubModal] = useState(null);
   const LIMIT = 20;
+  const { isSysAdmin, user: currentUser } = useAuth();
 
   const load = useCallback(() => {
     setLoading(true);
@@ -30,6 +32,19 @@ export default function AdminUsers() {
       await api.patch(`/admin/users/${user.id}`, { is_active: !user.is_active });
       setUsers(list => list.map(u => u.id === user.id ? { ...u, is_active: !user.is_active } : u));
       toast.success(user.is_active ? 'Пользователь заблокирован' : 'Пользователь разблокирован');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Ошибка');
+    }
+  };
+
+  const toggleRole = async (user) => {
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    const action = newRole === 'admin' ? 'назначить администратором' : 'снять роль администратора';
+    if (!confirm(`${action} для ${user.email}?`)) return;
+    try {
+      await api.patch(`/admin/users/${user.id}`, { role: newRole });
+      setUsers(list => list.map(u => u.id === user.id ? { ...u, role: newRole } : u));
+      toast.success(newRole === 'admin' ? 'Роль администратора назначена' : 'Роль администратора снята');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Ошибка');
     }
@@ -71,6 +86,12 @@ export default function AdminUsers() {
                 <p className="text-gray-500 text-xs truncate">{u.email}</p>
               </div>
               <div className="flex gap-1 shrink-0">
+                {isSysAdmin && u.id !== currentUser?.id && (
+                  <button onClick={() => toggleRole(u)} className="btn-ghost p-1.5 text-xs"
+                    title={u.role === 'admin' ? 'Снять роль админа' : 'Назначить админом'}>
+                    {u.role === 'admin' ? <ShieldCheck className="w-4 h-4 text-amber-400" /> : <Shield className="w-4 h-4" />}
+                  </button>
+                )}
                 <button onClick={() => toggleActive(u)} className="btn-ghost p-1.5 text-xs"
                   title={u.is_active ? 'Заблокировать' : 'Разблокировать'}>
                   {u.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
@@ -81,6 +102,7 @@ export default function AdminUsers() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {u.role === 'admin' && <span className="badge-yellow">🛡️ Админ</span>}
               <span className="badge-blue capitalize">{u.plan_id || 'free'}</span>
               <span className={u.is_active ? 'badge-green' : 'badge-red'}>
                 {u.is_active ? 'Активен' : 'Заблокирован'}
@@ -98,6 +120,7 @@ export default function AdminUsers() {
             <thead>
               <tr className="border-b border-gray-800 text-xs text-gray-500">
                 <th className="text-left px-4 py-3 font-medium">Пользователь</th>
+                <th className="text-left px-4 py-3 font-medium">Роль</th>
                 <th className="text-left px-4 py-3 font-medium">Тариф</th>
                 <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Регистрация</th>
                 <th className="text-left px-4 py-3 font-medium">Статус</th>
@@ -106,14 +129,19 @@ export default function AdminUsers() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center py-8 text-gray-500">Загрузка...</td></tr>
+                <tr><td colSpan={6} className="text-center py-8 text-gray-500">Загрузка...</td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-8 text-gray-500">Нет пользователей</td></tr>
+                <tr><td colSpan={6} className="text-center py-8 text-gray-500">Нет пользователей</td></tr>
               ) : users.map(u => (
                 <tr key={u.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
                   <td className="px-4 py-3">
                     <p className="text-gray-200 font-medium">{u.name || '—'}</p>
                     <p className="text-gray-500 text-xs">{u.email}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={u.role === 'admin' ? 'badge-yellow' : 'badge-gray'}>
+                      {u.role === 'admin' ? '🛡️ Админ' : '👤 Пользователь'}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="badge-blue capitalize">{u.plan_id || 'free'}</span>
@@ -128,6 +156,17 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
+                      {isSysAdmin && u.id !== currentUser?.id && (
+                        <button
+                          onClick={() => toggleRole(u)}
+                          className="btn-ghost p-1.5 text-xs"
+                          title={u.role === 'admin' ? 'Снять роль админа' : 'Назначить админом'}
+                        >
+                          {u.role === 'admin'
+                            ? <ShieldCheck className="w-4 h-4 text-amber-400" />
+                            : <Shield className="w-4 h-4" />}
+                        </button>
+                      )}
                       <button
                         onClick={() => toggleActive(u)}
                         className="btn-ghost p-1.5 text-xs"

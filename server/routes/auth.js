@@ -201,6 +201,7 @@ router.get('/me', requireAuth, requireActiveUser, async (req, res, next) => {
       steam_avatar: user.steam_avatar, google_id: user.google_id,
       trade_url: user.trade_url, balance: user.balance || 0,
       is_partner: !!partnerRef,
+      is_sysadmin: user.email === config.admin.email,
       subscription: sub ? {
         plan_id: sub.plan_id, plan_name: sub.plan_name, status: sub.status,
         expires_at: sub.expires_at, trial_ends_at: sub.trial_ends_at,

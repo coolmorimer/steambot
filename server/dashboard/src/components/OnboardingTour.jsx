@@ -58,14 +58,6 @@ const STEPS = [
     route: '/',
   },
   {
-    target: '[data-tour="nav-balance"]',
-    title: '💰 Баланс',
-    body: 'Управляйте балансом, привяжите Steam через Trade URL. Здесь же история транзакций и вывод средств.',
-    emoji: '💰',
-    position: 'right',
-    route: '/',
-  },
-  {
     target: '[data-tour="nav-subscription"]',
     title: '💎 Подписка',
     body: 'Выберите тариф и оплатите подписку. Чем выше тариф — тем больше аккаунтов, кампаний и функций.',
@@ -89,6 +81,7 @@ export default function OnboardingTour({ userId }) {
   const [step, setStep]           = useState(0);
   const [spotlight, setSpotlight] = useState(null); // { top, left, width, height }
   const [tooltipPos, setTooltipPos] = useState(null);
+  const [visible, setVisible]     = useState(true);
   const navigate   = useNavigate();
   const location   = useLocation();
   const rafRef     = useRef(null);
@@ -172,27 +165,24 @@ export default function OnboardingTour({ userId }) {
     setActive(false);
   }, [userId]);
 
+  const changeStep = useCallback((newStep) => {
+    setVisible(false);
+    setTimeout(() => {
+      const route = STEPS[newStep]?.route;
+      if (route && location.pathname !== route) navigate(route);
+      setStep(newStep);
+      setTimeout(() => setVisible(true), 180);
+    }, 220);
+  }, [location.pathname, navigate]);
+
   const goNext = () => {
-    if (step >= STEPS.length - 1) {
-      finish();
-      return;
-    }
-    const nextStep = step + 1;
-    const nextRoute = STEPS[nextStep]?.route;
-    if (nextRoute && location.pathname !== nextRoute) {
-      navigate(nextRoute);
-    }
-    setStep(nextStep);
+    if (step >= STEPS.length - 1) { finish(); return; }
+    changeStep(step + 1);
   };
 
   const goPrev = () => {
     if (step <= 0) return;
-    const prevStep = step - 1;
-    const prevRoute = STEPS[prevStep]?.route;
-    if (prevRoute && location.pathname !== prevRoute) {
-      navigate(prevRoute);
-    }
-    setStep(prevStep);
+    changeStep(step - 1);
   };
 
   if (!active) return null;
@@ -217,6 +207,7 @@ export default function OnboardingTour({ userId }) {
                 height={spotlight.height}
                 rx="12"
                 fill="black"
+                style={{ transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
               />
             </mask>
           </defs>
@@ -237,12 +228,13 @@ export default function OnboardingTour({ userId }) {
       {/* Spotlight glow ring */}
       {spotlight && (
         <div
-          className="absolute rounded-xl border-2 border-brand-400/60 shadow-[0_0_30px_rgba(99,102,241,0.3)] transition-all duration-500 ease-out pointer-events-none"
+          className="absolute rounded-xl border-2 border-brand-400/60 shadow-[0_0_30px_rgba(99,102,241,0.3)] pointer-events-none"
           style={{
             top: spotlight.top,
             left: spotlight.left,
             width: spotlight.width,
             height: spotlight.height,
+            transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           <div className="absolute inset-0 rounded-xl animate-pulse border border-brand-400/30" />
@@ -251,23 +243,28 @@ export default function OnboardingTour({ userId }) {
 
       {/* Tooltip / Card */}
       <div
-        className={`absolute z-10 transition-all duration-500 ease-out ${
-          isCenter
-            ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
-            : ''
-        }`}
-        style={
-          !isCenter && tooltipPos
-            ? { top: tooltipPos.top, left: tooltipPos.left }
-            : undefined
-        }
+        className="absolute z-10"
+        style={{
+          ...(isCenter
+            ? { top: '50%', left: '50%' }
+            : (tooltipPos ? { top: tooltipPos.top, left: tooltipPos.left } : {})),
+          transition: 'top 0.5s cubic-bezier(0.4,0,0.2,1), left 0.5s cubic-bezier(0.4,0,0.2,1)',
+        }}
       >
-        <div className={`
-          bg-gray-900/98 backdrop-blur-2xl border border-gray-700/50
-          rounded-2xl shadow-2xl shadow-black/50
-          onboarding-card
-          ${isCenter ? 'w-[420px] max-w-[90vw] p-8' : 'w-[340px] max-w-[85vw] p-5'}
-        `}>
+        <div
+          className={`
+            bg-gray-900/98 backdrop-blur-2xl border border-gray-700/50
+            rounded-2xl shadow-2xl shadow-black/50
+            ${isCenter ? 'w-[420px] max-w-[90vw] p-8' : 'w-[340px] max-w-[85vw] p-5'}
+          `}
+          style={{
+            transition: 'opacity 0.25s ease, transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+            opacity: visible ? 1 : 0,
+            transform: isCenter
+              ? `translate(-50%, -50%) scale(${visible ? 1 : 0.95})`
+              : `translateY(${visible ? 0 : 8}px) scale(${visible ? 1 : 0.97})`,
+          }}
+        >
           {/* Close button */}
           <button
             onClick={finish}
