@@ -4,6 +4,7 @@ import {
   Trash2, XCircle, ExternalLink,
 } from 'lucide-react';
 import api from '../api/client';
+import PageHint from '../components/PageHint';
 import toast from 'react-hot-toast';
 
 const STATUS_ICONS = {
@@ -80,13 +81,18 @@ export default function JobsActivity() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Активность</h1>
+          <h1 className="text-xl font-bold text-white">📋 История</h1>
           <p className="text-gray-500 text-sm">{total} заданий всего</p>
         </div>
         <button onClick={load} className="btn-ghost">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
+
+      <PageHint id="activity-intro" emoji="📋" title="Здесь история всех заданий">
+        Каждая публикация отображается здесь со статусом: успешно, ошибка или в очереди.
+        Используйте фильтры сверху для быстрого поиска.
+      </PageHint>
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">

@@ -38,13 +38,13 @@ export default function Landing() {
   const [trades, setTrades] = useState([]);
 
   const quickMenuItems = [
-    { to: '/',            icon: LayoutDashboard, label: 'Дашборд',      emoji: '📊' },
-    { to: '/accounts',    icon: Users,           label: 'Аккаунты',     emoji: '👤' },
-    { to: '/campaigns',   icon: Megaphone,       label: 'Задачи',      emoji: '✅' },
-    { to: '/activity',    icon: Activity,        label: 'Активность',   emoji: '⚡' },
-    { to: '/trades',      icon: ArrowLeftRight,  label: 'P2P Обмен',    emoji: '🔄' },
-    { to: '/settings',    icon: Settings,        label: 'Настройки',    emoji: '⚙️' },
-    { to: '/subscription',icon: CreditCard,      label: 'Подписка',     emoji: '💎' },
+    { to: '/',            icon: LayoutDashboard, label: 'Главная',        emoji: '🏠' },
+    { to: '/accounts',    icon: Users,           label: 'Мои аккаунты',   emoji: '🎮' },
+    { to: '/campaigns',   icon: Megaphone,       label: 'Автопостинг',    emoji: '📢' },
+    { to: '/activity',    icon: Activity,        label: 'История',        emoji: '📋' },
+    { to: '/trades',      icon: ArrowLeftRight,  label: 'Обмен скинами',  emoji: '🔄' },
+    { to: '/settings',    icon: Settings,        label: 'Профиль',        emoji: '👤' },
+    { to: '/subscription',icon: CreditCard,      label: 'Тариф',          emoji: '💎' },
   ];
 
   const planColors = {
@@ -117,7 +117,7 @@ export default function Landing() {
             <span className="font-bold text-white text-lg">Steam Poster Bot</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
-            <a href="#trades" className="hover:text-white transition-colors">P2P Обмен</a>
+            <a href="#trades" className="hover:text-white transition-colors">Обмен скинами</a>
             <a href="#features" className="hover:text-white transition-colors">Возможности</a>
             <a href="#pricing" className="hover:text-white transition-colors">Тарифы</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
@@ -257,7 +257,7 @@ export default function Landing() {
                 </div>
               </div>
             )}
-            <a href="#trades" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">P2P Обмен</a>
+            <a href="#trades" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Обмен скинами</a>
             <a href="#features" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Возможности</a>
             <a href="#pricing" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">Тарифы</a>
             <a href="#faq" onClick={() => setMobileNav(false)} className="block text-sm text-gray-300 hover:text-white py-1.5">FAQ</a>
@@ -283,7 +283,7 @@ export default function Landing() {
             )}
             <div className="flex gap-3 pt-2 border-t border-gray-800">
               {isLoggedIn ? (
-                <Link to="/" onClick={() => setMobileNav(false)} className="btn-primary text-sm flex-1 justify-center">📊 Дашборд</Link>
+                <Link to="/" onClick={() => setMobileNav(false)} className="btn-primary text-sm flex-1 justify-center">🏠 Главная</Link>
               ) : (
                 <>
                   <Link to="/login" className="btn-ghost text-sm flex-1 justify-center">Войти</Link>
@@ -415,7 +415,7 @@ export default function Landing() {
                     {/* Chart */}
                     <div className="sm:col-span-3 bg-gray-800/60 rounded-lg p-3.5 border border-gray-700/40">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs text-gray-500 font-medium">Активность за неделю</p>
+                        <p className="text-xs text-gray-500 font-medium">История за неделю</p>
                         <span className="text-[10px] text-green-400 font-medium bg-green-500/10 px-1.5 py-0.5 rounded">+23%</span>
                       </div>
                       <div className="relative h-24">
@@ -497,7 +497,7 @@ export default function Landing() {
             <div>
               <div className="inline-flex items-center gap-2 bg-purple-600/10 border border-purple-600/20 rounded-full px-4 py-1.5 mb-3">
                 <ArrowLeftRight className="w-4 h-4 text-purple-400" />
-                <span className="text-sm text-purple-300 font-medium">P2P Обмен</span>
+                <span className="text-sm text-purple-300 font-medium">Обмен скинами</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-extrabold text-white">
                 Обменивайтесь предметами
@@ -904,7 +904,7 @@ export default function Landing() {
                 a: 'Steam Guard поддерживается полностью. При авторизации вы можете ввести код из мобильного приложения или email.',
               },
               {
-                q: 'Как работает Telegram бот?',
+                q: 'Как работают Telegram-уведомления?',
                 a: 'Вы создаёте бота через @BotFather, вводите токен в Dashboard, и получаете уведомления о статусе задач, ошибках и статистику прямо в Telegram.',
               },
               {
@@ -998,7 +998,7 @@ export default function Landing() {
               <span className="text-gray-400 text-base">Steam Poster Bot © {new Date().getFullYear()}</span>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-base text-gray-500">
-              <Link to="/trades" className="hover:text-white transition-colors">P2P Обмен</Link>
+              <Link to="/trades" className="hover:text-white transition-colors">Обмен скинами</Link>
               <Link to="/login" className="hover:text-white transition-colors">Войти</Link>
               <a href="#pricing" className="hover:text-white transition-colors">Тарифы</a>
               <a href="#faq" className="hover:text-white transition-colors">FAQ</a>

@@ -3,6 +3,7 @@ import { Send, Play, Square, Trash2, RefreshCw, AlertTriangle, Copy, Smartphone,
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { EmptyState } from './Accounts';
+import PageHint from '../components/PageHint';
 import toast from 'react-hot-toast';
 
 export default function Telegram() {
@@ -27,11 +28,11 @@ export default function Telegram() {
   if (!hasTgFeature) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-bold text-white">Telegram бот</h1>
+        <h1 className="text-xl font-bold text-white">🔔 Уведомления</h1>
         <div className="card text-center py-12">
           <Send className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium">Telegram бот недоступен в вашем тарифе</p>
-          <p className="text-gray-600 text-sm mt-1">Улучшите подписку для подключения Telegram бота</p>
+          <p className="text-gray-400 font-medium">Telegram-уведомления недоступны в вашем тарифе</p>
+          <p className="text-gray-600 text-sm mt-1">Улучшите подписку для подключения Telegram-уведомлений</p>
           <a href="/subscription" className="btn-primary mt-4 inline-flex">Улучшить</a>
         </div>
       </div>
@@ -68,12 +69,19 @@ export default function Telegram() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Telegram бот</h1>
+        <h1 className="text-xl font-bold text-white">🔔 Уведомления</h1>
         <div className="flex gap-2">
           <button onClick={load} className="btn-ghost"><RefreshCw className="w-4 h-4" /></button>
           {!bot && <button onClick={() => setShowForm(true)} className="btn-primary"><Send className="w-4 h-4" /> Подключить</button>}
         </div>
       </div>
+
+      <PageHint id="telegram-intro" emoji="🔔" title="Настройте Telegram-уведомления"
+        steps={[
+          'Создайте бота в @BotFather и скопируйте токен',
+          'Узнайте ваш Chat ID через @userinfobot (t.me/userinfobot)',
+          'Вставьте токен и Chat ID ниже — бот будет слать уведомления',
+        ]} />
 
       {loading ? <div className="card h-40 animate-pulse bg-gray-800" /> :
         !bot ? (
@@ -377,6 +385,11 @@ function TelegramForm({ initial, onSaved, onClose }) {
           <textarea className="input font-mono text-sm resize-none" rows={3}
             value={form.authorized_chat_ids} onChange={f('authorized_chat_ids')}
             placeholder="123456789&#10;987654321" />
+          <p className="text-xs text-gray-500 mt-1">
+            💡 Не знаете свой Chat ID? Откройте{' '}
+            <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="text-brand-400 hover:underline">@userinfobot</a>
+            {' '}в Telegram и нажмите Start.
+          </p>
         </div>
         <div className="space-y-2">
           <p className="label">Уведомления</p>

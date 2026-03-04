@@ -13,6 +13,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
+import PageHint from '../components/PageHint';
 
 /* ══ Animated counter ══ */
 function AnimatedNum({ value, suffix = '' }) {
@@ -142,6 +143,14 @@ export default function Dashboard() {
       {/* ── Email verification ── */}
       {user && !user.email_verified && <EmailVerificationBanner />}
 
+      <PageHint id="dashboard-welcome" emoji="🏠" title="Это ваша главная страница"
+        steps={[
+          { title: 'Добавьте Steam-аккаунт', desc: 'перейдите в «Мои аккаунты» и войдите через QR или логин' },
+          { title: 'Создайте задачу автопостинга', desc: 'перейдите в «Автопостинг» и настройте шаблон поста' },
+          { title: 'Бот сделает остальное', desc: 'публикации пойдут автоматически, результаты — в «Истории»' },
+        ]}
+      />
+
       {/* ── Onboarding steps ── */}
       {showOnboarding && (
         <div className="card-glass border-brand-500/20 animate-scale-in">
@@ -220,7 +229,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2 card">
           <div className="flex items-center justify-between mb-5">
             <h2 className="section-title">
-              <Activity className="w-5 h-5 text-brand-400" /> Активность
+              <Activity className="w-5 h-5 text-brand-400" /> История
             </h2>
             <div className="flex items-center gap-1.5 bg-green-500/10 px-2.5 py-1 rounded-lg">
               <TrendingUp className="w-3.5 h-3.5 text-green-400" />
@@ -290,10 +299,10 @@ export default function Dashboard() {
 
       {/* ── Quick Actions ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <QuickAction to="/accounts"      icon="👤" label="Добавить аккаунт" />
-        <QuickAction to="/campaigns"     icon="✅" label="Новая задача" />
+        <QuickAction to="/accounts"      icon="🎮" label="Добавить аккаунт" />
+        <QuickAction to="/campaigns"     icon="📢" label="Новая задача" />
         <QuickAction to="/trades/create" icon="🔄" label="Создать обмен" />
-        <QuickAction to="/referrals"     icon="🎁" label="Рефералы" />
+        <QuickAction to="/referrals"     icon="🎁" label="Пригласи друга" />
       </div>
 
       {/* ── Recent jobs ── */}
@@ -310,7 +319,7 @@ export default function Dashboard() {
           <div className="text-center py-10">
             <div className="text-4xl mb-3">📭</div>
             <p className="text-gray-400 font-medium">Заданий пока нет</p>
-            <p className="text-xs text-gray-600 mt-1">Создайте задачу, чтобы начать автопостинг</p>
+            <p className="text-xs text-gray-600 mt-1">Создайте задачу автопостинга, чтобы начать</p>
             <Link to="/campaigns" className="btn-primary text-sm mt-4 inline-flex items-center gap-2">
               <Plus className="w-4 h-4" /> Создать задачу
             </Link>

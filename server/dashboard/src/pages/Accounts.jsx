@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
+import PageHint from '../components/PageHint';
 import toast from 'react-hot-toast';
 
 // ── Главная страница ──────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ export default function Accounts() {
             <span className="text-lg">🎮</span>
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">Steam аккаунты</h1>
+            <h1 className="text-xl font-extrabold text-white tracking-tight">Мои аккаунты</h1>
             <p className="text-gray-500 text-sm">{profiles.length} / {isUnlimited ? '∞' : limit} аккаунтов</p>
           </div>
         </div>
@@ -91,6 +92,13 @@ export default function Accounts() {
           )}
         </div>
       </div>
+
+      <PageHint id="accounts-intro" emoji="🎮" title="Здесь ваши Steam-аккаунты"
+        steps={[
+          'Нажмите «Добавить аккаунт» — войдите через QR-код или логин/пароль',
+          'Бот сохранит сессию и будет публиковать от имени этого аккаунта',
+          'Если сессия истечёт — перезайдите кнопкой «Обновить»',
+        ]} />
 
       {/* List */}
       {loading ? (

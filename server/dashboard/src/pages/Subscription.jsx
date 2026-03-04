@@ -8,6 +8,7 @@ import {
   ChevronUp, Banknote, Smartphone, RefreshCw,
 } from 'lucide-react';
 import clsx from 'clsx';
+import PageHint from '../components/PageHint';
 
 const PLAN_ICONS = { free: Zap, starter: Zap, pro: Crown, enterprise: Building2 };
 const PLAN_COLORS = {
@@ -120,15 +121,22 @@ export default function Subscription() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-brand-500/20 border border-purple-500/20 flex items-center justify-center">
-            <span className="text-lg">👑</span>
+            <span className="text-lg">�</span>
           </div>
-          <h1 className="text-xl font-extrabold text-white tracking-tight">Подписка</h1>
+          <h1 className="text-xl font-extrabold text-white tracking-tight">Тариф</h1>
         </div>
         <button onClick={handleRefresh} className="btn-ghost flex items-center gap-1.5 text-xs" disabled={refreshing}>
           <RefreshCw className={clsx('w-3.5 h-3.5', refreshing && 'animate-spin')} />
           Обновить
         </button>
       </div>
+
+      <PageHint id="subscription-intro" emoji="💎" title="Выберите подходящий тариф"
+        steps={[
+          'Пробный период — 3 дня бесплатно сразу после регистрации',
+          'Выберите тариф и оплатите картой или через СБП',
+          'Подписка активируется мгновенно после оплаты',
+        ]} />
 
       {/* ═══ Current plan card ═══ */}
       {cs && <CurrentPlanCard cs={cs} daysLeft={daysLeft} isTrialActive={isTrialActive} isActive={isActive} onCancel={handleCancel} />}

@@ -64,7 +64,7 @@ function welcomeEmail(name, appUrl) {
 <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
   <h2 style="color:#66c0f4;">🎮 Steam Poster Bot</h2>
   <p>Привет, <b>${name}</b>!</p>
-  <p>Ваш аккаунт успешно создан. Пробный период: 7 дней бесплатно.</p>
+  <p>Ваш аккаунт успешно создан. Пробный период: <b>3 дня бесплатно</b>.</p>
   <a href="${appUrl}/dashboard" style="display:inline-block;background:#66c0f4;color:#1b2838;
      padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
     Открыть Dashboard →

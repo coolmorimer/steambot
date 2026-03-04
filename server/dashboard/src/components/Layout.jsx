@@ -12,19 +12,19 @@ import SupportWidget from './SupportWidget';
 import OnboardingTour from './OnboardingTour';
 
 const baseNavItems = [
-  { to: '/',            icon: LayoutDashboard, label: 'Обзор',         emoji: '📊', tourId: 'nav-overview'     },
-  { to: '/accounts',    icon: Users,           label: 'Аккаунты',      emoji: '👤', tourId: 'nav-accounts'     },
-  { to: '/campaigns',   icon: Megaphone,       label: 'Задачи',       emoji: '✅', tourId: 'nav-campaigns'    },
-  { to: '/activity',    icon: Activity,        label: 'Активность',    emoji: '⚡', tourId: 'nav-activity'     },
-  { to: '/telegram',    icon: Send,            label: 'Telegram бот',  emoji: '🤖', tourId: 'nav-telegram'     },
-  { to: '/api',         icon: Code2,           label: 'API',           emoji: '🔗', tourId: 'nav-api'          },
+  { to: '/',            icon: LayoutDashboard, label: 'Главная',        emoji: '🏠', tourId: 'nav-overview'     },
+  { to: '/accounts',    icon: Users,           label: 'Мои аккаунты',   emoji: '🎮', tourId: 'nav-accounts'     },
+  { to: '/campaigns',   icon: Megaphone,       label: 'Автопостинг',    emoji: '📢', tourId: 'nav-campaigns'    },
+  { to: '/activity',    icon: Activity,        label: 'История',        emoji: '📋', tourId: 'nav-activity'     },
+  { to: '/telegram',    icon: Send,            label: 'Уведомления',    emoji: '🔔', tourId: 'nav-telegram'     },
+  { to: '/api',         icon: Code2,           label: 'API',            emoji: '🔗', tourId: 'nav-api'          },
   null,
-  { to: '/trades',      icon: ArrowLeftRight,  label: 'P2P Обмен',     emoji: '🔄', tourId: 'nav-trades'       },
-  { to: '/balance',     icon: Wallet,          label: 'Баланс',        emoji: '💰', tourId: 'nav-balance', partnerOnly: true },
+  { to: '/trades',      icon: ArrowLeftRight,  label: 'Обмен скинами',  emoji: '🔄', tourId: 'nav-trades'       },
+  { to: '/balance',     icon: Wallet,          label: 'Баланс',         emoji: '💰', tourId: 'nav-balance', partnerOnly: true },
   null,
-  { to: '/settings',    icon: Settings,        label: 'Настройки',     emoji: '⚙️', tourId: 'nav-settings'     },
-  { to: '/subscription',icon: CreditCard,      label: 'Подписка',      emoji: '💎', tourId: 'nav-subscription' },
-  { to: '/referrals',   icon: Gift,            label: 'Рефералы',      emoji: '🎁', tourId: 'nav-referrals'    },
+  { to: '/settings',    icon: Settings,        label: 'Профиль',        emoji: '👤', tourId: 'nav-settings'     },
+  { to: '/subscription',icon: CreditCard,      label: 'Тариф',          emoji: '💎', tourId: 'nav-subscription' },
+  { to: '/referrals',   icon: Gift,            label: 'Пригласи друга', emoji: '🎁', tourId: 'nav-referrals'    },
 ];
 
 const adminItem = { to: '/admin', icon: ShieldCheck, label: 'Админ', emoji: '🛡️' };

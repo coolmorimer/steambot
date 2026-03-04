@@ -108,7 +108,7 @@ export default function Trades() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center shadow-lg shadow-brand-600/20">
               <ArrowLeftRight className="w-5 h-5 text-white" />
             </div>
-            P2P Обмен
+            P2P Обмен скинами
           </h1>
           <p className="text-gray-500 text-sm mt-1.5 ml-[52px]">
             <span className="text-white font-semibold">{total}</span> активных предложений

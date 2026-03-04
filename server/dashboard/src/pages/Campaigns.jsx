@@ -3,6 +3,7 @@ import { Plus, Trash2, Play, Pause, RefreshCw, ChevronDown, ChevronUp, Pencil, C
 import api from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { EmptyState } from './Accounts';
+import PageHint from '../components/PageHint';
 import toast from 'react-hot-toast';
 
 // ─── Переменные шаблона ────────────────────────────────────────────────────────
@@ -789,10 +790,10 @@ export default function Campaigns() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-brand-500/20 border border-emerald-500/20 flex items-center justify-center">
-            <span className="text-lg">✅</span>
+            <span className="text-lg">📢</span>
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">Задачи</h1>
+            <h1 className="text-xl font-extrabold text-white tracking-tight">Автопостинг</h1>
             <p className="text-gray-500 text-sm">{campaigns.length} / {isUnlimited ? '∞' : limit} задач</p>
           </div>
         </div>
@@ -805,6 +806,13 @@ export default function Campaigns() {
           )}
         </div>
       </div>
+
+      <PageHint id="campaigns-intro" emoji="📢" title="Здесь настраивается автопостинг"
+        steps={[
+          'Нажмите «Создать» — выберите аккаунт и форум',
+          'Сгенерируйте пост из инвентаря или напишите свой',
+          'Укажите время публикации — бот сделает остальное автоматически',
+        ]} />
 
       {showForm && (
         <CampaignForm
@@ -819,7 +827,7 @@ export default function Campaigns() {
       {loading ? (
         <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="card h-24 animate-pulse bg-gray-800/50 rounded-2xl" />)}</div>
       ) : campaigns.length === 0 ? (
-        <EmptyState title="Нет задач" emoji="✅" desc="Создайте первую задачу для автоматической публикации на Steam." />
+        <EmptyState title="Нет задач" emoji="📢" desc="Создайте первую задачу для автопостинга на Steam." />
       ) : (
         <div className="space-y-3">
           {campaigns.map((c, i) => (

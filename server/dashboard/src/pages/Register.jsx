@@ -37,6 +37,15 @@ export default function Register() {
 
   return (
     <AuthShell title="Регистрация" subtitle="Создайте аккаунт за 30 секунд">
+      {/* Trial info banner */}
+      <div className="rounded-xl bg-emerald-900/20 border border-emerald-700/30 p-3 mb-4 flex items-center gap-3">
+        <span className="text-2xl">🎁</span>
+        <div>
+          <p className="text-sm font-semibold text-emerald-300">3 дня бесплатно</p>
+          <p className="text-xs text-gray-400">Пробный период активируется сразу после регистрации</p>
+        </div>
+      </div>
+
       <form onSubmit={submit} className="space-y-4">
         <div>
           <label className="label">👤 Имя <span className="text-gray-600">(необязательно)</span></label>
