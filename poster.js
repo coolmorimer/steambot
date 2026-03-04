@@ -228,27 +228,78 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
       'button:has-text("Создать")',
     ].join(', ')).first();
     await submitBtn.waitFor({ state: 'visible', timeout: 10_000 });
-    await submitBtn.click();
+
+    // Кликаем submit и ловим навигацию (Steam может перейти на тему или остаться)
+    await Promise.all([
+      page.waitForNavigation({ timeout: 25_000 }).catch(() => null),
+      submitBtn.click(),
+    ]);
 
     // ── 7. Дождаться URL новой темы ─────────────────────────────────────
-    // Steam после создания редиректит на /{forumid}/{topicid}/
-    try {
-      await page.waitForURL(/\/\d+\/?$/, { timeout: 20_000 });
-    } catch (_) {
-      // Возможно, Steam показал ошибку вместо редиректа
-      const pageText = await page.locator('.error_ctn, .forum_error, .DialogBody').first().textContent().catch(() => null);
-      if (pageText) {
-        await screenshotOnError('post_error');
-        throw new Error(`Steam отклонил публикацию: ${pageText.trim().slice(0, 200)}`);
+    // Steam после создания редиректит на /{forumid}/{topicid}/ —
+    // но иногда AJAX создаёт тему, а редирект не срабатывает.
+    let topicUrl;
+    const afterSubmitUrl = page.url();
+
+    if (/\/\d{10,}\/?$/.test(afterSubmitUrl)) {
+      // Редирект произошёл — URL уже содержит ID темы
+      topicUrl = afterSubmitUrl;
+      logger.info(`[${profile.name}] Редирект на тему: ${topicUrl}`);
+    } else {
+      // Нет редиректа — тема могла быть создана через AJAX без перехода
+      logger.warn(`[${profile.name}] Нет редиректа (URL: ${afterSubmitUrl}). Ждём/ищем тему...`);
+
+      // Подождём ещё немного — возможно задержка JS
+      try {
+        await page.waitForURL(/\/\d{10,}\/?$/, { timeout: 10_000 });
+        topicUrl = page.url();
+        logger.info(`[${profile.name}] Отложенный редирект: ${topicUrl}`);
+      } catch (_) {
+        // Редирект так и не случился — ищем тему на странице форума
+        logger.warn(`[${profile.name}] Редирект не произошёл. Ищу тему на форуме...`);
+
+        // Проверяем ошибки Steam на странице
+        const steamErr = await page.locator('.error_ctn, .forum_error, .DialogBody')
+          .first().textContent().catch(() => null);
+        if (steamErr && steamErr.trim().length > 10) {
+          await screenshotOnError('post_error');
+          throw new Error(`Steam отклонил публикацию: ${steamErr.trim().slice(0, 200)}`);
+        }
+
+        // Перезагружаем список форума и ищем нашу тему по заголовку
+        const forumListUrl = targetUrl.replace(/\/\d{10,}\/?$/, '/');
+        await page.goto(forumListUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        await sleep(2000, 3000);
+
+        // Берём фрагмент заголовка (корректно для Unicode/emoji)
+        const titleChars = Array.from(title).slice(0, 15).join('');
+        const foundHref = await page.evaluate(searchStr => {
+          for (const a of document.querySelectorAll('a')) {
+            const href = a.getAttribute('href') || '';
+            if (/\/\d{10,}\/?$/.test(href) && a.textContent.includes(searchStr)) {
+              return a.href || href;
+            }
+          }
+          return null;
+        }, titleChars);
+
+        if (foundHref) {
+          topicUrl = foundHref.startsWith('http') ? foundHref : `https://steamcommunity.com${foundHref}`;
+          logger.info(`[${profile.name}] Тема найдена на форуме (fallback): ${topicUrl}`);
+        } else {
+          await screenshotOnError('no_redirect');
+          throw new Error(`Тема не создана — нет редиректа и не найдена на форуме. URL: ${afterSubmitUrl}`);
+        }
       }
-      await screenshotOnError('no_redirect');
-      throw new Error(`Тема не создана — нет редиректа. URL: ${page.url()}`);
     }
-    const topicUrl = page.url();
 
     // Найти ID конкретного поста (OP) на странице — Steam ставит id="c_XXXXXXXXXX"
     let postUrl = topicUrl;
     try {
+      // Если мы не на странице темы — переходим
+      if (!/\/\d{10,}\/?$/.test(page.url())) {
+        await page.goto(topicUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+      }
       await page.waitForSelector('[id^="c_"]', { timeout: 5000 });
       const opId = await page.locator('[id^="c_"]').first().getAttribute('id');
       if (opId) {
