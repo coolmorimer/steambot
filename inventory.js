@@ -146,6 +146,18 @@ function categorize(desc) {
   const name = (desc.market_name || desc.name || '').toLowerCase();
   const tags  = desc.tags || [];
 
+  // ── Сначала исключаем не-оружейные предметы ──────────────────────────
+  // Граффити, стикеры, нашивки, контейнеры, ключи и т.д. — сразу в other,
+  // чтобы "Sealed Graffiti | Karambit" не попало в knife.
+  if (name.startsWith('sealed graffiti') || name.startsWith('graffiti') ||
+      type.includes('graffiti'))                                                   return 'other';
+  if (name.startsWith('sticker') || type.includes('sticker'))                      return 'other';
+  if (name.startsWith('patch') || type.includes('patch'))                          return 'other';
+  if (name.startsWith('music kit') || type.includes('music kit'))                  return 'other';
+  if (type.includes('container') || type.includes('key') ||
+      type.includes('tool') || type.includes('pass') ||
+      type.includes('gift') || type.includes('collectible'))                       return 'other';
+
   // Проверяем теги Steam
   for (const tag of tags) {
     const cat = (tag.category || '').toLowerCase();
