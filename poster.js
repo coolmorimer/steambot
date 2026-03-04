@@ -229,34 +229,88 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
     ].join(', ')).first();
     await submitBtn.waitFor({ state: 'visible', timeout: 10_000 });
 
+    // Запомним существующие ID тем ДО отправки (для fallback)
+    const existingTopicIds = await page.evaluate(() => {
+      const ids = new Set();
+      for (const a of document.querySelectorAll('a[href]')) {
+        const m = a.href.match(/\/(\d{10,})\/?$/);
+        if (m) ids.add(m[1]);
+      }
+      return [...ids];
+    });
+    logger.info(`[${profile.name}] Существующих тем на странице: ${existingTopicIds.length}`);
+
+    // Подписываемся на AJAX-ответ создания темы (Steam делает POST → возвращает JSON/redirect)
+    let ajaxTopicUrl = null;
+    const responsePromise = page.waitForResponse(
+      resp => {
+        const url = resp.url();
+        return (url.includes('/createtopic') || url.includes('/newtopic') ||
+                url.includes('Forum_CreateTopic') || /tradingforum\/?$/.test(url)) &&
+               resp.request().method() === 'POST';
+      },
+      { timeout: 25_000 }
+    ).then(async resp => {
+      try {
+        const contentType = resp.headers()['content-type'] || '';
+        // Steam может вернуть redirect (302) — URL будет в response headers
+        const redirectUrl = resp.headers()['location'];
+        if (redirectUrl && /\/\d{10,}\/?$/.test(redirectUrl)) {
+          ajaxTopicUrl = redirectUrl.startsWith('http') ? redirectUrl : `https://steamcommunity.com${redirectUrl}`;
+          logger.info(`[${profile.name}] AJAX redirect header: ${ajaxTopicUrl}`);
+          return;
+        }
+        // Или JSON-ответ с topic ID
+        if (contentType.includes('json')) {
+          const json = await resp.json().catch(() => null);
+          if (json) {
+            logger.info(`[${profile.name}] AJAX JSON ответ: ${JSON.stringify(json).slice(0, 300)}`);
+            const gid = json.gidnewtopic || json.topic_gid || json.gid || json.topicid;
+            if (gid) {
+              const base = targetUrl.replace(/\/+$/, '');
+              ajaxTopicUrl = `${base}/${gid}/`;
+              logger.info(`[${profile.name}] Topic GID из AJAX: ${gid}`);
+            }
+          }
+        }
+      } catch (e) {
+        logger.warn(`[${profile.name}] Ошибка разбора AJAX ответа: ${e.message}`);
+      }
+    }).catch(() => {
+      logger.warn(`[${profile.name}] AJAX-ответ создания темы не перехвачен`);
+    });
+
     // Кликаем submit и ловим навигацию (Steam может перейти на тему или остаться)
     await Promise.all([
       page.waitForNavigation({ timeout: 25_000 }).catch(() => null),
       submitBtn.click(),
     ]);
 
+    // Ждём завершения перехвата AJAX
+    await responsePromise;
+
     // ── 7. Дождаться URL новой темы ─────────────────────────────────────
-    // Steam после создания редиректит на /{forumid}/{topicid}/ —
-    // но иногда AJAX создаёт тему, а редирект не срабатывает.
     let topicUrl;
     const afterSubmitUrl = page.url();
 
     if (/\/\d{10,}\/?$/.test(afterSubmitUrl)) {
-      // Редирект произошёл — URL уже содержит ID темы
+      // Способ 1: Браузер редиректнул на тему
       topicUrl = afterSubmitUrl;
       logger.info(`[${profile.name}] Редирект на тему: ${topicUrl}`);
+    } else if (ajaxTopicUrl) {
+      // Способ 2: URL получен из AJAX-ответа
+      topicUrl = ajaxTopicUrl;
+      logger.info(`[${profile.name}] Тема из AJAX: ${topicUrl}`);
     } else {
-      // Нет редиректа — тема могла быть создана через AJAX без перехода
-      logger.warn(`[${profile.name}] Нет редиректа (URL: ${afterSubmitUrl}). Ждём/ищем тему...`);
-
-      // Подождём ещё немного — возможно задержка JS
+      // Способ 3: Ждём отложенный JS-редирект
+      logger.warn(`[${profile.name}] Нет редиректа (URL: ${afterSubmitUrl}). Ждём JS-редирект...`);
       try {
         await page.waitForURL(/\/\d{10,}\/?$/, { timeout: 10_000 });
         topicUrl = page.url();
         logger.info(`[${profile.name}] Отложенный редирект: ${topicUrl}`);
       } catch (_) {
-        // Редирект так и не случился — ищем тему на странице форума
-        logger.warn(`[${profile.name}] Редирект не произошёл. Ищу тему на форуме...`);
+        // Способ 4: Перезагружаем форум и ищем НОВУЮ тему (которой не было до отправки)
+        logger.warn(`[${profile.name}] Редирект не произошёл. Ищу новую тему на форуме...`);
 
         // Проверяем ошибки Steam на странице
         const steamErr = await page.locator('.error_ctn, .forum_error, .DialogBody')
@@ -266,29 +320,29 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
           throw new Error(`Steam отклонил публикацию: ${steamErr.trim().slice(0, 200)}`);
         }
 
-        // Перезагружаем список форума и ищем нашу тему по заголовку
+        // Перезагружаем список форума
         const forumListUrl = targetUrl.replace(/\/\d{10,}\/?$/, '/');
         await page.goto(forumListUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
         await sleep(2000, 3000);
 
-        // Берём фрагмент заголовка (корректно для Unicode/emoji)
-        const titleChars = Array.from(title).slice(0, 15).join('');
-        const foundHref = await page.evaluate(searchStr => {
-          for (const a of document.querySelectorAll('a')) {
-            const href = a.getAttribute('href') || '';
-            if (/\/\d{10,}\/?$/.test(href) && a.textContent.includes(searchStr)) {
-              return a.href || href;
+        // Ищем тему, ID которой НЕТ в existingTopicIds (т.е. она новая)
+        const knownIds = existingTopicIds;
+        const newTopicHref = await page.evaluate(known => {
+          for (const a of document.querySelectorAll('a[href]')) {
+            const m = a.href.match(/\/(\d{10,})\/?$/);
+            if (m && !known.includes(m[1])) {
+              return a.href;
             }
           }
           return null;
-        }, titleChars);
+        }, knownIds);
 
-        if (foundHref) {
-          topicUrl = foundHref.startsWith('http') ? foundHref : `https://steamcommunity.com${foundHref}`;
-          logger.info(`[${profile.name}] Тема найдена на форуме (fallback): ${topicUrl}`);
+        if (newTopicHref) {
+          topicUrl = newTopicHref.startsWith('http') ? newTopicHref : `https://steamcommunity.com${newTopicHref}`;
+          logger.info(`[${profile.name}] Новая тема найдена (fallback по ID): ${topicUrl}`);
         } else {
           await screenshotOnError('no_redirect');
-          throw new Error(`Тема не создана — нет редиректа и не найдена на форуме. URL: ${afterSubmitUrl}`);
+          throw new Error(`Тема не создана — нет редиректа и новая тема не найдена. URL: ${afterSubmitUrl}`);
         }
       }
     }
