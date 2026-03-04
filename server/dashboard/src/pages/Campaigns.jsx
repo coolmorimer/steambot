@@ -488,7 +488,7 @@ function insertVar(ref, varStr, onChange) {
 // ─── Пикер времени ─────────────────────────────────────────────────────────────
 /** Проверить, что соседние времена стоят минимум на minuteGap минут друг от друга
  *  с учётом перехода через полночь */
-function validateTimes(times, minuteGap = 60) {
+function validateTimes(times, minuteGap = 65) {
   if (times.length < 2) return true;
   const mins = times.map(t => {
     const [h, m] = t.split(':').map(Number);
@@ -510,7 +510,7 @@ function TimePicker({ value, onChange }) {
     if (!input) return;
     if (value.includes(input)) return toast.error('Это время уже добавлено');
     const next = [...value, input].sort();
-    if (!validateTimes(next)) return toast.error('Между публикациями должно быть минимум 60 минут');
+    if (!validateTimes(next)) return toast.error('Между публикациями должно быть минимум 65 минут');
     onChange(next);
     setInput('');
   };
@@ -996,9 +996,8 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
     schedule_times:  parseTimes(initial?.schedule_times),
     window_start:    initial?.window_start    ?? '',
     window_end:      initial?.window_end      ?? '',
-    profile_ids:     initial?.profile_ids     ?? [],
+    profile_id:      initial?.profile_ids?.[0] ?? initial?.profile_id ?? '',
     target_url:      initial?.target_url      ?? '',
-    group_ids:       initial?.group_ids       ?? [],
   });
   const [saving, setSaving]   = useState(false);
   const titleRef              = useRef(null);
@@ -1006,18 +1005,14 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
 
   const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
-  const toggleProfile = id => {
-    setForm(p => ({
-      ...p,
-      profile_ids: p.profile_ids.includes(id)
-        ? p.profile_ids.filter(x => x !== id)
-        : [...p.profile_ids, id],
-    }));
+  const selectProfile = id => {
+    setForm(p => ({ ...p, profile_id: id }));
   };
 
   const submit = async e => {
     e.preventDefault();
-    if (!form.profile_ids.length)     return toast.error('Выберите хотя бы один аккаунт');
+    if (!form.profile_id)             return toast.error('Выберите аккаунт');
+    if (!form.schedule_times.length)  return toast.error('Добавьте хотя бы одно время публикации');
 
     setSaving(true);
     try {
@@ -1028,9 +1023,9 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
         schedule_times: form.schedule_times,
         window_start:   form.window_start || null,
         window_end:     form.window_end   || null,
-        profile_ids:    form.profile_ids,
+        profile_ids:    [form.profile_id],
         target_url:     form.target_url || null,
-        group_ids:      form.group_ids,
+        group_ids:      [],
       };
 
       let saved;
@@ -1064,21 +1059,21 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
       </h2>
       <form onSubmit={submit} className="space-y-4">
 
-        {/* ── Аккаунты (вверху) ── */}
+        {/* ── Аккаунт (один) ── */}
         <div>
           <label className="label flex items-center gap-2">
             <Users className="w-4 h-4 text-brand-400" />
-            Аккаунты
-            <span className="text-gray-500 font-normal ml-1">({form.profile_ids.length} выбрано)</span>
+            Аккаунт
+            {form.profile_id && <span className="text-gray-500 font-normal ml-1">(выбран)</span>}
           </label>
           {profiles.length === 0 ? (
             <p className="text-sm text-gray-500">Сначала добавьте аккаунты</p>
           ) : (
             <div className="flex flex-wrap gap-2 mt-1">
               {profiles.map(p => (
-                <button key={p.id} type="button" onClick={() => toggleProfile(p.id)}
+                <button key={p.id} type="button" onClick={() => selectProfile(p.id)}
                   className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl border transition-all ${
-                    form.profile_ids.includes(p.id)
+                    form.profile_id === p.id
                       ? 'bg-brand-600/20 border-brand-500/60 text-white ring-1 ring-brand-500/30'
                       : 'border-gray-700 text-gray-400 hover:border-gray-500 hover:bg-gray-800/60'
                   }`}>
@@ -1090,7 +1085,7 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
                     </div>
                   )}
                   <span className="font-medium">{p.name}</span>
-                  {form.profile_ids.includes(p.id) && (
+                  {form.profile_id === p.id && (
                     <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />
                   )}
                 </button>
@@ -1099,28 +1094,9 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
           )}
         </div>
 
-        {/* ── Steam-группы ── */}
-        <div>
-          <label className="label flex items-center gap-2">
-            <Users className="w-4 h-4 text-indigo-400" />
-            Steam-группы
-            <span className="text-gray-500 font-normal ml-1">(опционально)</span>
-          </label>
-          <GroupPicker
-            value={form.group_ids}
-            onChange={ids => setForm(p => ({ ...p, group_ids: ids }))}
-            maxGroups={sub?.limits?.max_steam_groups ?? 0}
-          />
-          {form.group_ids.length > 0 && (
-            <p className="text-xs text-gray-500 mt-1.5">
-              Бот будет создавать темы в выбранных группах. Публикации в группы и форум работают параллельно.
-            </p>
-          )}
-        </div>
-
         {/* ── Генерация из инвентаря ── */}
         <GeneratePanel
-          profileIds={form.profile_ids}
+          profileIds={form.profile_id ? [form.profile_id] : []}
           profiles={profiles}
           onApply={(title, body) => setForm(p => ({ ...p, title_template: title, body_template: body }))}
         />
@@ -1150,6 +1126,18 @@ function CampaignForm({ initial, profiles, onSaved, onClose }) {
           <textarea ref={bodyRef} className="input resize-none font-mono" rows={5} required
             value={form.body_template} onChange={f('body_template')}
             placeholder="Привет! Мой инвентарь сегодня ({date}):\nЛучший предмет: {best_item}\nВсего предметов: {items_count}\nТрейд-ссылка: {trade_url}" />
+        </div>
+
+        {/* ── Время публикации ── */}
+        <div>
+          <label className="label flex items-center gap-2">
+            <Clock className="w-4 h-4 text-brand-400" />
+            Время публикации
+          </label>
+          <TimePicker
+            value={form.schedule_times}
+            onChange={times => setForm(p => ({ ...p, schedule_times: times }))}
+          />
         </div>
 
         <div className="flex gap-2 justify-end pt-1">
