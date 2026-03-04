@@ -270,7 +270,7 @@
 
     <div class="stat-grid">
       <div class="stat-card" onclick="showPage('accounts')"><div class="stat-icon">👤</div><div class="stat-val" id="stat-accounts">–</div><div class="stat-lbl">Аккаунты</div></div>
-      <div class="stat-card" onclick="showPage('campaigns')"><div class="stat-icon">📢</div><div class="stat-val" id="stat-campaigns">–</div><div class="stat-lbl">Кампании</div></div>
+      <div class="stat-card" onclick="showPage('campaigns')"><div class="stat-icon">�</div><div class="stat-val" id="stat-campaigns">–</div><div class="stat-lbl">Автопостинг</div></div>
       <div class="stat-card" onclick="showPage('jobs')"><div class="stat-icon">📤</div><div class="stat-val" id="stat-today">–</div><div class="stat-lbl">Сегодня</div></div>
     </div>
 
@@ -285,11 +285,11 @@
         <div class="big-icon big-icon-purple">➕</div>Добавить аккаунт
       </button>
       <button class="big-btn" onclick="showPage('campaigns');openCampaignForm(null)">
-        <div class="big-icon big-icon-yellow">📢</div>Новая кампания
+        <div class="big-icon big-icon-yellow">�</div>Новая задача
       </button>
     </div>
 
-    <div class="section-title">📋 Последние задания</div>
+    <div class="section-title">� Последняя активность</div>
     <div id="recent-jobs"><div class="card"><div style="padding:16px 0;text-align:center;color:var(--hint)">Загрузка...</div></div></div>
   </div>
 </div>
@@ -317,11 +317,11 @@
   <div id="campaigns-content" style="display:none">
     <div id="tip-campaigns" class="tip">
       <span class="tip-icon">💡</span>
-      <span><b>Кампания</b> — это расписание постов. Укажите <b>аккаунт</b>, <b>форум Steam</b>, <b>шаблон</b> и <b>время</b> — бот опубликует автоматически!</span>
+      <span><b>Задача</b> — это расписание постов. Укажите <b>аккаунт</b>, <b>форум Steam</b>, <b>шаблон</b> и <b>время</b> — бот опубликует автоматически!</span>
       <button class="tip-close" onclick="hideTip('campaigns')">✕</button>
     </div>
     <div class="section-header">
-      <span style="font-size:18px;font-weight:800">📢 Кампании</span>
+      <span style="font-size:18px;font-weight:800">� Автопостинг</span>
       <button class="btn-sm btn" onclick="openCampaignForm(null)">➕ Создать</button>
     </div>
     <div id="campaigns-list"></div>
@@ -334,7 +334,7 @@
   <div id="jobs-content" style="display:none">
     <div id="tip-jobs" class="tip">
       <span class="tip-icon">💡</span>
-      <span><b>Задания</b> — история всех публикаций. ✅ — опубликовано, ❌ — ошибка, ⏳ — ожидает.</span>
+      <span><b>Активность</b> — лента всех публикаций. ✅ — опубликовано, ❌ — ошибка, 🕒 — ожидает.</span>
       <button class="tip-close" onclick="hideTip('jobs')">✕</button>
     </div>
     <div id="jobs-stats-bar"></div>
@@ -344,31 +344,7 @@
   </div>
 </div>
 
-<!-- ─── TRADES ─── -->
-<div id="page-trades" class="page">
-  <div id="trades-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
-  <div id="trades-content" style="display:none">
-    <div id="tip-trades" class="tip">
-      <span class="tip-icon">💡</span>
-      <span><b>P2P Трейды</b> — обменивайте предметы Steam напрямую с другими пользователями. Создайте своё предложение или откликнитесь на чужое!</span>
-      <button class="tip-close" onclick="hideTip('trades')">✕</button>
-    </div>
-    <div class="section-header">
-      <span style="font-size:18px;font-weight:800">🔄 Маркетплейс</span>
-      <button class="btn-sm btn" onclick="openCreateTrade()">➕ Создать трейд</button>
-    </div>
-    <div class="big-actions mb-2">
-      <button class="big-btn" onclick="loadTradesMy()" style="min-height:70px">
-        <div class="big-icon big-icon-purple">📦</div>Мои трейды
-      </button>
-      <button class="big-btn" onclick="loadTradesProposals()" style="min-height:70px">
-        <div class="big-icon big-icon-blue">📨</div><span id="proposals-btn-label">Предложения</span>
-      </button>
-    </div>
-    <div id="trades-list"></div>
-    <div id="trades-pagination"></div>
-  </div>
-</div>
+
 
 <!-- ══════════════════ MODAL ══════════════════ -->
 <div id="modal-root"></div>
@@ -377,9 +353,8 @@
 <div class="bottom-tabs">
   <button class="btab active" data-page="overview"><span class="btab-icon">🏠</span>Обзор</button>
   <button class="btab" data-page="accounts"><span class="btab-icon">👤</span>Аккаунты</button>
-  <button class="btab" data-page="campaigns"><span class="btab-icon">📢</span>Кампании</button>
-  <button class="btab" data-page="jobs"><span class="btab-icon">📋</span>Задания</button>
-  <button class="btab" data-page="trades"><span class="btab-icon">🔄</span>Трейды</button>
+  <button class="btab" data-page="campaigns"><span class="btab-icon">�</span>Автопостинг</button>
+  <button class="btab" data-page="jobs"><span class="btab-icon">📜</span>Активность</button>
 </div>
 
 <script>
@@ -399,8 +374,6 @@ let _profiles = [], _campaigns = [];
 let _jobsFilter = 'all', _jobsOffset = 0;
 const JOBS_LIMIT = 20;
 let _botRunning = false;
-
-let _tradesView = 'browse', _tradesPage = 1;
 
 /* ── Steam games ── */
 const STEAM_GAMES = [
@@ -461,7 +434,7 @@ function showToast(msg,icon='ℹ️'){
 }
 
 function hideTip(id){const e=document.getElementById('tip-'+id);if(e)e.style.display='none';try{localStorage.setItem('tip_'+id,'1')}catch{}}
-function checkTips(){['overview','accounts','campaigns','jobs','trades'].forEach(id=>{try{if(localStorage.getItem('tip_'+id))hide('tip-'+id)}catch{}})}
+function checkTips(){['overview','accounts','campaigns','jobs'].forEach(id=>{try{if(localStorage.getItem('tip_'+id))hide('tip-'+id)}catch{}})}
 
 /* ── API ── */
 async function api(path,opts={}){
@@ -545,7 +518,7 @@ function showPage(name){
 
 function loadPage(name,silent=false){
   if(!token)return;
-  const m={overview:loadOverview,campaigns:loadCampaigns,accounts:loadAccounts,jobs:loadJobs,trades:loadTrades};
+  const m={overview:loadOverview,campaigns:loadCampaigns,accounts:loadAccounts,jobs:loadJobs};
   m[name]?.(silent);
 }
 
@@ -593,7 +566,7 @@ async function loadOverview(silent=false){
     );
 
     setHtml('recent-jobs',jobs.length===0
-      ?'<div class="card"><div class="empty" style="padding:20px 0"><div class="empty-icon">📭</div><div class="empty-text">Заданий пока нет.<br>Создайте кампанию и запустите бота!</div></div></div>'
+      ?'<div class="card"><div class="empty" style="padding:20px 0"><div class="empty-icon">📭</div><div class="empty-text">Активности пока нет.<br>Создайте задачу и запустите бота!</div></div></div>'
       :'<div class="card">'+jobs.map(jobRowCompact).join('')+'</div>');
 
     hide('overview-skeleton');show('overview-content');
@@ -649,7 +622,7 @@ function renderAccounts(){
       </div>
       <div class="list-info">
         <div class="list-name">${esc(p.name)}</div>
-        <div class="list-sub">${p.is_active?'✅ Активен':'❌ Неактивен'}${p.target_url?' · 🔗 Форум привязан':''}</div>
+        <div class="list-sub">${p.is_active?'✅ Активен':'❌ Куки истекли'}${p.target_url?' · 🔗 Форум привязан':''}</div>
       </div>
       <div class="list-actions">
         <button class="btn-icon" onclick="checkAccount('${p.id}')" title="Проверить">🔍</button>
@@ -874,10 +847,10 @@ function renderCampaigns(){
   const el=document.getElementById('campaigns-list');
   if(!_campaigns.length){
     el.innerHTML=`<div class="empty">
-      <div class="empty-icon">📢</div>
-      <div class="empty-title">Нет кампаний</div>
-      <div class="empty-text">Кампания — это расписание постов.<br>Создайте первую!</div>
-      <button class="btn" style="width:auto;margin:20px auto 0;display:block;padding:16px 32px;font-size:18px" onclick="openCampaignForm(null)">➕ Создать кампанию</button>
+      <div class="empty-icon">�</div>
+      <div class="empty-title">Нет задач</div>
+      <div class="empty-text">Задача — это расписание постов.<br>Создайте первую!</div>
+      <button class="btn" style="width:auto;margin:20px auto 0;display:block;padding:16px 32px;font-size:18px" onclick="openCampaignForm(null)">➕ Создать задачу</button>
     </div>`;
     return;
   }
@@ -888,7 +861,7 @@ function renderCampaigns(){
     return `
     <div class="list-item" style="flex-wrap:wrap">
       <div class="list-avatar" style="background:${c.is_active?'rgba(74,222,128,.12)':'rgba(107,114,128,.12)'}">
-        ${c.is_active?'📢':'⏸'}
+        ${c.is_active?'�':'⏸'}
       </div>
       <div class="list-info">
         <div class="list-name">${esc(c.name)}</div>
@@ -909,7 +882,7 @@ async function toggleCampaign(id,active){
   haptic('medium');
   try{
     await api('/campaigns/'+id,{method:'PATCH',body:{is_active:active}});
-    showToast(active?'Кампания запущена ▶️':'Кампания на паузе ⏸',active?'▶️':'⏸');
+    showToast(active?'Задача запущена ▶️':'Задача на паузе ⏸',active?'▶️':'⏸');
     loadCampaigns(true);
   }catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
@@ -935,11 +908,11 @@ function viewCampaign(id){
 
 async function deleteCampaign(id,name){
   haptic('medium');
-  openModal('🗑 Удалить кампанию?',`
+  openModal('🗑 Удалить задачу?',`
     <div style="text-align:center;margin-bottom:20px">
       <div style="font-size:48px;margin-bottom:12px">⚠️</div>
-      <p style="font-size:16px;color:var(--hint)">Удалить кампанию<br><strong style="color:var(--text);font-size:18px">${name}</strong>?</p>
-      <p style="font-size:13px;color:var(--red);margin-top:8px">Все ожидающие задания тоже удалятся!</p>
+      <p style="font-size:16px;color:var(--hint)">Удалить задачу<br><strong style="color:var(--text);font-size:18px">${name}</strong>?</p>
+      <p style="font-size:13px;color:var(--red);margin-top:8px">Все ожидающие задачи тоже удалятся!</p>
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
@@ -949,7 +922,7 @@ async function deleteCampaign(id,name){
 }
 async function confirmDeleteCampaign(id){
   closeModal();
-  try{await api('/campaigns/'+id,{method:'DELETE'});showToast('Кампания удалена','✅');loadCampaigns(true)}
+  try{await api('/campaigns/'+id,{method:'DELETE'});showToast('Задача удалена','✅');loadCampaigns(true)}
   catch(e){showToast('Ошибка: '+e.message,'❌')}
 }
 
@@ -963,7 +936,7 @@ function openCampaignForm(campaignId){
   _formForumUrl=c?.target_url||'';
   _formTimes=parseTimes(c?.schedule_times)||[];
   _formProfileIds=c?.profile_ids?[...c.profile_ids]:[];
-  openModal(c?'✏️ Редактировать кампанию':'➕ Новая кампания',buildCampaignFormHtml(c));
+  openModal(c?'✏️ Редактировать задачу':'✨ Новая задача',buildCampaignFormHtml(c));
 }
 
 function buildCampaignFormHtml(c){
@@ -985,21 +958,21 @@ function buildCampaignFormHtml(c){
         <div id="forum-picker-container">${forumHtml}</div>
       </div>
       <div class="form-group">
-        <label class="label">2️⃣ Название кампании *</label>
-        <input class="input" id="form-name" required value="${esc(c?.name||'')}" placeholder="Например: Трейд CS2" style="font-size:16px" />
+        <label class="label">2️⃣ Название задачи *</label>
+        <input class="input" id="form-name" required value="${esc(c?.name||'')}" placeholder="Моя задача" style="font-size:16px" />
       </div>
       <div class="form-group">
-        <label class="label">3️⃣ Заголовок поста * <span class="label-hint">(нажмите переменную ↓)</span></label>
+        <label class="label">3️⃣ Шаблон заголовка * <span class="label-hint">(нажмите переменную ↓)</span></label>
         <input class="input" id="form-title" required value="${esc(c?.title_template||'')}" placeholder="{full_inventory_post}" style="font-family:monospace;font-size:14px" />
         <div class="var-row">${varBtns}</div>
       </div>
       <div class="form-group">
-        <label class="label">4️⃣ Текст поста * <span class="label-hint">(нажмите переменную ↓)</span></label>
+        <label class="label">4️⃣ Тело публикации * <span class="label-hint">(нажмите переменную ↓)</span></label>
         <textarea class="input" id="form-body" rows="4" required placeholder="Напр.: {full_inventory_post}">${esc(c?.body_template||'')}</textarea>
         <div class="var-row">${varBtnsBody}</div>
       </div>
       <div class="form-group">
-        <label class="label">5️⃣ Время публикаций * <span class="label-hint">(мин. 60 мин. между)</span></label>
+        <label class="label">5️⃣ Время публикации * <span class="label-hint">(мин. 60 мин. между)</span></label>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <input type="time" class="input" id="form-time-input" style="width:140px;font-size:16px" />
           <button type="button" class="btn-sm btn" onclick="addFormTime()" style="font-size:16px">➕</button>
@@ -1020,7 +993,7 @@ function buildCampaignFormHtml(c){
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
         <button type="button" class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
-        <button type="submit" class="btn" style="flex:1;margin:0;font-size:16px" id="campaign-submit-btn">${c?'💾 Сохранить':'✅ Создать'}</button>
+        <button type="submit" class="btn" style="flex:1;margin:0;font-size:16px" id="campaign-submit-btn">${c?'💾 Сохранить':'Создать'}</button>
       </div>
     </form>
   `;
@@ -1127,15 +1100,15 @@ async function submitCampaignForm(e){
   try{
     if(_editingCampaign){
       await api('/campaigns/'+_editingCampaign.id,{method:'PATCH',body:payload});
-      showToast('Кампания обновлена! ✅','✅');
+      showToast('Задача обновлена! ✅','✅');
     }else{
       await api('/campaigns',{method:'POST',body:payload});
-      showToast('Кампания создана! 🎉','✅');haptic('success');
+      showToast('Задача создана! 🎉','✅');haptic('success');
     }
     closeModal();loadCampaigns(true);
   }catch(e){
     showToast('Ошибка: '+e.message,'❌');
-    if(btn){btn.disabled=false;btn.textContent=_editingCampaign?'💾 Сохранить':'✅ Создать'}
+    if(btn){btn.disabled=false;btn.textContent=_editingCampaign?'💾 Сохранить':'Создать'}
   }
 }
 
@@ -1151,7 +1124,7 @@ async function loadJobs(silent=false){
 
     setHtml('jobs-filter-bar',`
       <div class="filter-bar">
-        ${[['all','Все'],['pending','⏳ Ждёт'],['running','🔄 Идёт'],['done','✅ Готово'],['failed','❌ Ошибка'],['cancelled','⛔ Отмена']].map(([v,l])=>
+        ${[['all','Все'],['pending','🕒 Ожидают'],['running','⏳ В процессе'],['done','✅ Готово'],['failed','❌ Ошибки'],['cancelled','🚫 Отменены']].map(([v,l])=>
           `<button class="filter-chip ${_jobsFilter===v?'active':''}" onclick="setJobsFilter('${v}')">${l}</button>`
         ).join('')}
       </div>`);
@@ -1175,7 +1148,7 @@ async function loadJobs(silent=false){
       </div>`);
 
     if(!jobs?.length){
-      setHtml('jobs-list',`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Заданий нет</div><div class="empty-text">Они появятся когда бот начнёт публикации</div></div>`);
+      setHtml('jobs-list',`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Пока нет активности</div><div class="empty-text">Запустите бота и создайте задачу</div></div>`);
       setHtml('jobs-pagination','');
     }else{
       setHtml('jobs-list',jobs.map(jobRowFull).join(''));
@@ -1196,7 +1169,7 @@ function setJobsFilter(filter){haptic('light');_jobsFilter=filter;_jobsOffset=0;
 function jobsPage(offset){haptic('light');_jobsOffset=Math.max(0,offset);loadJobs(true)}
 
 function jobRowFull(j){
-  const cfg={done:{icon:'✅',badge:'badge-green'},failed:{icon:'❌',badge:'badge-red'},pending:{icon:'⏳',badge:'badge-yellow'},running:{icon:'🔄',badge:'badge-blue'},cancelled:{icon:'⛔',badge:'badge-gray'}};
+  const cfg={done:{icon:'✅',badge:'badge-green'},failed:{icon:'❌',badge:'badge-red'},pending:{icon:'🕒',badge:'badge-yellow'},running:{icon:'⏳',badge:'badge-blue'},cancelled:{icon:'🚫',badge:'badge-gray'}};
   const c=cfg[j.status]||{icon:'·',badge:'badge-gray'};
   const time=fmtTime(j.scheduled_at||j.created_at);
   const err=j.error_message||j.error||'';
@@ -1207,7 +1180,7 @@ function jobRowFull(j){
     <div class="list-item" style="flex-wrap:wrap">
       <div class="list-avatar" style="background:rgba(255,255,255,.04);font-size:20px">${c.icon}</div>
       <div class="list-info">
-        <div class="list-name">${esc(j.campaign_name||'Кампания')}</div>
+        <div class="list-name">${esc(j.campaign_name||'Задача')}</div>
         <div class="list-sub">👤 ${esc(j.profile_name||'?')} · ${time}</div>
         ${err?`<div style="font-size:12px;color:var(--red);margin-top:3px;word-break:break-word">⚠️ ${esc(err)}</div>`:''}
       </div>
@@ -1216,202 +1189,14 @@ function jobRowFull(j){
 }
 
 function jobRowCompact(j){
-  const cfg={done:'✅',failed:'❌',pending:'⏳',running:'🔄',cancelled:'⛔'};
+  const cfg={done:'✅',failed:'❌',pending:'🕒',running:'⏳',cancelled:'🚫'};
   const icon=cfg[j.status]||'·';
   const time=fmtTime(j.scheduled_at||j.created_at);
-  return `<div class="row"><div style="flex:1;min-width:0"><div style="font-weight:700">${icon} ${esc(j.campaign_name||'Кампания')}</div><div style="font-size:12px;color:var(--hint);margin-top:2px">${esc(j.profile_name||'')} · ${time}</div></div></div>`;
+  return `<div class="row"><div style="flex:1;min-width:0"><div style="font-weight:700">${icon} ${esc(j.campaign_name||'Задача')}</div><div style="font-size:12px;color:var(--hint);margin-top:2px">${esc(j.profile_name||'')} · ${time}</div></div></div>`;
 }
 
-async function cancelJob(id){haptic('medium');try{await api('/jobs/'+id+'/cancel',{method:'POST'});showToast('Задание отменено','⛔');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
+async function cancelJob(id){haptic('medium');try{await api('/jobs/'+id+'/cancel',{method:'POST'});showToast('Отменено','🚫');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
 async function deleteJob(id){haptic('medium');try{await api('/jobs/'+id,{method:'DELETE'});showToast('Удалено','✅');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
-
-/* ═══════════════════════════════════════════════════
-   TRADES (P2P)
-   ═══════════════════════════════════════════════════ */
-async function loadTrades(silent=false){
-  if(!silent){show('trades-skeleton');hide('trades-content')}
-  try{
-    const data=await api(`/trades?page=${_tradesPage}&limit=20&sort=bumped`);
-    const trades=data.trades||data||[];
-
-    // check proposals count
-    api('/trades/my/proposals/pending-count').then(d=>{
-      const cnt=d?.count||0;
-      const lbl=document.getElementById('proposals-btn-label');
-      if(lbl)lbl.textContent=cnt?`Предложения (${cnt})`:'Предложения';
-      const badge=document.querySelector('.btab[data-page="trades"] .btab-badge');
-      if(cnt>0&&!badge){
-        const b=document.createElement('span');b.className='btab-badge';b.textContent=cnt;
-        document.querySelector('.btab[data-page="trades"]').appendChild(b);
-      }else if(badge){badge.textContent=cnt;badge.style.display=cnt?'':'none'}
-    }).catch(()=>{});
-
-    if(!Array.isArray(trades)||!trades.length){
-      setHtml('trades-list',`<div class="empty"><div class="empty-icon">🔄</div><div class="empty-title">Нет трейдов</div><div class="empty-text">Создайте первое предложение обмена!</div></div>`);
-    }else{
-      setHtml('trades-list',trades.map(tradeCard).join(''));
-    }
-    setHtml('trades-pagination',data.total>20?`
-      <div class="pagination">
-        <button class="page-btn" onclick="tradesPageGo(${_tradesPage-1})" ${_tradesPage<=1?'disabled':''}>←</button>
-        <span style="font-size:14px;color:var(--hint);font-weight:700">${_tradesPage}</span>
-        <button class="page-btn" onclick="tradesPageGo(${_tradesPage+1})" ${_tradesPage*20>=data.total?'disabled':''}>→</button>
-      </div>`:'');
-    hide('trades-skeleton');show('trades-content');
-  }catch(e){showToast('Ошибка: '+e.message,'❌');hide('trades-skeleton')}
-}
-
-function tradesPageGo(p){haptic('light');_tradesPage=Math.max(1,p);loadTrades(true)}
-
-function tradeCard(t){
-  const items=(t.offering_items||[]).slice(0,4);
-  const imgs=items.map(i=>`<div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden">${i.image?`<img src="${esc(i.image)}" style="width:100%;height:100%;object-fit:contain">`:'🎮'}</div>`).join('');
-  const extra=(t.offering_items||[]).length-4;
-  return `
-    <div class="list-item" style="flex-wrap:wrap;cursor:pointer" onclick="viewTrade('${t.id}')">
-      <div style="display:flex;gap:6px;margin-bottom:8px;width:100%">${imgs}${extra>0?`<div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--hint)">+${extra}</div>`:''}</div>
-      <div class="list-info" style="width:100%">
-        <div class="list-name">${esc(t.title||'Трейд')}</div>
-        <div class="list-sub">${t.total_value?'💰 '+t.total_value+'₽':''}${t.wanted_tags?.length?' · 🔍 Ищет: '+t.wanted_tags.join(', '):''}</div>
-      </div>
-    </div>`;
-}
-
-async function viewTrade(id){
-  try{
-    const t=await api('/trades/'+id);
-    const offeringHtml=(t.offering_items||[]).map(i=>`
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
-        <div style="width:48px;height:48px;border-radius:10px;background:rgba(255,255,255,.06);overflow:hidden">${i.image?`<img src="${esc(i.image)}" style="width:100%;height:100%;object-fit:contain">`:'🎮'}</div>
-        <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">${esc(i.name)}</div>${i.exterior?`<div style="font-size:12px;color:var(--hint)">${esc(i.exterior)}</div>`:''}</div>
-      </div>`).join('');
-
-    openModal('🔄 Трейд',`
-      <div class="card"><div class="card-title">${esc(t.title)}</div>${t.description?`<div style="margin-top:8px;font-size:14px;color:var(--hint)">${esc(t.description)}</div>`:''}</div>
-      ${t.total_value?`<div class="card"><div class="card-sub">СТОИМОСТЬ</div><div style="font-size:22px;font-weight:900;margin-top:4px">💰 ${t.total_value} ₽</div></div>`:''}
-      <div class="section-title">📦 Предлагает</div>
-      <div class="card">${offeringHtml||'<div style="color:var(--hint)">Нет предметов</div>'}</div>
-      ${t.wanted_tags?.length?`<div class="section-title">🔍 Хочет получить</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">${t.wanted_tags.map(tg=>`<span class="badge badge-purple">${esc(tg)}</span>`).join('')}</div>`:''}
-      ${t.user_id!==me?.id?`<button class="btn" style="font-size:18px;padding:16px" onclick="closeModal();openProposeTrade('${t.id}')">📨 Предложить обмен</button>`:`<button class="btn btn-danger" style="font-size:16px" onclick="closeModal();deleteTrade('${t.id}')">🗑 Удалить трейд</button>`}
-    `);
-  }catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-async function loadTradesMy(){
-  haptic('light');
-  try{
-    const trades=await api('/trades/my/offers');
-    if(!trades?.length){showToast('У вас нет активных трейдов','ℹ️');return}
-    openModal('📦 Мои трейды',trades.map(t=>`
-      <div class="list-item" style="cursor:pointer" onclick="closeModal();viewTrade('${t.id}')">
-        <div class="list-avatar" style="background:rgba(168,85,247,.12)">📦</div>
-        <div class="list-info">
-          <div class="list-name">${esc(t.title)}</div>
-          <div class="list-sub">${t.total_value?'💰 '+t.total_value+'₽':''}</div>
-        </div>
-        <button class="btn-icon" onclick="event.stopPropagation();closeModal();bumpTrade('${t.id}')" title="Поднять">⬆️</button>
-      </div>`).join(''));
-  }catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-async function loadTradesProposals(){
-  haptic('light');
-  try{
-    const incoming=await api('/trades/my/proposals/incoming');
-    if(!incoming?.length){showToast('Нет входящих предложений','ℹ️');return}
-    openModal('📨 Входящие предложения',incoming.map(p=>`
-      <div class="list-item" style="flex-wrap:wrap">
-        <div class="list-avatar" style="background:rgba(96,165,250,.12)">📨</div>
-        <div class="list-info">
-          <div class="list-name">${esc(p.trade_title||'Предложение')}</div>
-          <div class="list-sub">${p.message?esc(p.message):'Без сообщения'}</div>
-        </div>
-        <div style="width:100%;display:flex;gap:8px;margin-top:8px">
-          <button class="btn" style="flex:1;margin:0;background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="acceptProposal('${p.id}')">✅ Принять</button>
-          <button class="btn btn-danger" style="flex:1;margin:0" onclick="declineProposal('${p.id}')">❌ Отклонить</button>
-        </div>
-      </div>`).join(''));
-  }catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-async function bumpTrade(id){
-  haptic('medium');
-  try{await api('/trades/'+id+'/bump',{method:'POST'});showToast('Трейд поднят! ⬆️','✅')}
-  catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-async function deleteTrade(id){
-  haptic('medium');
-  try{await api('/trades/'+id,{method:'DELETE'});showToast('Трейд удалён','✅');loadTrades(true)}
-  catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-async function acceptProposal(id){
-  haptic('medium');closeModal();
-  try{await api('/trades/proposals/'+id+'/accept',{method:'PATCH'});showToast('Предложение принято! 🤝','✅')}
-  catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-async function declineProposal(id){
-  haptic('medium');closeModal();
-  try{await api('/trades/proposals/'+id+'/decline',{method:'PATCH'});showToast('Предложение отклонено','❌')}
-  catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-function openCreateTrade(){
-  openModal('➕ Создать трейд',`
-    <div class="tip mb-2"><span class="tip-icon">💡</span><span>Опишите что <b>предлагаете</b> и что <b>хотите получить</b>. Другие пользователи увидят ваш трейд.</span></div>
-    <div class="form-group">
-      <label class="label">📝 Заголовок *</label>
-      <input class="input" id="trade-title" placeholder="Например: Обмен ножа на перчатки" style="font-size:16px" />
-    </div>
-    <div class="form-group">
-      <label class="label">📄 Описание</label>
-      <textarea class="input" id="trade-desc" rows="3" placeholder="Подробности обмена..."></textarea>
-    </div>
-    <div class="form-group">
-      <label class="label">🔍 Что ищу <span class="label-hint">(теги через запятую)</span></label>
-      <input class="input" id="trade-wanted" placeholder="knife, gloves, ak-47" />
-    </div>
-    <div class="form-group">
-      <label class="label">💰 Примерная стоимость (₽)</label>
-      <input class="input" id="trade-value" type="number" placeholder="0" />
-    </div>
-    <button class="btn" onclick="submitCreateTrade()" style="font-size:18px;padding:16px">✅ Опубликовать</button>
-  `);
-}
-
-async function submitCreateTrade(){
-  const title=document.getElementById('trade-title')?.value?.trim();
-  if(!title){showToast('Введите заголовок','⚠️');return}
-  const description=document.getElementById('trade-desc')?.value?.trim()||'';
-  const wantedRaw=document.getElementById('trade-wanted')?.value?.trim()||'';
-  const wanted_tags=wantedRaw?wantedRaw.split(',').map(s=>s.trim()).filter(Boolean):[];
-  const total_value=parseInt(document.getElementById('trade-value')?.value)||0;
-
-  try{
-    await api('/trades',{method:'POST',body:{title,description,wanted_tags,total_value,offering_items:[],wanted_items:[]}});
-    closeModal();showToast('Трейд опубликован! 🎉','✅');haptic('success');loadTrades(true);
-  }catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
-
-function openProposeTrade(tradeId){
-  openModal('📨 Предложить обмен',`
-    <div class="form-group">
-      <label class="label">💬 Сообщение продавцу</label>
-      <textarea class="input" id="proposal-msg" rows="3" placeholder="Опишите ваше предложение..."></textarea>
-    </div>
-    <button class="btn" onclick="submitProposal('${tradeId}')" style="font-size:18px;padding:16px">📨 Отправить</button>
-  `);
-}
-
-async function submitProposal(tradeId){
-  const message=document.getElementById('proposal-msg')?.value?.trim()||'';
-  try{
-    await api('/trades/'+tradeId+'/proposals',{method:'POST',body:{message,offering_items:[]}});
-    closeModal();showToast('Предложение отправлено! 📨','✅');haptic('success');
-  }catch(e){showToast('Ошибка: '+e.message,'❌')}
-}
 
 /* ═══════════════════════════════════════════════════
    HELPERS

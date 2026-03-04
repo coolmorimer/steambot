@@ -63,8 +63,8 @@ async function _notifyBot(userId) {
 const RK = {
   keyboard: [
     ['📊 Статус',    '🔄 Обновить'],
-    ['👤 Аккаунты',  '📋 Кампании'],
-    ['📜 Задачи',    '📈 Статистика'],
+    ['👤 Аккаунты',  '📋 Автопостинг'],
+    ['📜 Активность',    '📈 Статистика'],
   ],
   resize_keyboard: true,
   persistent: true,
@@ -111,8 +111,8 @@ async function start(userId, config, { suppressNotify = false } = {}) {
       if (t === '📊 Статус')              return await cmdMenu(tg, c, config, userId);
       if (t === '🔄 Обновить')             return await cmdMenu(tg, c, config, userId);
       if (t === '👤 Аккаунты')             return await cmdAccounts(tg, c, config, userId);
-      if (t === '📋 Кампании')             return await cmdCampaigns(tg, c, config, userId);
-      if (t === '📜 Задачи')               return await cmdJobs(tg, c, config, userId);
+      if (t === '📋 Автопостинг')            return await cmdCampaigns(tg, c, config, userId);
+      if (t === '📜 Активность')               return await cmdJobs(tg, c, config, userId);
       if (t === '📈 Статистика')           return await cmdStats(tg, c, config, userId);
       if (!t.startsWith('/'))
         await tg.sendMessage(c, '👇 Нажмите кнопку внизу или /menu', { reply_markup: RK });
@@ -186,17 +186,17 @@ async function cmdMenu(bot, cid, cfg, userId) {
     on ? '🟢 Бот <b>работает</b>' : '🔴 Бот <b>остановлен</b>',
     '',
     `👤 Аккаунтов: <b>${accs.length}</b>`,
-    `📋 Кампаний: <b>${act}</b> из ${cmps.length} активны`,
+    `📋 Задач: <b>${act}</b> из ${cmps.length} активны`,
     '',
-    `✅ ${done}  ❌ ${fail}  🕐 ${pend}`,
+    `✅ ${done}  ❌ ${fail}  🕒 ${pend}`,
   ].join('\n');
 
   const kb = [
     [ ib(on ? '⏹ Остановить' : '▶️ Запустить', on ? 'bot:stop' : 'bot:start'),
       ib('🔄 Обновить', 'go:menu') ],
     [ ib(`👤 Аккаунты (${accs.length})`, 'go:accounts'),
-      ib(`📋 Кампании (${cmps.length})`, 'go:campaigns') ],
-    [ ib('📜 Задачи', 'go:jobs'),
+      ib(`📋 Автопостинг (${cmps.length})`, 'go:campaigns') ],
+    [ ib('📜 Активность', 'go:jobs'),
       ib('📈 Статистика', 'go:stats') ],
   ];
 
@@ -219,15 +219,15 @@ async function cmdHelp(bot, cid, cfg) {
     '<b>Кнопки внизу экрана:</b>',
     '📊 Статус — главное меню',
     '👤 Аккаунты — Steam аккаунты',
-    '📋 Кампании — расписание постов',
-    '📜 Задачи — история постинга',
+    '📋 Автопостинг — расписание постов',
+    '📜 Активность — лента публикаций',
     '📈 Статистика — цифры',
     '',
     '<b>Кнопки в сообщениях:</b>',
     '▶️/⏹ — запуск/стоп бота',
-    '⏸/▶️ — вкл/выкл аккаунт или кампанию',
+    '⏸/▶️ — вкл/выкл аккаунт или задачу',
     '',
-    '💡 Для создания кампаний и добавления',
+    '💡 Для создания задач и добавления',
     'аккаунтов используйте <b>Панель управления</b>',
   ].join('\n');
 
@@ -270,12 +270,12 @@ async function cmdCampaigns(bot, cid, cfg, userId) {
     const kb = cfg.webAppUrl ? [[ wa('➕ Создать', cfg.webAppUrl) ]] : [];
     kb.push([ ib('🏠 Меню', 'go:menu') ]);
     return bot.sendMessage(cid,
-      '📋 <b>Кампании</b>\n\n📭 Пусто. Создайте через панель.',
+      '📋 <b>Автопостинг</b>\n\n📭 Пусто. Создайте задачу через панель.',
       { parse_mode: 'HTML', reply_markup: { inline_keyboard: kb, ...RK } }
     );
   }
 
-  const lines = [`📋 <b>Кампании</b> (${cmps.length})`, ''];
+  const lines = [`📋 <b>Автопостинг</b> (${cmps.length})`, ''];
   cmps.forEach(c => {
     const t = Array.isArray(c.schedule_times) && c.schedule_times.length
       ? c.schedule_times.join(', ') : '—';
@@ -298,12 +298,12 @@ async function cmdJobs(bot, cid, cfg) {
   const list = jobs.slice(0, 10);
 
   if (!list.length) {
-    return bot.sendMessage(cid, '📜 <b>Задачи</b>\n\n📭 Пока нет.',
+    return bot.sendMessage(cid, '📜 <b>Активность</b>\n\n📭 Пока нет.',
       { parse_mode: 'HTML', reply_markup: RK });
   }
 
-  const ic = { done: '✅', failed: '❌', running: '⏳', pending: '🕐', cancelled: '🚫' };
-  const lines = ['📜 <b>Последние задачи</b>', ''];
+  const ic = { done: '✅', failed: '❌', running: '⏳', pending: '🕒', cancelled: '🚫' };
+  const lines = ['📜 <b>Лента активности</b>', ''];
   list.forEach(j => {
     const d = new Date(j.scheduled_at || j.created_at);
     const ts = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -330,8 +330,8 @@ async function cmdStats(bot, cid, cfg) {
     '',
     `✅ Выполнено: <b>${s.done}</b>  (${(s.done / tot * 100).toFixed(0)}%)`,
     `❌ Ошибок: <b>${s.failed}</b>`,
-    `🕐 Очередь: <b>${s.pending}</b>`,
-    `⏳ Идёт: <b>${s.running}</b>`,
+    `� Ожидают: <b>${s.pending}</b>`,
+    `⏳ В процессе: <b>${s.running}</b>`,
     `🚫 Отменено: <b>${s.cancelled}</b>`,
   ].join('\n');
 
@@ -425,7 +425,7 @@ async function notifyJobResult(userId, { success, title, profileName, topicUrl, 
   if (success && topicUrl)
     kb.push([{ text: '🔗 Открыть тему', url: topicUrl }]);
   if (e.config.webAppUrl)
-    kb.push([ wa('📋 Все задачи', e.config.webAppUrl) ]);
+    kb.push([ wa('� Активность', e.config.webAppUrl) ]);
 
   const txt = success
     ? `✅ <b>Пост опубликован!</b>\n📌 ${esc(title)}\n👤 ${esc(profileName)}` +
