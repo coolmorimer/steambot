@@ -101,12 +101,18 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
     // ── 1. Открыть страницу форума ──────────────────────────────────────
     logger.info(`[${profile.name}] Открываю форум: ${targetUrl}`);
     try {
-      await page.goto(targetUrl, { waitUntil: 'load', timeout: 45_000 });
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 90_000 });
     } catch (navErr) {
-      await screenshotOnError('nav');
-      throw new Error(`Не удалось загрузить страницу: ${navErr.message}`);
+      // Retry once with longer timeout
+      logger.warn(`[${profile.name}] Первая попытка загрузки не удалась, повторяю...`);
+      try {
+        await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 90_000 });
+      } catch (retryErr) {
+        await screenshotOnError('nav');
+        throw new Error(`Не удалось загрузить страницу: ${retryErr.message}`);
+      }
     }
-    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => {});
     logger.info(`[${profile.name}] Страница загружена, URL: ${page.url()}`);
 
     // ── 2. Проверить сессию ─────────────────────────────────────────────
