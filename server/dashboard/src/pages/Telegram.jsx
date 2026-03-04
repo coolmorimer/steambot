@@ -83,6 +83,27 @@ export default function Telegram() {
           'Вставьте токен и Chat ID ниже — бот будет слать уведомления',
         ]} />
 
+      {/* Как узнать Telegram User ID */}
+      <section className="card-glass space-y-3">
+        <h2 className="font-bold text-white flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-blue-400" />
+          Как узнать Telegram User ID (Chat ID)
+        </h2>
+        <p className="text-sm text-gray-400">
+          User ID нужен для поля «Chat IDs» ниже.
+          Это число вида <code className="bg-gray-800 px-1.5 py-0.5 rounded text-brand-400 text-xs">123456789</code>.
+        </p>
+        <div className="rounded-xl bg-blue-900/10 border border-blue-700/20 p-3 space-y-1">
+          <p className="text-sm text-blue-300 font-medium">Через бота @userinfobot:</p>
+          <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300 font-medium transition-colors">
+            <ExternalLink className="w-4 h-4" />
+            Открыть @userinfobot в Telegram
+          </a>
+          <p className="text-xs text-gray-500">Нажмите Start — бот покажет ваш User ID. Скопируйте число и вставьте в поле Chat IDs.</p>
+        </div>
+      </section>
+
       {loading ? <div className="card h-40 animate-pulse bg-gray-800" /> :
         !bot ? (
           <>
