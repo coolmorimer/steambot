@@ -265,7 +265,9 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
           const json = await resp.json().catch(() => null);
           if (json) {
             logger.info(`[${profile.name}] AJAX JSON ответ: ${JSON.stringify(json).slice(0, 300)}`);
-            const gid = json.gidnewtopic || json.topic_gid || json.gid || json.topicid;
+            logger.info(`[${profile.name}] AJAX JSON ключи: ${Object.keys(json).join(', ')}`);
+            // json.gid НЕ используем — он возвращает GID форума/подфорума, а не темы
+            const gid = json.gidnewtopic || json.topic_gid || json.gidforumtopic || json.topicid;
             if (gid) {
               const base = targetUrl.replace(/\/+$/, '');
               ajaxTopicUrl = `${base}/${gid}/`;
@@ -347,13 +349,59 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
       }
     }
 
-    // Найти ID конкретного поста (OP) на странице — Steam ставит id="c_XXXXXXXXXX"
+    // ── 8. Валидация URL темы ──────────────────────────────────────────
+    logger.info(`[${profile.name}] Валидация URL темы: ${topicUrl}`);
+    try {
+      // Переходим на найденный URL
+      const curNorm = page.url().replace(/\/?#.*$/, '').replace(/\/?$/, '');
+      const topNorm = topicUrl.replace(/\/?#.*$/, '').replace(/\/?$/, '');
+      if (curNorm !== topNorm) {
+        await page.goto(topicUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        await sleep(1500, 2500);
+      }
+
+      // Проверяем: это страница темы (есть посты) или листинг форума?
+      const hasPostContent = await page.locator('[id^="c_"], .commentthread_comment_content, .forum_op').first().count();
+      if (hasPostContent === 0) {
+        const isForumListing = await page.evaluate(() => {
+          return !!document.querySelector('.forum_topics_container, .forum_paging, .forum_topic');
+        });
+
+        if (isForumListing) {
+          logger.warn(`[${profile.name}] URL ведёт на раздел форума, а не на тему! Ищу новую тему по ID...`);
+
+          // Перейдём на основную страницу форума и найдём новую тему по ID
+          const forumListUrl = targetUrl.replace(/\/\d{10,}\/?$/, '/').replace(/\/+$/, '/');
+          if (page.url().replace(/\/?$/, '/') !== forumListUrl) {
+            await page.goto(forumListUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+            await sleep(2000, 3000);
+          }
+
+          const correctedHref = await page.evaluate(known => {
+            for (const a of document.querySelectorAll('a[href]')) {
+              const m = a.href.match(/\/(\d{10,})\/?$/);
+              if (m && !known.includes(m[1])) return a.href;
+            }
+            return null;
+          }, existingTopicIds);
+
+          if (correctedHref) {
+            topicUrl = correctedHref.startsWith('http') ? correctedHref : `https://steamcommunity.com${correctedHref}`;
+            logger.info(`[${profile.name}] Тема найдена (валидация → fallback по ID): ${topicUrl}`);
+            await page.goto(topicUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+            await sleep(1000, 2000);
+          } else {
+            logger.warn(`[${profile.name}] Не удалось найти новую тему после валидации`);
+          }
+        }
+      }
+    } catch (valErr) {
+      logger.warn(`[${profile.name}] Ошибка валидации URL: ${valErr.message}`);
+    }
+
+    // ── 9. Найти якорь OP-поста ────────────────────────────────────────
     let postUrl = topicUrl;
     try {
-      // Если мы не на странице темы — переходим
-      if (!/\/\d{10,}\/?$/.test(page.url())) {
-        await page.goto(topicUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-      }
       await page.waitForSelector('[id^="c_"]', { timeout: 5000 });
       const opId = await page.locator('[id^="c_"]').first().getAttribute('id');
       if (opId) {
