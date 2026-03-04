@@ -38,12 +38,11 @@ export default function Landing() {
   const [trades, setTrades] = useState([]);
 
   const quickMenuItems = [
-    { to: '/',            icon: LayoutDashboard, label: 'Обзор',        emoji: '📊' },
+    { to: '/',            icon: LayoutDashboard, label: 'Дашборд',      emoji: '📊' },
     { to: '/accounts',    icon: Users,           label: 'Аккаунты',     emoji: '👤' },
     { to: '/campaigns',   icon: Megaphone,       label: 'Кампании',     emoji: '📢' },
     { to: '/activity',    icon: Activity,        label: 'Активность',   emoji: '⚡' },
     { to: '/trades',      icon: ArrowLeftRight,  label: 'P2P Обмен',    emoji: '🔄' },
-    { to: '/balance',     icon: Wallet,          label: 'Баланс',       emoji: '💰' },
     { to: '/settings',    icon: Settings,        label: 'Настройки',    emoji: '⚙️' },
     { to: '/subscription',icon: CreditCard,      label: 'Подписка',     emoji: '💎' },
   ];
@@ -126,33 +125,42 @@ export default function Landing() {
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
               <div className="relative">
-                <button
-                  onClick={() => setQuickMenu(o => !o)}
-                  className="flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-gray-800/60 transition-all duration-200 group"
-                >
-                  {user?.steam_avatar ? (
-                    <img src={user.steam_avatar} className="w-8 h-8 rounded-lg object-cover ring-2 ring-gray-700/50 group-hover:ring-brand-500/40 transition-all" alt="" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center text-brand-400 text-xs font-bold ring-2 ring-gray-700/50 group-hover:ring-brand-500/40 transition-all">
-                      {(user?.name || user?.email || '?')[0].toUpperCase()}
+                <div className="flex items-center gap-0.5 rounded-xl hover:bg-gray-800/60 transition-all duration-200 group">
+                  {/* Avatar → go to dashboard */}
+                  <Link
+                    to="/"
+                    className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-l-xl"
+                  >
+                    {user?.steam_avatar ? (
+                      <img src={user.steam_avatar} className="w-8 h-8 rounded-lg object-cover ring-2 ring-gray-700/50 group-hover:ring-brand-500/40 transition-all" alt="" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center text-brand-400 text-xs font-bold ring-2 ring-gray-700/50 group-hover:ring-brand-500/40 transition-all">
+                        {(user?.name || user?.email || '?')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className="text-left hidden lg:block">
+                      <p className="text-sm font-medium text-white leading-tight truncate max-w-[120px]">
+                        {user?.steam_username || user?.name || user?.email?.split('@')[0]}
+                      </p>
+                      <span className={clsx(
+                        'inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-gradient-to-r text-white leading-none',
+                        planGrad
+                      )}>
+                        {planName}
+                      </span>
                     </div>
-                  )}
-                  <div className="text-left hidden lg:block">
-                    <p className="text-sm font-medium text-white leading-tight truncate max-w-[120px]">
-                      {user?.steam_username || user?.name || user?.email?.split('@')[0]}
-                    </p>
-                    <span className={clsx(
-                      'inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-gradient-to-r text-white leading-none',
-                      planGrad
-                    )}>
-                      {planName}
-                    </span>
-                  </div>
-                  <ChevronDown className={clsx(
-                    'w-4 h-4 text-gray-400 transition-transform duration-200',
-                    quickMenu && 'rotate-180'
-                  )} />
-                </button>
+                  </Link>
+                  {/* Chevron → toggle dropdown */}
+                  <button
+                    onClick={() => setQuickMenu(o => !o)}
+                    className="p-2 rounded-r-xl hover:bg-gray-700/40 transition-colors"
+                  >
+                    <ChevronDown className={clsx(
+                      'w-4 h-4 text-gray-400 transition-transform duration-200',
+                      quickMenu && 'rotate-180'
+                    )} />
+                  </button>
+                </div>
 
                 {/* Quick Menu Dropdown */}
                 {quickMenu && (
@@ -202,18 +210,6 @@ export default function Landing() {
                           </Link>
                         ))}
                       </div>
-
-                      {/* Dashboard button */}
-                      <div className="p-3 border-t border-gray-800/60">
-                        <Link
-                          to="/"
-                          onClick={() => setQuickMenu(false)}
-                          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-sm font-semibold transition-all duration-200 shadow-lg shadow-brand-600/20 hover:shadow-brand-600/30"
-                        >
-                          <LayoutDashboard className="w-4 h-4" />
-                          Перейти в дашборд
-                        </Link>
-                      </div>
                     </div>
                   </>
                 )}
@@ -239,13 +235,15 @@ export default function Landing() {
           <div className="md:hidden border-t border-gray-800/50 bg-[#0c0e12] px-4 py-4 space-y-3">
             {isLoggedIn && (
               <div className="flex items-center gap-3 pb-3 border-b border-gray-800/50">
-                {user?.steam_avatar ? (
-                  <img src={user.steam_avatar} className="w-9 h-9 rounded-lg object-cover ring-2 ring-gray-700/50" alt="" />
-                ) : (
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center text-brand-400 text-sm font-bold">
-                    {(user?.name || user?.email || '?')[0].toUpperCase()}
-                  </div>
-                )}
+                <Link to="/" onClick={() => setMobileNav(false)}>
+                  {user?.steam_avatar ? (
+                    <img src={user.steam_avatar} className="w-9 h-9 rounded-lg object-cover ring-2 ring-gray-700/50" alt="" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-purple-500/20 flex items-center justify-center text-brand-400 text-sm font-bold">
+                      {(user?.name || user?.email || '?')[0].toUpperCase()}
+                    </div>
+                  )}
+                </Link>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">
                     {user?.steam_username || user?.name || user?.email?.split('@')[0]}
@@ -285,7 +283,7 @@ export default function Landing() {
             )}
             <div className="flex gap-3 pt-2 border-t border-gray-800">
               {isLoggedIn ? (
-                <Link to="/" onClick={() => setMobileNav(false)} className="btn-primary text-sm flex-1 justify-center">Дашборд →</Link>
+                <Link to="/" onClick={() => setMobileNav(false)} className="btn-primary text-sm flex-1 justify-center">📊 Дашборд</Link>
               ) : (
                 <>
                   <Link to="/login" className="btn-ghost text-sm flex-1 justify-center">Войти</Link>
