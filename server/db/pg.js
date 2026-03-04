@@ -729,8 +729,26 @@ async function deleteUserRefreshTokens(userId) {
 }
 
 async function expireTrialSubscriptions(now) {
+  // Находим пользователей с истекающим trial ДО обновления
+  const expiring = await getAll(`
+    SELECT DISTINCT user_id FROM user_subscriptions
+    WHERE status='trial' AND trial_ends_at IS NOT NULL AND trial_ends_at < $1`, [now]);
+
   await query(`UPDATE user_subscriptions SET status='expired'
     WHERE status='trial' AND trial_ends_at IS NOT NULL AND trial_ends_at < $1`, [now]);
+
+  // Для каждого пользователя создаём бесплатную подписку (Free всегда доступен)
+  for (const row of expiring) {
+    const existing = await getOne(
+      `SELECT id FROM user_subscriptions WHERE user_id = $1 AND plan_id = 'free' AND status = 'active'`, [row.user_id]);
+    if (!existing) {
+      const id = uuidv4();
+      await query(`
+        INSERT INTO user_subscriptions (id,user_id,plan_id,status,billing_period,started_at,created_at)
+        VALUES ($1,$2,'free','active','monthly',$3,$3)
+      `, [id, row.user_id, now]);
+    }
+  }
 }
 
 async function expireActiveSubscriptions(now) {

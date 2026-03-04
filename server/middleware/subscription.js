@@ -27,6 +27,13 @@ async function loadSubscription(req, res, next) {
     if (sub.status === 'trial' && sub.trial_ends_at) {
       if (new Date(sub.trial_ends_at) < new Date()) {
         await db.updateSubscription(sub.id, { status: 'expired' });
+        // Автоматически создаём бесплатную подписку (Free всегда доступен)
+        await db.createSubscription({ userId: req.userId, planId: 'free', status: 'active' });
+        const freeSub = await db.getActiveSubscription(req.userId);
+        if (freeSub) {
+          req.subscription = freeSub;
+          return next();
+        }
         return res.status(403).json({
           error: 'Пробный период истёк. Оформите подписку.',
           code:  'TRIAL_EXPIRED',

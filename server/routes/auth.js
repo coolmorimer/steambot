@@ -34,7 +34,11 @@ router.post('/register', validate(schemas.register), async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
     const userId = await db.createUser({ email, passwordHash, name: name || '' });
 
-    await db.createSubscription({ userId, planId: 'free', status: 'trial', trialDays: config.trialDays });
+    // Выбранный пробный тариф (Starter/Pro/Enterprise) на 3 дня
+    const trialPlanId = req.body.trial_plan_id || 'starter';
+    const validTrialPlans = ['starter', 'pro', 'enterprise'];
+    const chosenTrialPlan = validTrialPlans.includes(trialPlanId) ? trialPlanId : 'starter';
+    await db.createSubscription({ userId, planId: chosenTrialPlan, status: 'trial', trialDays: config.trialDays });
 
     // ── Обработка реферального кода ──
     if (referral_code) {

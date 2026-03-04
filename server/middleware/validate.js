@@ -30,6 +30,7 @@ const schemas = {
     password:      z.string().min(8, 'Пароль минимум 8 символов'),
     name:          z.string().max(100).optional(),
     referral_code: z.string().max(50).optional(),
+    trial_plan_id: z.enum(['starter', 'pro', 'enterprise']).optional(),
   }),
 
   login: z.object({

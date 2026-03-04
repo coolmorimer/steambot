@@ -32,8 +32,8 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const register = async (email, password, name, referralCode) => {
-    const { data } = await api.post('/auth/register', { email, password, name, referral_code: referralCode || undefined });
+  const register = async (email, password, name, referralCode, trialPlanId) => {
+    const { data } = await api.post('/auth/register', { email, password, name, referral_code: referralCode || undefined, trial_plan_id: trialPlanId || undefined });
     localStorage.setItem('access_token',  data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token);
     await fetchMe();

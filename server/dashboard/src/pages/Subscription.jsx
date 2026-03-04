@@ -320,7 +320,8 @@ function CurrentPlanCard({ cs, daysLeft, isTrialActive, isActive, onCancel }) {
             <div className="flex items-center gap-1.5 mt-2">
               <Clock className="w-3.5 h-3.5 text-yellow-400" />
               <p className="text-xs text-yellow-400">
-                Пробный период — до {new Date(cs.trial_ends_at).toLocaleDateString('ru')}
+                Пробный период — до {new Date(cs.trial_ends_at).toLocaleDateString('ru')}.
+                После окончания — бесплатный тариф Free.
               </p>
             </div>
           )}
@@ -596,10 +597,11 @@ function PlanCard({ plan, period, isCurrent, isExpired, isActive, onUpgrade, upg
   let btnDisabled = false;
 
   if (isCurrent && !isExpired) {
-    btnLabel = 'Текущий тариф';
+    btnLabel = plan.id === 'free' ? 'Текущий тариф' : 'Текущий тариф';
     btnDisabled = true;
   } else if (priceRub === 0) {
-    btnLabel = 'Выбрать';
+    btnLabel = isCurrent ? 'Текущий тариф' : 'Бесплатный';
+    btnDisabled = isCurrent;
   }
 
   return (
