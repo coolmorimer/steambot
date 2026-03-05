@@ -295,14 +295,17 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
     let topicUrl;
     const afterSubmitUrl = page.url();
 
-    if (/\/\d{10,}\/?$/.test(afterSubmitUrl)) {
-      // Способ 1: Браузер редиректнул на тему
-      topicUrl = afterSubmitUrl;
-      logger.info(`[${profile.name}] Редирект на тему: ${topicUrl}`);
-    } else if (ajaxTopicUrl) {
-      // Способ 2: URL получен из AJAX-ответа
+    if (ajaxTopicUrl) {
+      // Способ 1: URL из AJAX-ответа (прямой ответ сервера — самый надёжный)
       topicUrl = ajaxTopicUrl;
       logger.info(`[${profile.name}] Тема из AJAX: ${topicUrl}`);
+      if (/\/\d{10,}\/?$/.test(afterSubmitUrl) && afterSubmitUrl !== ajaxTopicUrl) {
+        logger.warn(`[${profile.name}] Redirect URL (${afterSubmitUrl}) отличается от AJAX — используем AJAX`);
+      }
+    } else if (/\/\d{10,}\/?$/.test(afterSubmitUrl)) {
+      // Способ 2: Браузер редиректнул на URL с числовым ID
+      topicUrl = afterSubmitUrl;
+      logger.info(`[${profile.name}] Редирект на тему: ${topicUrl}`);
     } else {
       // Способ 3: Ждём отложенный JS-редирект
       logger.warn(`[${profile.name}] Нет редиректа (URL: ${afterSubmitUrl}). Ждём JS-редирект...`);
@@ -399,7 +402,64 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
       logger.warn(`[${profile.name}] Ошибка валидации URL: ${valErr.message}`);
     }
 
-    // ── 9. Найти якорь OP-поста ────────────────────────────────────────
+    // ── 9. Проверка заголовка темы ──────────────────────────────────────
+    try {
+      const chkCur = page.url().replace(/\/?#.*$/, '').replace(/\/?$/, '');
+      const chkTop = topicUrl.replace(/\/?#.*$/, '').replace(/\/?$/, '');
+      if (chkCur !== chkTop) {
+        await page.goto(topicUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        await sleep(1500, 2500);
+      }
+
+      const titleMatch = await page.evaluate((expected) => {
+        const norm = expected.trim();
+        if (document.title.includes(norm)) return true;
+        const els = document.querySelectorAll(
+          '.topicTitle, .topic_title, .forum_op_topic_title, ' +
+          '[class*="TopicTitle"], [class*="topic_title"], ' +
+          '.forum_op h1, .forum_op h2, .topicsubject'
+        );
+        for (const el of els) {
+          if (el.textContent.trim() === norm) return true;
+        }
+        return false;
+      }, title);
+
+      if (!titleMatch) {
+        logger.warn(`[${profile.name}] Заголовок "${title.slice(0, 60)}" не найден на ${topicUrl}. Ищу правильную тему...`);
+
+        const forumList = targetUrl.replace(/\/\d{10,}\/?$/, '/').replace(/\/+$/, '/');
+        await page.goto(forumList, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+        await sleep(2000, 3000);
+
+        const correctUrl = await page.evaluate((expected) => {
+          const norm = expected.trim().toLowerCase();
+          const prefix = norm.slice(0, 40);
+          for (const a of document.querySelectorAll('a[href]')) {
+            if (!/\/\d{10,}\/?$/.test(a.href)) continue;
+            const t = a.textContent.trim().toLowerCase();
+            if (t === norm || t.startsWith(prefix)) return a.href;
+          }
+          return null;
+        }, title);
+
+        if (correctUrl) {
+          const fixed = correctUrl.startsWith('http') ? correctUrl : `https://steamcommunity.com${correctUrl}`;
+          logger.info(`[${profile.name}] ✓ Правильная тема найдена по заголовку: ${fixed}`);
+          topicUrl = fixed;
+          await page.goto(topicUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+          await sleep(1000, 2000);
+        } else {
+          logger.warn(`[${profile.name}] Тема с заголовком "${title.slice(0, 60)}" не найдена на форуме — оставляем текущий URL`);
+        }
+      } else {
+        logger.info(`[${profile.name}] Заголовок темы подтверждён ✓`);
+      }
+    } catch (titleErr) {
+      logger.warn(`[${profile.name}] Ошибка проверки заголовка: ${titleErr.message}`);
+    }
+
+    // ── 10. Найти якорь OP-поста ───────────────────────────────────────
     let postUrl = topicUrl;
     try {
       await page.waitForSelector('[id^="c_"]', { timeout: 5000 });
