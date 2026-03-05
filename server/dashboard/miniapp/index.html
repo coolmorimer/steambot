@@ -317,7 +317,7 @@
   <div id="campaigns-content" style="display:none">
     <div id="tip-campaigns" class="tip">
       <span class="tip-icon">💡</span>
-      <span><b>Задача</b> — это расписание постов. Укажите <b>аккаунт</b>, <b>форум Steam</b>, <b>шаблон</b> и <b>время</b> — бот опубликует автоматически!</span>
+      <span><b>Задача</b> — это расписание постов. Выберите <b>аккаунт</b>, сгенерируйте <b>шаблон</b> из инвентаря и укажите <b>время</b> — бот опубликует автоматически!</span>
       <button class="tip-close" onclick="hideTip('campaigns')">✕</button>
     </div>
     <div class="section-header">
@@ -374,6 +374,7 @@ let _profiles = [], _campaigns = [];
 let _jobsFilter = 'all', _jobsOffset = 0;
 const JOBS_LIMIT = 20;
 let _botRunning = false;
+let _selectedVariant = 0;
 
 /* ── Steam games ── */
 const STEAM_GAMES = [
@@ -403,13 +404,19 @@ const STEAM_GAMES = [
     { name:'General Discussions', url:'https://steamcommunity.com/app/322330/discussions/0/' }]},
 ];
 
-const TEMPLATE_VARS = [
-  { v:'{date}', h:'дата' }, { v:'{time}', h:'время' }, { v:'{day}', h:'день недели' },
-  { v:'{num}', h:'номер поста' }, { v:'{profile}', h:'имя аккаунта' },
-  { v:'{items_count}', h:'кол-во предметов' }, { v:'{best_item}', h:'лучший предмет' },
-  { v:'{top_items}', h:'топ-5 предметов' }, { v:'{stattrak_count}', h:'StatTrak' },
-  { v:'{knives_count}', h:'ножи' }, { v:'{trade_url}', h:'ссылка на обмен' },
-  { v:'{full_inventory_post}', h:'⭐ готовый пост' },
+const POST_PRESETS = [
+  { label:'💔 Классика', emoji:'💔', desc:'[h1] + ссылка ×3, секции по категориям',
+    title:'💔🍒🍑OPEN INVENTORY🍑🍒💔 <=> 💔🍒🍑SEND TRADES🍑🍒💔', body:'{full_inventory_post}' },
+  { label:'💜 Витрина', emoji:'💜', desc:'Разделитель ════, без [h1], минимализм',
+    title:'💜 SHOWCASE | {items_count} SKINS FOR TRADE | {knives_count} KNIVES 💜', body:'{full_inventory_post}' },
+  { label:'🔥 TG-стиль', emoji:'🔥', desc:'Нумерованные секции, дата в заголовке',
+    title:'🔥 [{date}] CS2 ITEMS | {items_count} total | SEND OFFER → 🔥', body:'{full_inventory_post}' },
+  { label:'🎯 Чистый список', emoji:'🎯', desc:'Без [h1], без рамок, ссылка внизу',
+    title:'🎯 TRADING {items_count} CS2 SKINS — CHECK MY INV 🎯', body:'{full_inventory_post}' },
+  { label:'⭐ VIP-стиль', emoji:'⭐', desc:'Звёзды ★★★, ссылка каждые 3 секции',
+    title:'⭐ VIP INVENTORY | {knives_count} KNIVES + {stattrak_count} STATTRAK | {date} ⭐', body:'{full_inventory_post}' },
+  { label:'🧡 Карточки', emoji:'🧡', desc:'Unicode-рамки ┌─┐, статистика сверху',
+    title:'🧡 {items_count} CS2 ITEMS AVAILABLE | BEST: {best_item} 🧡', body:'{full_inventory_post}' },
 ];
 
 /* ═══════════════════════════════════════════════════
@@ -927,91 +934,187 @@ async function confirmDeleteCampaign(id){
 }
 
 /* ── Campaign Form ── */
-let _editingCampaign=null, _formForumUrl='', _formTimes=[], _formProfileIds=[];
+let _editingCampaign=null, _formTimes=[], _formProfileId='';
+let _presetsOpen=false;
 
 function openCampaignForm(campaignId){
   if(campaignId){_editingCampaign=_campaigns.find(c=>c.id===campaignId)||null}
   else{_editingCampaign=null}
   const c=_editingCampaign;
-  _formForumUrl=c?.target_url||'';
   _formTimes=parseTimes(c?.schedule_times)||[];
-  _formProfileIds=c?.profile_ids?[...c.profile_ids]:[];
+  _formProfileId=c?.profile_ids?.[0]||c?.profile_id||'';
+  _selectedVariant=0; _presetsOpen=false;
   openModal(c?'✏️ Редактировать задачу':'✨ Новая задача',buildCampaignFormHtml(c));
 }
 
 function buildCampaignFormHtml(c){
   const profileChips=_profiles.map(p=>{
-    const sel=_formProfileIds.includes(p.id);
-    return `<button type="button" class="chip ${sel?'selected':''}" onclick="toggleFormProfile('${p.id}',this)" style="padding:10px 16px">${p.is_active?'🟢':'🔴'} ${esc(p.name)}</button>`;
+    const sel=_formProfileId===p.id;
+    return `<button type="button" class="chip ${sel?'selected':''}" data-profile-chip="${p.id}" onclick="selectFormProfile('${p.id}')" style="display:flex;align-items:center;gap:8px;padding:10px 16px">
+      ${p.avatar_url
+        ?`<img src="${esc(p.avatar_url)}" style="width:28px;height:28px;border-radius:8px;object-fit:cover" alt="">`
+        :`<span style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${(p.name||'?')[0].toUpperCase()}</span>`}
+      <span style="font-weight:600">${esc(p.name)}</span>
+      <span class="profile-check" style="color:var(--accent);${sel?'':'display:none'}">✓</span>
+    </button>`;
   }).join('');
+
+  const variantBtns=POST_PRESETS.map((p,i)=>`
+    <button type="button" class="chip ${_selectedVariant===i?'selected':''}" data-variant-chip="${i}" onclick="selectVariant(${i})" style="text-align:left;padding:10px 14px;flex:1 1 calc(50% - 4px);min-width:130px">
+      <div style="font-weight:700;font-size:13px">${p.emoji} ${p.label.replace(/^.+? /,'')}</div>
+      <div style="font-size:11px;color:${_selectedVariant===i?'rgba(168,85,247,.8)':'var(--hint)'};margin-top:2px">${esc(p.desc)}</div>
+    </button>`).join('');
+
   const timesHtml=_formTimes.map(t=>`<span class="time-chip">${t} <span class="time-chip-remove" onclick="removeFormTime('${t}')">✕</span></span>`).join('');
-  const forumHtml=_formForumUrl?buildSelectedForumHtml(_formForumUrl):buildForumPickerHtml();
-  const varBtns=TEMPLATE_VARS.map(v=>`<button type="button" class="var-btn" onclick="insertVarTo('form-title','${v.v}')" title="${v.h}">${v.v}</button>`).join('');
-  const varBtnsBody=TEMPLATE_VARS.map(v=>`<button type="button" class="var-btn" onclick="insertVarTo('form-body','${v.v}')" title="${v.h}">${v.v}</button>`).join('');
+
+  const presetBtns=POST_PRESETS.map((p,i)=>`
+    <button type="button" onclick="applyPreset(${i})" style="text-align:left;padding:10px 14px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .1s;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;color:#fff">${p.emoji} ${p.label.replace(/^.+? /,'')}</div>
+      <div style="font-size:11px;color:var(--hint);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px">${esc(p.title).slice(0,45)}…</div>
+    </button>`).join('');
 
   return `
     <form onsubmit="submitCampaignForm(event)">
-      <div class="tip mb-2"><span class="tip-icon">📖</span><span>Заполните поля шаг за шагом. Поля со <b>звёздочкой *</b> — обязательные.</span></div>
 
       <div class="form-group">
-        <label class="label">1️⃣ Выберите форум Steam *</label>
-        <div id="forum-picker-container">${forumHtml}</div>
+        <label class="label" style="display:flex;align-items:center;gap:6px">👤 Аккаунт ${_formProfileId?'<span style="font-weight:400;color:rgba(138,130,166,.7);text-transform:none">(выбран)</span>':''}</label>
+        ${_profiles.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${profileChips}</div>`
+          :'<p style="font-size:14px;color:var(--hint)">⚠️ Сначала добавьте аккаунты</p>'}
       </div>
+
+      <div class="form-group" style="background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(16,185,129,.02));border:1px solid rgba(16,185,129,.15);border-radius:var(--radius);padding:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,.15);display:flex;align-items:center;justify-content:center;font-size:20px">✨</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Сгенерировать из инвентаря</div>
+            <div style="font-size:12px;color:var(--hint);margin-top:2px">Бот прочитает инвентарь и составит готовый пост</div>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:6px">Стиль заголовка:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${variantBtns}</div>
+          <div id="variant-preview" style="font-size:11px;color:var(--hint);font-family:monospace;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.7">${esc(POST_PRESETS[_selectedVariant]?.title||'')}</div>
+        </div>
+        <button type="button" class="btn" onclick="generateFromInventory()" id="gen-btn" style="background:linear-gradient(135deg,#10b981,#059669);margin:0;font-size:15px;padding:12px" ${!_formProfileId?'disabled':''}>
+          ✨ Сгенерировать пост
+        </button>
+        <div id="gen-meta" style="display:none;margin-top:8px;font-size:12px;color:var(--hint)"></div>
+        ${!_formProfileId?'<div id="gen-warning" style="font-size:12px;color:#f59e0b;margin-top:6px">⚠️ Сначала выберите аккаунт</div>':''}
+      </div>
+
       <div class="form-group">
-        <label class="label">2️⃣ Название задачи *</label>
+        <button type="button" onclick="togglePresets()" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--radius-sm);border:1px dashed rgba(255,255,255,.12);background:none;color:var(--hint);cursor:pointer;font-size:13px;font-weight:600">
+          <span>📋 Вставить шаблон вручную (без генерации)</span>
+          <span id="presets-arrow">▼</span>
+        </button>
+        <div id="presets-list" style="display:none;margin-top:10px;grid-template-columns:1fr;gap:8px">${presetBtns}</div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">📝 Название задачи</label>
         <input class="input" id="form-name" required value="${esc(c?.name||'')}" placeholder="Моя задача" style="font-size:16px" />
       </div>
       <div class="form-group">
-        <label class="label">3️⃣ Шаблон заголовка * <span class="label-hint">(нажмите переменную ↓)</span></label>
-        <input class="input" id="form-title" required value="${esc(c?.title_template||'')}" placeholder="{full_inventory_post}" style="font-family:monospace;font-size:14px" />
-        <div class="var-row">${varBtns}</div>
+        <label class="label">📌 Шаблон заголовка</label>
+        <input class="input" id="form-title" required value="${esc(c?.title_template||'')}" placeholder="Напр.: Инвентарь {date} — {items_count} предметов" style="font-family:monospace;font-size:14px" />
       </div>
       <div class="form-group">
-        <label class="label">4️⃣ Тело публикации * <span class="label-hint">(нажмите переменную ↓)</span></label>
-        <textarea class="input" id="form-body" rows="4" required placeholder="Напр.: {full_inventory_post}">${esc(c?.body_template||'')}</textarea>
-        <div class="var-row">${varBtnsBody}</div>
+        <label class="label">📄 Тело публикации</label>
+        <textarea class="input" id="form-body" rows="4" required placeholder="Привет! Мой инвентарь ({date}):\nЛучший предмет: {best_item}\n{trade_url}">${esc(c?.body_template||'')}</textarea>
       </div>
+
       <div class="form-group">
-        <label class="label">5️⃣ Время публикации * <span class="label-hint">(мин. 60 мин. между)</span></label>
+        <label class="label" style="display:flex;align-items:center;gap:6px">⏰ Время публикации <span class="label-hint">(мин. 65 мин. между)</span></label>
         <div style="display:flex;gap:8px;margin-bottom:10px">
           <input type="time" class="input" id="form-time-input" style="width:140px;font-size:16px" />
           <button type="button" class="btn-sm btn" onclick="addFormTime()" style="font-size:16px">➕</button>
         </div>
         <div id="form-times-list" style="display:flex;flex-wrap:wrap;gap:6px">${timesHtml}</div>
       </div>
-      <div class="form-group">
-        <label class="label">⏰ Окно активности <span class="label-hint">(необязательно)</span></label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="time" class="input" id="form-window-start" style="width:130px" value="${esc(c?.window_start||'')}" />
-          <span style="color:var(--hint);font-size:18px">→</span>
-          <input type="time" class="input" id="form-window-end" style="width:130px" value="${esc(c?.window_end||'')}" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="label">6️⃣ Аккаунты * <span class="label-hint">(${_formProfileIds.length} выбрано)</span></label>
-        ${_profiles.length?`<div style="display:flex;flex-wrap:wrap;gap:8px" id="form-profiles">${profileChips}</div>`:'<p style="font-size:14px;color:var(--hint)">⚠️ Сначала добавьте аккаунты</p>'}
-      </div>
+
       <div style="display:flex;gap:10px;margin-top:20px">
         <button type="button" class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
-        <button type="submit" class="btn" style="flex:1;margin:0;font-size:16px" id="campaign-submit-btn">${c?'💾 Сохранить':'Создать'}</button>
+        <button type="submit" class="btn" style="flex:1;margin:0;font-size:16px" id="campaign-submit-btn">${c?'💾 Сохранить':'✨ Создать'}</button>
       </div>
     </form>
   `;
 }
 
-function insertVarTo(fieldId,varStr){
-  const el=document.getElementById(fieldId);if(!el)return;
-  const start=el.selectionStart,end=el.selectionEnd,val=el.value;
-  el.value=val.slice(0,start)+varStr+val.slice(end);
-  el.focus();el.setSelectionRange(start+varStr.length,start+varStr.length);
+function selectFormProfile(id){
   haptic('light');
+  _formProfileId=id;
+  const container=document.getElementById('modal-body');
+  if(!container)return;
+  container.querySelectorAll('[data-profile-chip]').forEach(btn=>{
+    const chipId=btn.getAttribute('data-profile-chip');
+    btn.classList.toggle('selected',chipId===id);
+    const check=btn.querySelector('.profile-check');
+    if(check)check.style.display=chipId===id?'':'none';
+  });
+  const genBtn=document.getElementById('gen-btn');
+  if(genBtn)genBtn.disabled=false;
+  const warn=document.getElementById('gen-warning');
+  if(warn)warn.style.display='none';
 }
 
-function toggleFormProfile(id,btn){
+function selectVariant(idx){
   haptic('light');
-  const idx=_formProfileIds.indexOf(id);
-  if(idx>=0){_formProfileIds.splice(idx,1);btn.classList.remove('selected')}
-  else{_formProfileIds.push(id);btn.classList.add('selected')}
+  _selectedVariant=idx;
+  const container=document.getElementById('modal-body');
+  if(!container)return;
+  container.querySelectorAll('[data-variant-chip]').forEach(btn=>{
+    const i=parseInt(btn.getAttribute('data-variant-chip'));
+    btn.classList.toggle('selected',i===idx);
+  });
+  const preview=document.getElementById('variant-preview');
+  if(preview)preview.textContent=POST_PRESETS[idx]?.title||'';
+}
+
+async function generateFromInventory(){
+  if(!_formProfileId){showToast('Выберите аккаунт','⚠️');return}
+  const btn=document.getElementById('gen-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:16px;height:16px;vertical-align:middle;margin-right:6px"></span>Читаю инвентарь...'}
+  try{
+    const data=await api('/profiles/'+_formProfileId+'/inventory-post?variant='+_selectedVariant);
+    const titleEl=document.getElementById('form-title');
+    const bodyEl=document.getElementById('form-body');
+    if(titleEl)titleEl.value=data.title||'';
+    if(bodyEl)bodyEl.value=data.body||'';
+    if(data.meta){
+      const metaEl=document.getElementById('gen-meta');
+      if(metaEl){
+        let parts=['📦 '+data.meta.items_count+' скинов'];
+        if(data.meta.knives_count>0)parts.push('🔪 '+data.meta.knives_count+' ножей');
+        if(data.meta.stattrak_count>0)parts.push('📈 '+data.meta.stattrak_count+' StatTrak');
+        metaEl.innerHTML=parts.join(' · ');
+        metaEl.style.display='';
+      }
+    }
+    if(btn){btn.innerHTML='✅ Готово!';btn.disabled=false}
+    haptic('success');showToast('Пост сгенерирован! ✨','✅');
+  }catch(e){
+    showToast('Ошибка: '+e.message,'❌');
+    if(btn){btn.disabled=false;btn.innerHTML='✨ Сгенерировать пост'}
+  }
+}
+
+function applyPreset(idx){
+  const p=POST_PRESETS[idx];if(!p)return;
+  const titleEl=document.getElementById('form-title');
+  const bodyEl=document.getElementById('form-body');
+  if(titleEl)titleEl.value=p.title;
+  if(bodyEl)bodyEl.value=p.body;
+  togglePresets();
+  haptic('medium');showToast('Шаблон применён!','📋');
+}
+
+function togglePresets(){
+  const list=document.getElementById('presets-list');
+  const arrow=document.getElementById('presets-arrow');
+  if(!list)return;
+  _presetsOpen=!_presetsOpen;
+  list.style.display=_presetsOpen?'grid':'none';
+  if(arrow)arrow.textContent=_presetsOpen?'▲':'▼';
 }
 
 function addFormTime(){
@@ -1019,7 +1122,7 @@ function addFormTime(){
   const t=input?.value;if(!t){showToast('Выберите время','⚠️');return}
   if(_formTimes.includes(t)){showToast('Это время уже добавлено','⚠️');return}
   const next=[..._formTimes,t].sort();
-  if(!validateTimes(next)){showToast('Мин. 60 минут между публикациями','⚠️');return}
+  if(!validateTimes(next)){showToast('Мин. 65 минут между публикациями','⚠️');return}
   _formTimes=next;input.value='';renderFormTimes();haptic('light');
 }
 function removeFormTime(t){_formTimes=_formTimes.filter(x=>x!==t);renderFormTimes()}
@@ -1030,54 +1133,9 @@ function renderFormTimes(){
 function validateTimes(times){
   if(times.length<2)return true;
   const mins=times.map(t=>{const[h,m]=t.split(':').map(Number);return h*60+m}).sort((a,b)=>a-b);
-  for(let i=1;i<mins.length;i++){if(mins[i]-mins[i-1]<60)return false}
-  return(1440-mins[mins.length-1]+mins[0])>=60;
+  for(let i=1;i<mins.length;i++){if(mins[i]-mins[i-1]<65)return false}
+  return(1440-mins[mins.length-1]+mins[0])>=65;
 }
-
-/* ── Forum Picker ── */
-function buildForumPickerHtml(){
-  return `
-    <div class="game-grid">
-      ${STEAM_GAMES.map(g=>`<button type="button" class="game-btn" onclick="selectGame(${g.appId})"><span class="game-emoji">${g.emoji}</span>${g.short}</button>`).join('')}
-    </div>
-    <button type="button" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:6px;font-weight:600" onclick="showCustomUrlInput()">🌐 Ввести URL вручную</button>
-  `;
-}
-function buildSelectedForumHtml(url){
-  const game=STEAM_GAMES.find(g=>g.forums.some(f=>f.url===url));
-  const forum=game?.forums.find(f=>f.url===url);
-  return `
-    <div class="selected-forum">
-      <div style="font-size:26px">${game?.emoji||'🌐'}</div>
-      <div class="selected-forum-info">
-        <div class="selected-forum-name">${game?esc(game.name):'Кастомный URL'}${forum?' → '+esc(forum.name):''}</div>
-        <div class="selected-forum-url">${esc(url)}</div>
-      </div>
-      <button type="button" class="btn-icon" onclick="clearForumSelection()" title="Изменить">✏️</button>
-    </div>`;
-}
-function selectGame(appId){
-  haptic('light');
-  const game=STEAM_GAMES.find(g=>g.appId===appId);if(!game)return;
-  const container=document.getElementById('forum-picker-container');
-  container.innerHTML=`
-    <button type="button" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;margin-bottom:10px;font-weight:600" onclick="clearForumSelection()">← Все игры</button>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:24px">${game.emoji}</span><strong style="font-size:16px">${esc(game.name)}</strong></div>
-    ${game.forums.map(f=>`<div class="forum-btn" onclick="selectForum('${esc(f.url)}')">${esc(f.name)}<div class="forum-btn-sub">${esc(f.url.replace('https://steamcommunity.com',''))}</div></div>`).join('')}
-  `;
-}
-function selectForum(url){haptic('medium');_formForumUrl=url;document.getElementById('forum-picker-container').innerHTML=buildSelectedForumHtml(url)}
-function clearForumSelection(){_formForumUrl='';document.getElementById('forum-picker-container').innerHTML=buildForumPickerHtml()}
-function showCustomUrlInput(){
-  document.getElementById('forum-picker-container').innerHTML=`
-    <div style="display:flex;gap:8px">
-      <input class="input" id="custom-forum-url" placeholder="https://steamcommunity.com/app/730/tradingforum/" style="flex:1;font-family:monospace;font-size:13px" />
-      <button type="button" class="btn-sm btn" onclick="applyCustomUrl()">OK</button>
-    </div>
-    <button type="button" style="font-size:13px;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:6px;font-weight:600" onclick="clearForumSelection()">← Выбрать из списка</button>
-  `;
-}
-function applyCustomUrl(){const url=document.getElementById('custom-forum-url')?.value?.trim();if(!url){showToast('Введите URL','⚠️');return}selectForum(url)}
 
 /* ── Submit Form ── */
 async function submitCampaignForm(e){
@@ -1085,17 +1143,23 @@ async function submitCampaignForm(e){
   const name=document.getElementById('form-name')?.value?.trim();
   const title_template=document.getElementById('form-title')?.value?.trim();
   const body_template=document.getElementById('form-body')?.value?.trim();
-  const window_start=document.getElementById('form-window-start')?.value||null;
-  const window_end=document.getElementById('form-window-end')?.value||null;
 
-  if(!name||!title_template||!body_template){showToast('Заполните все поля со *','⚠️');haptic('error');return}
-  if(!_formProfileIds.length){showToast('Выберите хотя бы 1 аккаунт','⚠️');haptic('error');return}
+  if(!name||!title_template||!body_template){showToast('Заполните все обязательные поля','⚠️');haptic('error');return}
+  if(!_formProfileId){showToast('Выберите аккаунт','⚠️');haptic('error');return}
   if(!_formTimes.length){showToast('Добавьте время публикации','⚠️');haptic('error');return}
 
   const btn=document.getElementById('campaign-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='Сохраняю...'}
 
-  const payload={name,title_template,body_template,schedule_times:_formTimes,window_start,window_end,profile_ids:_formProfileIds,target_url:_formForumUrl||null};
+  const payload={
+    name, title_template, body_template,
+    schedule_times:_formTimes,
+    window_start:_editingCampaign?.window_start||null,
+    window_end:_editingCampaign?.window_end||null,
+    profile_ids:[_formProfileId],
+    target_url:_editingCampaign?.target_url||null,
+    group_ids:[],
+  };
 
   try{
     if(_editingCampaign){
@@ -1108,7 +1172,7 @@ async function submitCampaignForm(e){
     closeModal();loadCampaigns(true);
   }catch(e){
     showToast('Ошибка: '+e.message,'❌');
-    if(btn){btn.disabled=false;btn.textContent=_editingCampaign?'💾 Сохранить':'Создать'}
+    if(btn){btn.disabled=false;btn.textContent=_editingCampaign?'💾 Сохранить':'✨ Создать'}
   }
 }
 

@@ -62,9 +62,12 @@ async function createForumPost(profile, title, body, options = {}) {
         logger.error(`[${profile.name}] Сессия истекла (попытка ${attempt}, ${elapsed}с). Ретрай бессмысленен.`);
         throw err;
       }
+      const isRateLimit = err.message === 'RATE_LIMITED' || err.message.startsWith('RATE_LIMITED');
       if (attempt < retries) {
-        logger.warn(`[${profile.name}] Попытка ${attempt} неудачна (${elapsed}с): ${err.message}. Повтор через 5 сек...`);
-        await sleep(5000, 5000);
+        const waitMs = isRateLimit ? 90_000 : 5_000;
+        const waitLabel = isRateLimit ? '90 сек (rate limit)' : '5 сек';
+        logger.warn(`[${profile.name}] Попытка ${attempt} неудачна (${elapsed}с): ${err.message}. Повтор через ${waitLabel}...`);
+        await sleep(waitMs, waitMs);
       } else {
         logger.error(`[${profile.name}] Все ${retries} попытки исчерпаны (последняя ${elapsed}с): ${err.message}`);
       }
@@ -242,6 +245,7 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
 
     // Подписываемся на AJAX-ответ создания темы (Steam делает POST → возвращает JSON/redirect)
     let ajaxTopicUrl = null;
+    let ajaxCreateFailed = null; // null | 'RATE_LIMIT' | 'ERROR'
     const responsePromise = page.waitForResponse(
       resp => {
         const url = resp.url();
@@ -272,6 +276,20 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
               const base = targetUrl.replace(/\/+$/, '');
               ajaxTopicUrl = `${base}/${gid}/`;
               logger.info(`[${profile.name}] Topic GID из AJAX: ${gid}`);
+            } else {
+              // Нет GID — проверяем код ответа
+              const errMsg = json.strError || json.message || json.error || '';
+              if (json.success === 84) {
+                ajaxCreateFailed = 'RATE_LIMIT';
+                logger.warn(`[${profile.name}] Steam rate limit (success=84) — тема НЕ создана`);
+              } else if (json.success !== 1 && json.success !== true) {
+                ajaxCreateFailed = 'ERROR';
+                logger.warn(`[${profile.name}] Steam success=${json.success} без GID темы${errMsg ? ': ' + errMsg : ''}`);
+              }
+              if (errMsg && !ajaxCreateFailed) {
+                ajaxCreateFailed = 'ERROR';
+                logger.error(`[${profile.name}] Steam ошибка: ${errMsg}`);
+              }
             }
           }
         }
@@ -290,6 +308,18 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
 
     // Ждём завершения перехвата AJAX
     await responsePromise;
+
+    // ── 6b. Ранняя проверка: если AJAX вернул ошибку — не искать тему ────
+    if (ajaxCreateFailed && !ajaxTopicUrl) {
+      // Проверим видимые ошибки на странице для деталей
+      const visErr = await page.locator('.error_ctn, .forum_error, .DialogBody')
+        .first().textContent({ timeout: 2000 }).catch(() => null);
+      const detail = visErr && visErr.trim().length > 5 ? `: ${visErr.trim().slice(0, 200)}` : '';
+      if (ajaxCreateFailed === 'RATE_LIMIT') {
+        throw new Error(`RATE_LIMITED${detail}`);
+      }
+      throw new Error(`Steam не создал тему (AJAX-ответ без GID)${detail}`);
+    }
 
     // ── 7. Дождаться URL новой темы ─────────────────────────────────────
     let topicUrl;
@@ -449,13 +479,18 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
           topicUrl = fixed;
           await page.goto(topicUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
           await sleep(1000, 2000);
+        } else if (!ajaxTopicUrl && !/\/\d{10,}\/?$/.test(afterSubmitUrl)) {
+          // URL получен через fallback (не AJAX и не redirect) и заголовок не подтверждён — скорее всего чужая тема
+          throw new Error(`Не удалось подтвердить публикацию: тема "${title.slice(0, 60)}" не найдена на форуме`);
         } else {
-          logger.warn(`[${profile.name}] Тема с заголовком "${title.slice(0, 60)}" не найдена на форуме — оставляем текущий URL`);
+          logger.warn(`[${profile.name}] Заголовок не подтверждён на форуме, но URL получен из AJAX/redirect — оставляем`);
         }
       } else {
         logger.info(`[${profile.name}] Заголовок темы подтверждён ✓`);
       }
     } catch (titleErr) {
+      // Пробрасываем критические ошибки (не удалось подтвердить публикацию)
+      if (titleErr.message.startsWith('Не удалось подтвердить')) throw titleErr;
       logger.warn(`[${profile.name}] Ошибка проверки заголовка: ${titleErr.message}`);
     }
 
