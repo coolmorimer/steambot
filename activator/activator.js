@@ -132,7 +132,7 @@ app.post('/api/restore', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '127.0.0.1', () => {
   console.log(`\n╔═══════════════════════════════════════╗`);
   console.log(`║  Steam Poster Bot — Activator Panel   ║`);
   console.log(`║  http://localhost:${PORT}               ║`);

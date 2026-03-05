@@ -18,9 +18,42 @@ const PORT         = process.env.PORT         || 3847;
 const ADMIN_TOKEN  = process.env.ADMIN_TOKEN  || 'CHANGE_ME_ADMIN_SECRET';
 const HMAC_SECRET  = process.env.HMAC_SECRET  || 'CHANGE_ME_HMAC_SECRET_32CHARS_MIN';
 
+// Запрет запуска с дефолтными секретами в production
+if (process.env.NODE_ENV === 'production') {
+  if (ADMIN_TOKEN === 'CHANGE_ME_ADMIN_SECRET' || HMAC_SECRET === 'CHANGE_ME_HMAC_SECRET_32CHARS_MIN') {
+    console.error('[FATAL] ADMIN_TOKEN и HMAC_SECRET должны быть заданы через env в production!');
+    process.exit(1);
+  }
+}
 if (ADMIN_TOKEN === 'CHANGE_ME_ADMIN_SECRET') {
   console.warn('[WARN] ADMIN_TOKEN не задан! Используйте значение по умолчанию только для разработки.');
 }
+
+// ─── Rate limiter (простой in-memory) ─────────────────────────────────────────
+const _rateMap = new Map();
+function rateLimit(windowMs = 60000, maxHits = 10) {
+  return (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    let entry = _rateMap.get(ip);
+    if (!entry || now - entry.start > windowMs) {
+      entry = { start: now, count: 0 };
+      _rateMap.set(ip, entry);
+    }
+    entry.count++;
+    if (entry.count > maxHits) {
+      return res.status(429).json({ ok: false, error: 'too_many_requests' });
+    }
+    next();
+  };
+}
+// Очистка старых записей каждые 5 минут
+setInterval(() => {
+  const cutoff = Date.now() - 300000;
+  for (const [ip, entry] of _rateMap) {
+    if (entry.start < cutoff) _rateMap.delete(ip);
+  }
+}, 300000);
 
 // ─── База данных ───────────────────────────────────────────────────────────
 const db = new Database(path.join(__dirname, 'licenses.db'));
@@ -108,10 +141,17 @@ function getClientIp(req) {
 const app = express();
 app.use(express.json({ limit: '16kb' }));
 
-// Простая авторизация для admin-эндпоинтов
+// Простая авторизация для admin-эндпоинтов (timing-safe)
 function adminAuth(req, res, next) {
   const token = req.headers['x-admin-token'] || '';
-  if (token !== ADMIN_TOKEN) return res.status(403).json({ ok: false, error: 'forbidden' });
+  if (!token || token.length !== ADMIN_TOKEN.length) {
+    return res.status(403).json({ ok: false, error: 'forbidden' });
+  }
+  const a = Buffer.from(token, 'utf8');
+  const b = Buffer.from(ADMIN_TOKEN, 'utf8');
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(403).json({ ok: false, error: 'forbidden' });
+  }
   next();
 }
 
@@ -122,7 +162,7 @@ function adminAuth(req, res, next) {
  * Body: { key: "SB...", hwid: "<raw hwid>" }
  * Привязывает ключ к HWID.
  */
-app.post('/api/activate', (req, res) => {
+app.post('/api/activate', rateLimit(60000, 5), (req, res) => {
   const { key, hwid } = req.body ?? {};
   const ip = getClientIp(req);
   if (!key || !hwid) return res.json({ ok: false, error: 'missing_fields' });
@@ -166,7 +206,7 @@ app.post('/api/activate', (req, res) => {
  * Body: { key, hwid }
  * Периодическая валидация (при каждом запуске приложения).
  */
-app.post('/api/validate', (req, res) => {
+app.post('/api/validate', rateLimit(60000, 30), (req, res) => {
   const { key, hwid } = req.body ?? {};
   const ip = getClientIp(req);
   if (!key || !hwid) return res.json({ ok: false, error: 'missing_fields' });

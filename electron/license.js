@@ -22,7 +22,7 @@ const http    = require('http');
 const https   = require('https');
 
 // Установите true для сборки без лицензии (всегда активна)
-const BYPASS_LICENSE = true;
+const BYPASS_LICENSE = process.env.NODE_ENV === 'development';
 
 // ── Настройки (разработчик меняет SERVER_URL и HMAC_SECRET перед релизом) ──
 const SERVER_URL   = process.env.LICENSE_SERVER_URL || 'http://localhost:3847';
@@ -106,7 +106,9 @@ function verifySignature(payload) {
     .createHmac('sha256', HMAC_SECRET)
     .update(JSON.stringify(body))
     .digest('hex');
-  return expected === __sig;
+  // Timing-safe сравнение
+  if (expected.length !== __sig.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(__sig, 'utf8'));
 }
 
 // ── HTTP-запрос к серверу лицензий ────────────────────────────────────────────

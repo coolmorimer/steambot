@@ -65,5 +65,8 @@ contextBridge.exposeInMainWorld('api', {
   onNgrokUrl:           (cb) => {
     ipcRenderer.on('settings:ngrok-url', (_, url) => cb(url));
   },
-  removeAllListeners:   (channel) => ipcRenderer.removeAllListeners(channel),
+  removeAllListeners:   (channel) => {
+    const allowed = ['job:update', 'bot:log', 'account:expired', 'accounts:login-status', 'bot:status-changed', 'settings:ngrok-url'];
+    if (allowed.includes(channel)) ipcRenderer.removeAllListeners(channel);
+  },
 });

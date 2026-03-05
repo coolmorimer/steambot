@@ -55,14 +55,36 @@ function start(opts = {}, callbacks = {}) {
   cb       = { ...cb, ...callbacks };
 
   _app = express();
-  _app.use(express.json());
+  _app.use(express.json({ limit: '64kb' }));
 
-  // ── CORS (разрешаем Telegram WebView) ──
+  // ── CORS (только ngrok/localhost) ──
   _app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin || '';
+    // Разрешаем Telegram WebView, ngrok и localhost
+    if (origin && (/^https:\/\/[\w-]+\.ngrok-free\.app$/.test(origin)
+        || /^https?:\/\/localhost(:\d+)?$/.test(origin)
+        || /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin))) {
+      res.header('Access-Control-Allow-Origin', origin);
+    }
     res.header('Access-Control-Allow-Headers', 'Content-Type, X-Token');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
+
+  // ── Auth middleware для API ──
+  _app.use('/api', (req, res, next) => {
+    if (!_secret) return next();                              // токен не настроен — пропускаем (dev)
+    const token = req.headers['x-token'] || '';
+    if (!token || token.length !== _secret.length) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+    // Timing-safe сравнение
+    const a = Buffer.from(token, 'utf8');
+    const b = Buffer.from(_secret, 'utf8');
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
     next();
   });
 
@@ -81,10 +103,12 @@ function start(opts = {}, callbacks = {}) {
 
   _app.post('/api/accounts/add',     async (req, res) => {
     try {
-      const r = await cb.addAccount(req.body.name || 'Account');
+      const name = typeof req.body.name === 'string' ? req.body.name.slice(0, 64) : 'Account';
+      const r = await cb.addAccount(name);
       res.json(r);
     } catch (err) {
-      res.json({ ok: false, error: err.message });
+      logger.error(`[webapp] addAccount error: ${err.message}`);
+      res.json({ ok: false, error: 'Внутренняя ошибка' });
     }
   });
   _app.post('/api/accounts/toggle',  (req, res) => {
@@ -110,8 +134,8 @@ function start(opts = {}, callbacks = {}) {
   });
 
   // ── Запуск ──
-  server = _app.listen(_port, '0.0.0.0', () => {
-    logger.info(`WebApp-сервер запущен: http://0.0.0.0:${_port}`);
+  server = _app.listen(_port, '127.0.0.1', () => {
+    logger.info(`WebApp-сервер запущен: http://127.0.0.1:${_port}`);
   });
 
   server.on('error', (err) => {

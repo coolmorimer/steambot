@@ -327,8 +327,11 @@ ipcMain.handle('bot:stop', () => {
   return { ok: true };
 });
 
-// Открыть URL во внешнем браузере
+// Открыть URL во внешнем браузере (только http/https)
 ipcMain.handle('shell:open', (_, url) => {
+  if (typeof url !== 'string' || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    return { ok: false, error: 'invalid_url' };
+  }
   shell.openExternal(url);
   return { ok: true };
 });
