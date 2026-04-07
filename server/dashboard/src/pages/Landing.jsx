@@ -304,7 +304,7 @@ export default function Landing() {
           </div>
           
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white leading-tight mb-5">
-            Продавай и обменивай{' '}
+            Продавай и обменивай в{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-purple-400 to-blue-400">
               Steam автоматически
             </span>
@@ -574,7 +574,7 @@ export default function Landing() {
                 icon: Users, color: 'brand', border: 'hover:border-blue-500/40',
                 glow: 'hover:shadow-blue-500/10',
                 title: 'Мультиаккаунт',
-                desc: 'Подключайте неограниченное количество Steam-аккаунтов. QR-код или логин/пароль — любой способ авторизации.',
+                desc: 'Подключайте несколько Steam-аккаунтов. QR-код или логин/пароль — любой способ авторизации.',                 
               },
               {
                 icon: Target, color: 'purple', border: 'hover:border-purple-500/40',
@@ -667,7 +667,7 @@ export default function Landing() {
               {
                 step: '02',
                 title: 'Создайте задачу',
-                desc: 'Укажите форум, текст поста и расписание. Выберите дни недели и время публикации.',
+                desc: 'Укажите форум, текст поста и расписание. Задайте время публикации.',                      
                 Icon: FileText,
                 gradient: 'from-purple-600/20 to-transparent',
               },
@@ -887,7 +887,7 @@ export default function Landing() {
               },
               {
                 q: 'Как работают Telegram-уведомления?',
-                a: 'Вы создаёте бота через @BotFather, вводите токен в Dashboard, и получаете уведомления о статусе задач, ошибках и статистику прямо в Telegram.',
+                a: 'Привяжите свой Telegram на странице «Уведомления» — нажмите «Привязать Telegram» и подтвердите в мессенджере. Вы будете получать уведомления о статусе задач и ошибках.',               
               },
               {
                 q: 'Можно ли отменить подписку?',
@@ -957,7 +957,7 @@ export default function Landing() {
                 </h2>
                 <p className="text-gray-400 text-lg md:text-xl mb-8 max-w-xl mx-auto">
                   Присоединяйтесь к сотням пользователей, которые уже автоматизировали продвижение в Steam.
-                  3 дня бесплатно — без ограничений.
+                  3 дня бесплатно — полный доступ.
                 </p>
                 <Link to="/register" className="btn bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-lg !px-10 !py-3.5 shadow-xl shadow-brand-600/25 transition-all hover:shadow-2xl hover:shadow-brand-600/30 hover:scale-[1.02] relative overflow-hidden">
                   <span className="relative z-10 flex items-center gap-2">Создать аккаунт бесплатно <ArrowRight className="w-5 h-5" /></span>
@@ -997,7 +997,6 @@ function buildFeatures(plan) {
   // Free plan — only P2P trades
   if (plan.id === 'free') {
     f.push('P2P обмен предметами');
-    f.push('Баланс и вывод средств');
     return f;
   }
   // Paid plans — all posting features + trades
@@ -1005,8 +1004,7 @@ function buildFeatures(plan) {
   f.push(`${plan.max_steam_accounts === -1 ? '∞' : plan.max_steam_accounts} Steam аккаунтов`);
   f.push(`${plan.max_campaigns === -1 ? '∞' : plan.max_campaigns} задач`);
   f.push(`${plan.max_jobs_per_day === -1 ? '∞' : plan.max_jobs_per_day} постов / день`);
-  if (plan.max_steam_groups > 0) f.push(`${plan.max_steam_groups} Steam-групп`);
-  if (plan.max_telegram_bots > 0) f.push(`Telegram бот (${plan.max_telegram_bots})`);
+  if (plan.max_telegram_bots > 0) f.push('Telegram бот');
   if (plan.has_mini_app) f.push('Telegram Mini App');
   if (plan.has_ai_templates) f.push('AI шаблоны');
   if (plan.has_analytics) f.push('Аналитика');

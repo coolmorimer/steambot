@@ -1,138 +1,86 @@
-﻿'use strict';
+'use strict';
 
 const express = require('express');
 const db      = require('../db');
 const { requireAuth, requireActiveUser } = require('../middleware/auth');
-const { checkLimit }        = require('../middleware/subscription');
-const TelegramBotManager    = require('../services/TelegramBotManager');
-const SteamBotManager       = require('../services/SteamBotManager');
+const TelegramBotManager = require('../services/TelegramBotManager');
 
 const router = express.Router();
 const ALL    = [requireAuth, requireActiveUser];
 
+/**
+ * GET /api/telegram — информация о привязке Telegram для текущего пользователя
+ */
 router.get('/', ALL, async (req, res, next) => {
   try {
-    const bot = await db.getTelegramBot(req.userId);
-    if (!bot) return res.json(null);
+    const user = await db.getUserById(req.userId);
+    const botUsername = await db.getServerSetting('TG_BOT_USERNAME');
     res.json({
-      id: bot.id, label: bot.label,
-      bot_username: bot.bot_username,
-      bot_token: bot.bot_token ? '***' + bot.bot_token.slice(-6) : null,
-      authorized_chat_ids: typeof bot.authorized_chat_ids === 'string'
-        ? JSON.parse(bot.authorized_chat_ids) : (bot.authorized_chat_ids || []),
-      mini_app_url:     bot.mini_app_url,
-      notify_errors:    !!bot.notify_errors,
-      notify_success:   !!bot.notify_success,
-      notify_expired:   !!bot.notify_expired,
-      notify_bot_state: !!bot.notify_bot_state,
-      is_active:        !!bot.is_active,
-      is_running:       await TelegramBotManager.isRunningAsync(req.userId),
+      telegram_chat_id:  user.telegram_chat_id || null,
+      tg_notify_errors:  !!user.tg_notify_errors,
+      tg_notify_success: !!user.tg_notify_success,
+      tg_notify_expired: !!user.tg_notify_expired,
+      bot_username:      botUsername || null,
+      bot_running:       TelegramBotManager.isRunning(),
     });
   } catch (e) { next(e); }
 });
 
-router.put('/', ALL, ...checkLimit.telegramBot, async (req, res, next) => {
+/**
+ * PUT /api/telegram — обновить настройки уведомлений
+ */
+router.put('/', ALL, async (req, res, next) => {
   try {
-    const { label, bot_token, authorized_chat_ids, mini_app_url,
-            notify_errors, notify_success, notify_expired, notify_bot_state } = req.body;
+    const { tg_notify_errors, tg_notify_success, tg_notify_expired } = req.body;
+    const updates = {};
+    if (tg_notify_errors  !== undefined) updates.tg_notify_errors  = tg_notify_errors  ? 1 : 0;
+    if (tg_notify_success !== undefined) updates.tg_notify_success = tg_notify_success ? 1 : 0;
+    if (tg_notify_expired !== undefined) updates.tg_notify_expired = tg_notify_expired ? 1 : 0;
 
-    // При обновлении существующего бота — bot_token необязателен (сохраняем старый)
-    const existing = await db.getTelegramBot(req.userId);
-    const finalToken = bot_token || existing?.bot_token;
-    if (!finalToken) return res.status(400).json({ error: 'bot_token обязателен' });
-
-    const id = await db.upsertTelegramBot(req.userId, {
-      label, bot_token: finalToken,
-      authorized_chat_ids: authorized_chat_ids || [],
-      mini_app_url: mini_app_url || null,
-      notify_errors, notify_success, notify_expired, notify_bot_state,
-    });
-
-    const botRecord = await db.getTelegramBot(req.userId);
-    if (botRecord && botRecord.is_active) {
-      await TelegramBotManager.restart(req.userId, await buildBotConfig(req.userId));
-    }
-
-    await db.auditLog(req.userId, 'telegram.save', 'telegram_bot', id);
-    res.json({ ok: true, id });
-  } catch (e) { next(e); }
-});
-
-router.post('/start', ALL, ...checkLimit.telegramBot, async (req, res, next) => {
-  try {
-    const bot = await db.getTelegramBot(req.userId);
-    if (!bot || !bot.bot_token)
-      return res.status(400).json({ error: 'Сначала настройте Telegram-бот' });
-
-    await TelegramBotManager.start(req.userId, await buildBotConfig(req.userId));
-    await db.upsertTelegramBot(req.userId, { ...botToData(bot), is_active: true });
+    await db.updateUser(req.userId, updates);
+    await db.auditLog(req.userId, 'telegram.update_prefs', 'user', req.userId);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
 
-router.post('/stop', ALL, async (req, res, next) => {
+/**
+ * POST /api/telegram/link — генерация кода привязки
+ */
+router.post('/link', ALL, async (req, res, next) => {
   try {
-    TelegramBotManager.stop(req.userId);
-    const bot = await db.getTelegramBot(req.userId);
-    if (bot) await db.upsertTelegramBot(req.userId, { ...botToData(bot), is_active: false });
-    res.json({ ok: true });
+    const botUsername = await db.getServerSetting('TG_BOT_USERNAME');
+    if (!botUsername) return res.status(400).json({ error: 'Telegram-бот не настроен администратором' });
+
+    const code = await db.createTelegramLinkCode(req.userId);
+    const link = `https://t.me/${botUsername}?start=${code}`;
+    res.json({ code, link, bot_username: botUsername });
   } catch (e) { next(e); }
 });
 
-router.post('/test', ALL, async (req, res) => {
-  try {
-    if (!TelegramBotManager.isRunning(req.userId))
-      return res.status(400).json({ error: 'Бот не запущен' });
-    await TelegramBotManager.sendNotification(req.userId, 'Тестовое сообщение от Steam Poster Bot!');
-    res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
+/**
+ * DELETE /api/telegram — отвязать Telegram
+ */
 router.delete('/', ALL, async (req, res, next) => {
   try {
-    TelegramBotManager.stop(req.userId);
-    const bot = await db.getTelegramBot(req.userId);
-    if (bot) await db.deleteTelegramBot(bot.id, req.userId);
+    await db.updateUser(req.userId, { telegram_chat_id: null });
+    await db.auditLog(req.userId, 'telegram.unlink', 'user', req.userId);
     res.json({ ok: true });
   } catch (e) { next(e); }
 });
 
-async function buildBotConfig(userId) {
-  const bot = await db.getTelegramBot(userId);
-  if (!bot) return null;
-  return {
-    token:    bot.bot_token,
-    chatIds:  typeof bot.authorized_chat_ids === 'string'
-      ? JSON.parse(bot.authorized_chat_ids) : (bot.authorized_chat_ids || []),
-    notify: {
-      errors:   !!bot.notify_errors,
-      success:  !!bot.notify_success,
-      expired:  !!bot.notify_expired,
-      botState: !!bot.notify_bot_state,
-    },
-    webAppUrl: bot.mini_app_url,
-    userId,
-    getStatus:    () => SteamBotManager.getStatus(userId),
-    getAccounts:  () => db.getProfiles(userId),
-    getCampaigns: () => db.getCampaigns(userId),
-    getRecentJobs:() => db.getRecentJobs(userId, 20),
-    startBot:     () => SteamBotManager.start(userId),
-    stopBot:      () => SteamBotManager.stop(userId),
-  };
-}
-
-function botToData(bot) {
-  return {
-    label:               bot.label,
-    bot_token:           bot.bot_token,
-    authorized_chat_ids: typeof bot.authorized_chat_ids === 'string'
-      ? JSON.parse(bot.authorized_chat_ids) : (bot.authorized_chat_ids || []),
-    mini_app_url:        bot.mini_app_url,
-    notify_errors:       !!bot.notify_errors,
-    notify_success:      !!bot.notify_success,
-    notify_expired:      !!bot.notify_expired,
-    notify_bot_state:    !!bot.notify_bot_state,
-  };
-}
+/**
+ * POST /api/telegram/test — тестовое уведомление
+ */
+router.post('/test', ALL, async (req, res, next) => {
+  try {
+    if (!TelegramBotManager.isRunning())
+      return res.status(400).json({ error: 'Telegram-бот не запущен' });
+    const user = await db.getUserById(req.userId);
+    if (!user?.telegram_chat_id)
+      return res.status(400).json({ error: 'Telegram не привязан' });
+    await TelegramBotManager.sendNotification(req.userId, '✅ Тестовое сообщение от Steam Poster Bot!');
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
 
 module.exports = router;

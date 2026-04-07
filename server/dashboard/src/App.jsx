@@ -30,6 +30,7 @@ import AdminSupport   from './pages/admin/AdminSupport';
 import AdminPayments  from './pages/admin/AdminPayments';
 import AdminWithdrawals from './pages/admin/AdminWithdrawals';
 import AdminPartners from './pages/admin/AdminPartners';
+import AdminLayout   from './components/AdminLayout';
 import Referrals from './pages/Referrals';
 
 export default function App() {
@@ -64,14 +65,16 @@ export default function App() {
           <Route path="referrals"      element={<Referrals />} />
 
           {/* Admin */}
-          <Route path="admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="admin/users"  element={<AdminRoute><AdminUsers /></AdminRoute>} />
-          <Route path="admin/plans"  element={<AdminRoute><AdminPlans /></AdminRoute>} />
-          <Route path="admin/config"   element={<AdminRoute><AdminConfig /></AdminRoute>} />
-          <Route path="admin/support" element={<AdminRoute><AdminSupport /></AdminRoute>} />
-          <Route path="admin/payments" element={<AdminRoute><AdminPayments /></AdminRoute>} />
-          <Route path="admin/withdrawals" element={<AdminRoute><AdminWithdrawals /></AdminRoute>} />
-          <Route path="admin/partners" element={<AdminRoute><AdminPartners /></AdminRoute>} />
+          <Route path="admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+            <Route index             element={<AdminDashboard />} />
+            <Route path="users"      element={<AdminUsers />} />
+            <Route path="plans"      element={<AdminPlans />} />
+            <Route path="config"     element={<AdminConfig />} />
+            <Route path="support"    element={<AdminSupport />} />
+            <Route path="payments"   element={<AdminPayments />} />
+            <Route path="withdrawals" element={<AdminWithdrawals />} />
+            <Route path="partners"   element={<AdminPartners />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import {
   ArrowUpCircle, Search, RefreshCw, CheckCircle2, XCircle,
   Clock, Loader2, AlertTriangle,
@@ -66,8 +65,6 @@ export default function AdminWithdrawals() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <Link to="/admin" className="text-gray-500 hover:text-white text-sm">← Назад</Link>
-        <span className="text-gray-700">/</span>
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <ArrowUpCircle className="w-5 h-5 text-red-400" /> Заявки на вывод
         </h1>

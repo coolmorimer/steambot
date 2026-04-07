@@ -10,6 +10,8 @@
 
 const { z } = require('zod');
 
+const FORBIDDEN_HTML = /<script|javascript:|on\w+\s*=/i;
+
 function validate(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
@@ -47,7 +49,10 @@ const schemas = {
   campaignCreate: z.object({
     name:             z.string().min(1).max(100),
     title_template:   z.string().min(1).max(500),
-    body_template:    z.string().min(1).max(5000),
+    body_template:    z.string().min(1).max(5000).refine(
+      val => !FORBIDDEN_HTML.test(val),
+      { message: 'Шаблон содержит запрещённые HTML-конструкции' }
+    ),
     schedule_minutes: z.number().int().min(1).max(10080).optional(),
     schedule_times:   z.array(z.string().regex(/^\d{2}:\d{2}$/)).max(24).optional(),
     window_start:     z.string().regex(/^\d{2}:\d{2}$/).optional(),

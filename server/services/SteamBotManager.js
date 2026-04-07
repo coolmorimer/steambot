@@ -35,6 +35,9 @@ const PostTpl = require('./PostTemplateGenerator');
 const INV_VAR_RE = /\{(items_count|knives_count|stattrak_count|best_item|top_items|trade_url|full_inventory_post|knives_section|gloves_section|awp_section|ak47_section|m4_section|pistols_section|agents_section|other_section)\}/i;
 function hasInventoryVars(t) { return INV_VAR_RE.test(t); }
 
+// Кулдаун Steam: 60 минут между постами с одного аккаунта
+const STEAM_COOLDOWN_MS = 60 * 60 * 1000;
+
 // Состояние: userId -> { running, tasks, busyJobs, busyProfiles }
 const _bots = new Map();
 
@@ -275,8 +278,31 @@ async function processQueue(userId, state) {
     if (state.busyJobs.has(job.id))       continue;
     if (state.busyProfiles.has(job.profile_id)) continue;
 
+    // ── Проверка кулдауна Steam (60 мин) и авто-ротация аккаунта ──────
+    let profileId = job.profile_id;
+    const cooldownOk = await isProfileCooldownReady(userId, profileId);
+
+    if (!cooldownOk) {
+      // Профиль на кулдауне — ищем свободный из той же кампании
+      const altId = await findAvailableProfile(userId, job.campaign_id, profileId, state.busyProfiles);
+
+      if (altId) {
+        await db.updateJobProfile(job.id, userId, altId);
+        profileId = altId;
+        job.profile_id = altId;
+        console.log(`[SteamBot ${userId}] Кулдаун: аккаунт сменён на ${altId} для джоба ${job.id}`);
+      } else {
+        // Все аккаунты на кулдауне — откладываем
+        try { await db.updateJobStatus(job.id, userId, 'pending'); } catch (_) { /* unique conflict — OK */ }
+        console.log(`[SteamBot ${userId}] Кулдаун: нет свободных аккаунтов, джоб ${job.id} отложен`);
+        continue;
+      }
+    }
+
+    if (state.busyProfiles.has(profileId)) continue;
+
     state.busyJobs.add(job.id);
-    state.busyProfiles.add(job.profile_id);
+    state.busyProfiles.add(profileId);
 
     // Обработка в фоне (не ждём)
     runJob(userId, job, poster, state).finally(() => {
@@ -392,6 +418,35 @@ function stopAll() {
 // ════════════════════════════════════════════════════════════════════════════
 //  HELPERS
 // ════════════════════════════════════════════════════════════════════════════
+
+// ── Кулдаун-проверка и ротация аккаунтов ──────────────────────────────────
+
+async function isProfileCooldownReady(userId, profileId) {
+  const lastPostTime = await db.getProfileLastPostTime(profileId, userId);
+  if (!lastPostTime) return true;
+  return (Date.now() - new Date(lastPostTime).getTime()) >= STEAM_COOLDOWN_MS;
+}
+
+async function findAvailableProfile(userId, campaignId, excludeProfileId, busyProfiles) {
+  const campaign = await db.getCampaign(campaignId, userId);
+  if (!campaign) return null;
+
+  const profileIds = campaign.profile_ids || [];
+  const profiles   = await db.getProfiles(userId);
+
+  for (const pid of profileIds) {
+    if (pid === excludeProfileId) continue;
+    if (busyProfiles.has(pid))    continue;
+
+    const prof = profiles.find(p => p.id === pid && p.is_active);
+    if (!prof) continue;
+
+    if (await isProfileCooldownReady(userId, pid)) return pid;
+  }
+  return null;
+}
+
+// ── Расчёт расписания ─────────────────────────────────────────────────────
 
 function calcNextScheduledAt(campaign, lastJob) {
   const now = new Date();

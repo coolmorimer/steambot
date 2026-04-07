@@ -24,7 +24,7 @@ const router = express.Router();
 function signAccessToken(user) {
   return jwt.sign(
     { sub: user.id, email: user.email, role: user.role },
-    config.jwt.secret, { expiresIn: config.jwt.expiresIn },
+    config.jwt.secret, { algorithm: 'HS256', expiresIn: config.jwt.expiresIn },
   );
 }
 
@@ -60,16 +60,22 @@ const STEAM_OPENID = 'https://steamcommunity.com/openid/login';
 router.get('/steam', (req, res) => {
   // If link_token is provided, user wants to link Steam to existing account
   let returnTo = `${config.appUrl}/api/oauth/steam/callback`;
+
+  // CSRF state token — embed link info if present
+  const statePayload = { csrf: crypto.randomBytes(16).toString('hex') };
+
   if (req.query.link_token) {
     try {
-      const payload = jwt.verify(req.query.link_token, config.jwt.secret);
-      // Create a short-lived link token (5 min) with just user ID
-      const linkToken = jwt.sign({ link_user_id: payload.sub }, config.jwt.secret, { expiresIn: '5m' });
-      returnTo += `?link_token=${encodeURIComponent(linkToken)}`;
+      const payload = jwt.verify(req.query.link_token, config.jwt.secret, { algorithms: ['HS256'] });
+      statePayload.link_user_id = payload.sub;
     } catch (e) {
       logger.warn('Invalid link_token for Steam link', { err: e.message });
     }
   }
+
+  const stateToken = jwt.sign(statePayload, config.jwt.secret, { algorithm: 'HS256', expiresIn: '10m' });
+  returnTo += `?state=${encodeURIComponent(stateToken)}`;
+
   const params = new URLSearchParams({
     'openid.ns':         'http://specs.openid.net/auth/2.0',
     'openid.mode':       'checkid_setup',
@@ -146,16 +152,20 @@ router.get('/steam/callback', async (req, res) => {
       }
     }
 
-    // Check if this is a "link to existing account" flow
+    // Verify CSRF state token
     let linkUserId = null;
-    const linkToken = req.query.link_token;
-    if (linkToken) {
-      try {
-        const lp = jwt.verify(linkToken, config.jwt.secret);
-        linkUserId = lp.link_user_id;
-      } catch (e) {
-        logger.warn('Invalid/expired link_token in Steam callback', { err: e.message });
+    const stateParam = req.query.state;
+    if (!stateParam) {
+      return res.redirect(`${config.appUrl}/login?error=steam_missing_state`);
+    }
+    try {
+      const statePayload = jwt.verify(stateParam, config.jwt.secret, { algorithms: ['HS256'] });
+      if (statePayload.link_user_id) {
+        linkUserId = statePayload.link_user_id;
       }
+    } catch (e) {
+      logger.warn('Invalid/expired state token in Steam callback', { err: e.message });
+      return res.redirect(`${config.appUrl}/login?error=steam_invalid_state`);
     }
 
     // Find or create user

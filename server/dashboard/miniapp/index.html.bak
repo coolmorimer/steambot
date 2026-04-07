@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Steam Poster Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0f0a1a;--bg2:#1a1230;--bg3:#241b3d;
+      --text:#eaeaef;--hint:#8a82a6;
+      --accent:#a855f7;--accent2:#7c3aed;--accent-soft:rgba(168,85,247,.12);
+      --green:#4ade80;--red:#f87171;--yellow:#facc15;--blue:#60a5fa;
+      --radius:16px;--radius-sm:12px;
+    }
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','SF Pro',sans-serif;font-size:15px;min-height:100vh;padding-bottom:90px;-webkit-tap-highlight-color:transparent}
+
+    /* ══ HEADER ══ */
+    .header{padding:20px 16px 14px;background:linear-gradient(135deg,#1a103a 0%,#2d1b69 50%,#1a103a 100%);border-bottom:1px solid rgba(168,85,247,.15)}
+    .header-row{display:flex;align-items:center;gap:12px}
+    .header-logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#a855f7,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;flex-shrink:0}
+    .header-info{flex:1;min-width:0}
+    .header-name{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .header-meta{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap}
+    .plan-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(124,58,237,.25));color:#c4b5fd;border:1px solid rgba(168,85,247,.2)}
+    .bot-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700}
+    .bot-pill.on{background:rgba(74,222,128,.12);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+    .bot-pill.off{background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.2)}
+    .bot-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .bot-dot.on{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.5)}
+    .bot-dot.off{background:#f87171}
+
+    /* ══ BOTTOM TABS ══ */
+    .bottom-tabs{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--bg2);border-top:1px solid rgba(255,255,255,.06);display:flex;padding:6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px)}
+    .btab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;font-size:10px;font-weight:700;color:var(--hint);cursor:pointer;background:none;border:none;transition:color .15s;position:relative}
+    .btab.active{color:var(--accent)}
+    .btab-icon{font-size:22px;line-height:1}
+    .btab-badge{position:absolute;top:2px;right:50%;transform:translateX(14px);min-width:16px;height:16px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+    /* ══ PAGES ══ */
+    .page{display:none;padding:16px;animation:pageIn .2s ease}
+    .page.active{display:block}
+    @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+    /* ══ CARDS ══ */
+    .card{background:var(--bg2);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.04)}
+    .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .card-title{font-weight:800;font-size:16px}
+    .card-sub{font-size:13px;color:var(--hint)}
+
+    /* ══ BADGES ══ */
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700}
+    .badge-green{background:rgba(34,197,94,.12);color:#4ade80}
+    .badge-red{background:rgba(239,68,68,.12);color:#f87171}
+    .badge-yellow{background:rgba(234,179,8,.12);color:#facc15}
+    .badge-blue{background:rgba(96,165,250,.12);color:#60a5fa}
+    .badge-purple{background:rgba(168,85,247,.12);color:#c4b5fd}
+    .badge-gray{background:rgba(107,114,128,.12);color:#9ca3af}
+
+    /* ══ STAT GRID ══ */
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+    .stat-card{background:var(--bg2);border-radius:var(--radius-sm);padding:16px 10px;text-align:center;border:1px solid rgba(255,255,255,.04);cursor:pointer;transition:transform .1s}
+    .stat-card:active{transform:scale(.96)}
+    .stat-icon{font-size:28px;margin-bottom:6px}
+    .stat-val{font-size:26px;font-weight:900;background:linear-gradient(135deg,#c4b5fd,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .stat-lbl{font-size:11px;color:var(--hint);margin-top:3px;font-weight:600}
+
+    /* ══ BIG BUTTONS ══ */
+    .big-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+    .big-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 10px;border-radius:var(--radius);background:var(--bg2);border:1px solid rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:13px;font-weight:700;transition:all .1s;min-height:90px}
+    .big-btn:active{transform:scale(.96);background:var(--bg3)}
+    .big-btn .big-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px}
+    .big-icon-green{background:rgba(34,197,94,.15);color:#4ade80}
+    .big-icon-red{background:rgba(239,68,68,.15);color:#f87171}
+    .big-icon-blue{background:rgba(96,165,250,.15);color:#60a5fa}
+    .big-icon-purple{background:rgba(168,85,247,.15);color:#a855f7}
+    .big-icon-yellow{background:rgba(234,179,8,.15);color:#facc15}
+    .big-btn-full{grid-column:1/-1}
+
+    /* ══ BOT STATUS ══ */
+    .bot-status-card{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--radius);margin-bottom:16px}
+    .bot-status-card.on{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15)}
+    .bot-status-card.off{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.15)}
+    .bot-status-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+    .bot-status-dot.on{background:#4ade80;box-shadow:0 0 10px rgba(74,222,128,.5)}
+    .bot-status-dot.off{background:#f87171}
+    .bot-status-info{flex:1}
+    .bot-status-title{font-size:16px;font-weight:800}
+    .bot-status-sub{font-size:12px;color:var(--hint);margin-top:2px}
+
+    /* ══ TOGGLE ══ */
+    .toggle{position:relative;width:50px;height:28px;flex-shrink:0;background:rgba(255,255,255,.1);border-radius:14px;cursor:pointer;transition:background .2s;border:none;padding:0}
+    .toggle.on{background:var(--accent)}
+    .toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .toggle.on::after{transform:translateX(22px)}
+
+    /* ══ HELP TIP ══ */
+    .tip{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.12);font-size:13px;color:#93c5fd;margin-bottom:14px;line-height:1.5}
+    .tip-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+    .tip b{color:var(--text)}
+    .tip-close{margin-left:auto;cursor:pointer;font-size:16px;opacity:.5;flex-shrink:0;background:none;border:none;color:#93c5fd}
+
+    /* ══ PROGRESS BAR ══ */
+    .progress-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);margin:10px 0}
+    .progress-seg{height:100%;transition:width .3s}
+
+    /* ══ LIST ITEM ══ */
+    .list-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg2);border-radius:var(--radius);margin-bottom:10px;border:1px solid rgba(255,255,255,.04)}
+    .list-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .list-info{flex:1;min-width:0}
+    .list-name{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .list-sub{font-size:12px;color:var(--hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .list-actions{display:flex;gap:6px;flex-shrink:0}
+
+    /* ══ BUTTONS ══ */
+    .btn{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none;border-radius:var(--radius-sm);padding:14px 20px;font-size:16px;font-weight:800;cursor:pointer;width:100%;margin-top:8px;transition:all .1s}
+    .btn:active{transform:scale(.97)}
+    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .btn-sm{padding:10px 18px;font-size:14px;width:auto;margin:0}
+    .btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626)}
+    .btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:12px 18px;font-size:14px;cursor:pointer;font-weight:700;transition:all .1s}
+    .btn-ghost:active{background:rgba(255,255,255,.1)}
+    .btn-icon{width:40px;height:40px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;transition:all .1s;flex-shrink:0}
+    .btn-icon:active{background:rgba(255,255,255,.1);transform:scale(.95)}
+    .btn-icon.danger:active{background:rgba(239,68,68,.15);color:var(--red)}
+
+    /* ══ FORMS ══ */
+    .input{width:100%;background:var(--bg3);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:12px 16px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s}
+    .input:focus{border-color:var(--accent)}
+    .input::placeholder{color:rgba(138,130,166,.5)}
+    textarea.input{resize:vertical;min-height:80px;font-family:monospace;font-size:14px;line-height:1.5}
+    .label{display:block;font-size:13px;font-weight:700;color:var(--hint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+    .form-group{margin-bottom:16px}
+    .label-hint{font-weight:400;color:rgba(138,130,166,.7);text-transform:none;letter-spacing:0}
+
+    /* ══ SKELETON ══ */
+    .skeleton{border-radius:var(--radius-sm);background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;margin-bottom:10px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .sk-stat{height:90px;border-radius:var(--radius-sm)}
+    .sk-card{height:80px}
+
+    /* ══ EMPTY STATE ══ */
+    .empty{text-align:center;padding:50px 20px;color:var(--hint)}
+    .empty-icon{font-size:56px;margin-bottom:12px;opacity:.6}
+    .empty-title{font-size:17px;font-weight:800;margin-bottom:6px;color:var(--text)}
+    .empty-text{font-size:14px;line-height:1.5;max-width:260px;margin:0 auto}
+
+    /* ══ TOAST ══ */
+    .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid rgba(168,85,247,.2);color:white;padding:12px 20px;border-radius:24px;font-size:15px;font-weight:600;z-index:999;animation:toastIn .3s cubic-bezier(.2,1,.3,1);box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:90vw}
+    .toast-icon{font-size:18px;flex-shrink:0}
+    @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.9)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+
+    /* ══ MODAL ══ */
+    .modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s ease}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .modal{background:var(--bg);border-radius:22px 22px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:0;animation:slideUp .3s cubic-bezier(.2,1,.3,1)}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 12px;border-bottom:1px solid rgba(255,255,255,.06);position:sticky;top:0;background:var(--bg);z-index:2}
+    .modal-title{font-size:18px;font-weight:800}
+    .modal-close{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);border:none;color:var(--hint);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px}
+    .modal-body{padding:16px}
+
+    /* ══ CHIPS ══ */
+    .chip{display:inline-flex;align-items:center;gap:4px;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--hint);transition:all .15s}
+    .chip.selected{background:var(--accent-soft);color:var(--accent);border-color:rgba(168,85,247,.3)}
+    .chip:active{transform:scale(.96)}
+
+    /* ══ TIME CHIPS ══ */
+    .time-chip{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:16px;font-size:13px;font-weight:700;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:#c4b5fd}
+    .time-chip-remove{cursor:pointer;opacity:.6;font-size:16px}
+    .time-chip-remove:active{opacity:1}
+
+    /* ══ GAME GRID ══ */
+    .game-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:10px 0}
+    .game-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.04);cursor:pointer;color:var(--text);font-size:12px;font-weight:700;text-align:center;transition:all .1s}
+    .game-btn:active{transform:scale(.96);border-color:rgba(168,85,247,.3)}
+    .game-emoji{font-size:28px}
+    .forum-btn{text-align:left;padding:14px 16px;border-radius:var(--radius-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.04);cursor:pointer;color:var(--text);font-size:14px;font-weight:700;margin-bottom:8px;transition:all .1s}
+    .forum-btn:active{transform:scale(.96);border-color:rgba(168,85,247,.3)}
+    .forum-btn-sub{font-size:12px;color:var(--hint);margin-top:3px;font-weight:400}
+
+    /* ══ VAR BTNS ══ */
+    .var-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+    .var-btn{font-size:11px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);color:var(--hint);cursor:pointer;font-family:monospace;transition:all .15s}
+    .var-btn:active{background:var(--accent-soft);color:var(--accent)}
+
+    /* ══ SELECTED FORUM ══ */
+    .selected-forum{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.2)}
+    .selected-forum-info{flex:1;min-width:0}
+    .selected-forum-name{font-size:14px;font-weight:700}
+    .selected-forum-url{font-size:12px;color:var(--hint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* ══ FILTER BAR ══ */
+    .filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch}
+    .filter-bar::-webkit-scrollbar{display:none}
+    .filter-chip{white-space:nowrap;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);transition:all .15s;flex-shrink:0}
+    .filter-chip.active{background:var(--accent-soft);color:var(--accent);border-color:rgba(168,85,247,.3)}
+    .filter-chip:active{transform:scale(.96)}
+
+    /* ══ PAGINATION ══ */
+    .pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:16px;padding:10px 0}
+    .page-btn{padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.04);color:var(--hint);cursor:pointer;font-size:14px;font-weight:700;transition:all .15s}
+    .page-btn:active{transform:scale(.96)}
+    .page-btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+
+    /* ══ JOB STATS ══ */
+    .job-stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+    .job-stat{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+    .job-dot{width:10px;height:10px;border-radius:50%}
+
+    /* ══ QR ══ */
+    .qr-box{background:#fff;border-radius:18px;padding:14px;margin:14px auto;max-width:260px}
+    .qr-box img{width:100%;image-rendering:pixelated}
+
+    /* ══ SPINNER ══ */
+    .spinner{display:inline-block;width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner-lg{width:44px;height:44px;border-width:3px}
+    .loading-center{display:flex;flex-direction:column;align-items:center;gap:14px;padding:50px 0}
+
+    /* ══ SECTION ══ */
+    .section-title{font-size:14px;font-weight:800;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px;padding-left:2px}
+    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+
+    /* ══ ERROR ══ */
+    .error-banner{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);font-size:14px;color:#fca5a5;margin-bottom:12px}
+
+    /* ══ MISC ══ */
+    .row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+    .row:last-child{border-bottom:none}
+    .text-center{text-align:center}
+    .mt-2{margin-top:8px}
+    .mt-4{margin-top:16px}
+    .mb-2{margin-bottom:8px}
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<div class="header">
+  <div class="header-row">
+    <div class="header-logo">🎮</div>
+    <div class="header-info">
+      <div class="header-name" id="user-name">Загрузка...</div>
+      <div class="header-meta">
+        <span class="plan-badge" id="plan-badge">⏳ ...</span>
+        <span class="bot-pill off" id="header-bot-pill"><span class="bot-dot off"></span>Бот</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGES ══════════════════ -->
+
+<!-- ─── OVERVIEW ─── -->
+<div id="page-overview" class="page active">
+  <div id="overview-skeleton">
+    <div class="stat-grid"><div class="skeleton sk-stat"></div><div class="skeleton sk-stat"></div><div class="skeleton sk-stat"></div></div>
+    <div class="skeleton sk-card"></div><div class="skeleton sk-card"></div>
+  </div>
+  <div id="overview-content" style="display:none">
+    <div id="bot-status-el"></div>
+
+    <div id="tip-overview" class="tip">
+      <span class="tip-icon">💡</span>
+      <span>Это <b>главный экран</b>. Здесь видно состояние бота, статистику и быстрые действия. Нажмите на любую карточку для перехода.</span>
+      <button class="tip-close" onclick="hideTip('overview')">✕</button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card" onclick="showPage('accounts')"><div class="stat-icon">👤</div><div class="stat-val" id="stat-accounts">–</div><div class="stat-lbl">Аккаунты</div></div>
+      <div class="stat-card" onclick="showPage('campaigns')"><div class="stat-icon">�</div><div class="stat-val" id="stat-campaigns">–</div><div class="stat-lbl">Автопостинг</div></div>
+      <div class="stat-card" onclick="showPage('jobs')"><div class="stat-icon">📤</div><div class="stat-val" id="stat-today">–</div><div class="stat-lbl">Сегодня</div></div>
+    </div>
+
+    <div class="big-actions" id="quick-actions">
+      <button class="big-btn" id="btn-bot-toggle" onclick="botToggle()">
+        <div class="big-icon big-icon-green">▶️</div>Запустить бота
+      </button>
+      <button class="big-btn" onclick="refreshAll()">
+        <div class="big-icon big-icon-blue">🔄</div>Обновить всё
+      </button>
+      <button class="big-btn" onclick="showPage('accounts');openAddAccount()">
+        <div class="big-icon big-icon-purple">➕</div>Добавить аккаунт
+      </button>
+      <button class="big-btn" onclick="showPage('campaigns');openCampaignForm(null)">
+        <div class="big-icon big-icon-yellow">�</div>Новая задача
+      </button>
+    </div>
+
+    <div class="section-title">� Последняя активность</div>
+    <div id="recent-jobs"><div class="card"><div style="padding:16px 0;text-align:center;color:var(--hint)">Загрузка...</div></div></div>
+  </div>
+</div>
+
+<!-- ─── ACCOUNTS ─── -->
+<div id="page-accounts" class="page">
+  <div id="accounts-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+  <div id="accounts-content" style="display:none">
+    <div id="tip-accounts" class="tip">
+      <span class="tip-icon">💡</span>
+      <span><b>Аккаунты</b> — это ваши Steam-профили. Бот будет постить от их имени. Нажмите ➕ чтобы добавить.</span>
+      <button class="tip-close" onclick="hideTip('accounts')">✕</button>
+    </div>
+    <div class="section-header">
+      <span style="font-size:18px;font-weight:800">👤 Аккаунты</span>
+      <button class="btn-sm btn" onclick="openAddAccount()">➕ Добавить</button>
+    </div>
+    <div id="accounts-list"></div>
+  </div>
+</div>
+
+<!-- ─── CAMPAIGNS ─── -->
+<div id="page-campaigns" class="page">
+  <div id="campaigns-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+  <div id="campaigns-content" style="display:none">
+    <div id="tip-campaigns" class="tip">
+      <span class="tip-icon">💡</span>
+      <span><b>Задача</b> — это расписание постов. Выберите <b>аккаунт</b>, сгенерируйте <b>шаблон</b> из инвентаря и укажите <b>время</b> — бот опубликует автоматически!</span>
+      <button class="tip-close" onclick="hideTip('campaigns')">✕</button>
+    </div>
+    <div class="section-header">
+      <span style="font-size:18px;font-weight:800">� Автопостинг</span>
+      <button class="btn-sm btn" onclick="openCampaignForm(null)">➕ Создать</button>
+    </div>
+    <div id="campaigns-list"></div>
+  </div>
+</div>
+
+<!-- ─── JOBS ─── -->
+<div id="page-jobs" class="page">
+  <div id="jobs-skeleton"><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+  <div id="jobs-content" style="display:none">
+    <div id="tip-jobs" class="tip">
+      <span class="tip-icon">💡</span>
+      <span><b>Активность</b> — лента всех публикаций. ✅ — опубликовано, ❌ — ошибка, 🕒 — ожидает.</span>
+      <button class="tip-close" onclick="hideTip('jobs')">✕</button>
+    </div>
+    <div id="jobs-stats-bar"></div>
+    <div id="jobs-filter-bar"></div>
+    <div id="jobs-list"></div>
+    <div id="jobs-pagination"></div>
+  </div>
+</div>
+
+
+
+<!-- ══════════════════ MODAL ══════════════════ -->
+<div id="modal-root"></div>
+
+<!-- ══════════════════ BOTTOM TABS ══════════════════ -->
+<div class="bottom-tabs">
+  <button class="btab active" data-page="overview"><span class="btab-icon">🏠</span>Обзор</button>
+  <button class="btab" data-page="accounts"><span class="btab-icon">👤</span>Аккаунты</button>
+  <button class="btab" data-page="campaigns"><span class="btab-icon">�</span>Автопостинг</button>
+  <button class="btab" data-page="jobs"><span class="btab-icon">📜</span>Активность</button>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   INIT & AUTH
+   ═══════════════════════════════════════════════════ */
+const tg = window.Telegram?.WebApp;
+tg?.expand(); tg?.ready();
+tg?.setHeaderColor?.('#0f0a1a'); tg?.setBackgroundColor?.('#0f0a1a');
+
+const BASE = window.location.origin;
+let token = null, me = null, subData = null;
+let _autoRefreshTimer = null;
+const AUTO_REFRESH_MS = 30000;
+
+let _profiles = [], _campaigns = [];
+let _jobsFilter = 'all', _jobsOffset = 0;
+const JOBS_LIMIT = 20;
+let _botRunning = false;
+let _selectedVariant = 0;
+
+/* ── Steam games ── */
+const STEAM_GAMES = [
+  { appId:730,    name:'Counter-Strike 2', short:'CS2', emoji:'🎯', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/730/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/app/730/discussions/0/' }]},
+  { appId:570,    name:'Dota 2', short:'Dota 2', emoji:'⚔️', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/570/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/app/570/discussions/0/' }]},
+  { appId:440,    name:'Team Fortress 2', short:'TF2', emoji:'🎩', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/440/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/app/440/discussions/0/' }]},
+  { appId:252490, name:'Rust', short:'Rust', emoji:'🔧', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/252490/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/app/252490/discussions/0/' }]},
+  { appId:578080, name:'PUBG', short:'PUBG', emoji:'🪖', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/578080/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/app/578080/discussions/0/' }]},
+  { appId:753,    name:'Steam', short:'Steam', emoji:'🎮', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/753/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/discussions/forum/0/' }]},
+  { appId:304930, name:'Unturned', short:'Unturned', emoji:'🧟', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/304930/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/app/304930/discussions/0/' }]},
+  { appId:322330, name:"Don't Starve Together", short:'DST', emoji:'🔥', forums:[
+    { name:'Trading Forum', url:'https://steamcommunity.com/app/322330/tradingforum/' },
+    { name:'General Discussions', url:'https://steamcommunity.com/app/322330/discussions/0/' }]},
+];
+
+const POST_PRESETS = [
+  { label:'💔 Классика', emoji:'💔', desc:'[h1] + ссылка ×3, секции по категориям',
+    title:'💔🍒🍑OPEN INVENTORY🍑🍒💔 <=> 💔🍒🍑SEND TRADES🍑🍒💔', body:'{full_inventory_post}' },
+  { label:'💜 Витрина', emoji:'💜', desc:'Разделитель ════, без [h1], минимализм',
+    title:'💜 SHOWCASE | {items_count} SKINS FOR TRADE | {knives_count} KNIVES 💜', body:'{full_inventory_post}' },
+  { label:'🔥 TG-стиль', emoji:'🔥', desc:'Нумерованные секции, дата в заголовке',
+    title:'🔥 [{date}] CS2 ITEMS | {items_count} total | SEND OFFER → 🔥', body:'{full_inventory_post}' },
+  { label:'🎯 Чистый список', emoji:'🎯', desc:'Без [h1], без рамок, ссылка внизу',
+    title:'🎯 TRADING {items_count} CS2 SKINS — CHECK MY INV 🎯', body:'{full_inventory_post}' },
+  { label:'⭐ VIP-стиль', emoji:'⭐', desc:'Звёзды ★★★, ссылка каждые 3 секции',
+    title:'⭐ VIP INVENTORY | {knives_count} KNIVES + {stattrak_count} STATTRAK | {date} ⭐', body:'{full_inventory_post}' },
+  { label:'🧡 Карточки', emoji:'🧡', desc:'Unicode-рамки ┌─┐, статистика сверху',
+    title:'🧡 {items_count} CS2 ITEMS AVAILABLE | BEST: {best_item} 🧡', body:'{full_inventory_post}' },
+];
+
+/* ═══════════════════════════════════════════════════
+   UTILS
+   ═══════════════════════════════════════════════════ */
+function haptic(t='light'){try{tg?.HapticFeedback?.impactOccurred?.(t)}catch{}}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function show(id){const e=document.getElementById(id);if(e)e.style.display=''}
+function hide(id){const e=document.getElementById(id);if(e)e.style.display='none'}
+function setText(id,v){const e=document.getElementById(id);if(e)e.textContent=v}
+function setHtml(id,v){const e=document.getElementById(id);if(e)e.innerHTML=v}
+function isToday(d){return new Date(d).toDateString()===new Date().toDateString()}
+function fmtTime(d){return new Date(d).toLocaleString('ru',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+
+function showToast(msg,icon='ℹ️'){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const el=document.createElement('div');el.className='toast';
+  el.innerHTML=`<span class="toast-icon">${icon}</span><span>${esc(msg)}</span>`;
+  document.body.appendChild(el);haptic('light');
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s'},2800);
+  setTimeout(()=>el.remove(),3100);
+}
+
+function hideTip(id){const e=document.getElementById('tip-'+id);if(e)e.style.display='none';try{localStorage.setItem('tip_'+id,'1')}catch{}}
+function checkTips(){['overview','accounts','campaigns','jobs'].forEach(id=>{try{if(localStorage.getItem('tip_'+id))hide('tip-'+id)}catch{}})}
+
+/* ── API ── */
+async function api(path,opts={}){
+  const sep=path.includes('?')?'&':'?';
+  const url=BASE+'/api'+path+sep+'_t='+Date.now();
+  const res=await fetch(url,{
+    cache:'no-store',
+    headers:{'Content-Type':'application/json','Cache-Control':'no-cache',...(token?{Authorization:'Bearer '+token}:{})},
+    ...opts, body:opts.body?JSON.stringify(opts.body):undefined,
+  });
+  if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.error||d.message||res.statusText)}
+  return res.json();
+}
+
+/* ── Modal ── */
+let _loginSessionId=null, _loginPollTimer=null, _qrPollTimer=null, _loginMode='qr';
+
+function openModal(title,bodyHtml){
+  const root=document.getElementById('modal-root');
+  root.innerHTML=`
+    <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">${title}</span>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modal-body">${bodyHtml}</div>
+      </div>
+    </div>`;
+  haptic('light');
+}
+function closeModal(){
+  document.getElementById('modal-root').innerHTML='';
+  if(_loginPollTimer){clearInterval(_loginPollTimer);_loginPollTimer=null}
+  if(_qrPollTimer){clearInterval(_qrPollTimer);_qrPollTimer=null}
+  if(_loginSessionId){api('/profiles/login/'+_loginSessionId,{method:'DELETE'}).catch(()=>{});_loginSessionId=null}
+}
+function setModalBody(html){const el=document.getElementById('modal-body');if(el)el.innerHTML=html}
+
+/* ═══════════════════════════════════════════════════
+   AUTH
+   ═══════════════════════════════════════════════════ */
+async function authInit(){
+  const initData=tg?.initData;
+  if(!initData){
+    document.getElementById('user-name').textContent='⚠️ Откройте через Telegram';
+    document.getElementById('plan-badge').textContent='';
+    return false;
+  }
+  try{
+    const data=await api('/bot/miniapp/auth',{method:'POST',body:{init_data:initData}});
+    token=data.access_token; me=data.user; subData=data.subscription;
+    const name=me.name||me.email?.split('@')[0]||'Пользователь';
+    document.getElementById('user-name').textContent=`👋 ${name}`;
+    document.getElementById('plan-badge').textContent='✨ '+(subData?.plan_name||'Free');
+    return true;
+  }catch(e){
+    document.getElementById('user-name').textContent='⚠️ Ошибка авторизации';
+    document.getElementById('plan-badge').textContent='';
+    return false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════ */
+document.querySelectorAll('.btab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    haptic('light');
+    showPage(tab.dataset.page);
+  });
+});
+
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.btab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name)?.classList.add('active');
+  document.querySelector(`.btab[data-page="${name}"]`)?.classList.add('active');
+  loadPage(name);
+}
+
+function loadPage(name,silent=false){
+  if(!token)return;
+  const m={overview:loadOverview,campaigns:loadCampaigns,accounts:loadAccounts,jobs:loadJobs};
+  m[name]?.(silent);
+}
+
+function updateBotPill(on){
+  _botRunning=on;
+  const el=document.getElementById('header-bot-pill');
+  if(!el)return;
+  el.className='bot-pill '+(on?'on':'off');
+  el.innerHTML=`<span class="bot-dot ${on?'on':'off'}"></span>${on?'Работает':'Стоп'}`;
+  const btn=document.getElementById('btn-bot-toggle');
+  if(btn){
+    btn.innerHTML=on
+      ?'<div class="big-icon big-icon-red">⏹</div>Остановить бота'
+      :'<div class="big-icon big-icon-green">▶️</div>Запустить бота';
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   OVERVIEW
+   ═══════════════════════════════════════════════════ */
+async function loadOverview(silent=false){
+  if(!silent){show('overview-skeleton');hide('overview-content')}
+  try{
+    const [profiles,campaigns,jobsData,botStatus]=await Promise.all([
+      api('/profiles'),api('/campaigns'),api('/jobs?limit=5'),api('/bot/status').catch(()=>null)
+    ]);
+    _profiles=profiles; _campaigns=campaigns;
+    const jobs=jobsData.jobs||[];
+    const today=jobs.filter(j=>isToday(j.scheduled_at||j.created_at)).length;
+    setText('stat-accounts',profiles.length);
+    setText('stat-campaigns',campaigns.length);
+    setText('stat-today',today);
+
+    const on=botStatus?.running===true;
+    updateBotPill(on);
+
+    setHtml('bot-status-el',`
+      <div class="bot-status-card ${on?'on':'off'}">
+        <div class="bot-status-dot ${on?'on':'off'}"></div>
+        <div class="bot-status-info">
+          <div class="bot-status-title">${on?'🟢 Бот работает':'🔴 Бот остановлен'}</div>
+          <div class="bot-status-sub">${on?'Публикации идут по расписанию':'Нажмите «Запустить» чтобы начать'}</div>
+        </div>
+      </div>`
+    );
+
+    setHtml('recent-jobs',jobs.length===0
+      ?'<div class="card"><div class="empty" style="padding:20px 0"><div class="empty-icon">📭</div><div class="empty-text">Активности пока нет.<br>Создайте задачу и запустите бота!</div></div></div>'
+      :'<div class="card">'+jobs.map(jobRowCompact).join('')+'</div>');
+
+    hide('overview-skeleton');show('overview-content');
+  }catch(e){showToast('Ошибка: '+e.message,'❌');hide('overview-skeleton')}
+}
+
+async function botToggle(){
+  haptic('medium');
+  const action=_botRunning?'stop':'start';
+  try{
+    showToast(action==='start'?'Запуск бота...':'Останавливаю...','⏳');
+    await api('/bot/'+action,{method:'POST'});
+    const on=action==='start';
+    updateBotPill(on);
+    showToast(on?'✅ Бот запущен!':'⏹ Бот остановлен',on?'✅':'⏹');
+    setTimeout(()=>loadOverview(true),1000);
+  }catch(e){showToast('Ошибка: '+e.message,'❌');haptic('error')}
+}
+
+function refreshAll(){
+  haptic('light');showToast('Обновляю...','🔄');
+  const ap=document.querySelector('.page.active')?.id?.replace('page-','');
+  loadPage(ap||'overview',false);
+}
+
+/* ═══════════════════════════════════════════════════
+   ACCOUNTS
+   ═══════════════════════════════════════════════════ */
+async function loadAccounts(silent=false){
+  if(!silent){show('accounts-skeleton');hide('accounts-content')}
+  try{
+    _profiles=await api('/profiles');
+    renderAccounts();
+    hide('accounts-skeleton');show('accounts-content');
+  }catch(e){showToast('Ошибка: '+e.message,'❌');hide('accounts-skeleton')}
+}
+
+function renderAccounts(){
+  const el=document.getElementById('accounts-list');
+  if(!_profiles.length){
+    el.innerHTML=`<div class="empty">
+      <div class="empty-icon">👤</div>
+      <div class="empty-title">Нет аккаунтов</div>
+      <div class="empty-text">Добавьте свой Steam аккаунт.<br>Бот будет постить от его имени.</div>
+      <button class="btn" style="width:auto;margin:20px auto 0;display:block;padding:16px 32px;font-size:18px" onclick="openAddAccount()">➕ Добавить аккаунт</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML=_profiles.map(p=>`
+    <div class="list-item">
+      <div class="list-avatar" style="background:${p.is_active?'rgba(74,222,128,.12)':'rgba(248,113,113,.12)'}">
+        ${p.is_active?'🟢':'🔴'}
+      </div>
+      <div class="list-info">
+        <div class="list-name">${esc(p.name)}</div>
+        <div class="list-sub">${p.is_active?'✅ Активен':'❌ Куки истекли'}</div>
+      </div>
+      <div class="list-actions">
+        <button class="btn-icon" onclick="checkAccount('${p.id}')" title="Проверить">🔍</button>
+        <button class="btn-icon" onclick="toggleAccount('${p.id}',${!p.is_active})" title="${p.is_active?'Выключить':'Включить'}">${p.is_active?'⏸':'▶️'}</button>
+        <button class="btn-icon danger" onclick="deleteAccount('${p.id}','${esc(p.name)}')" title="Удалить">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function checkAccount(id){
+  haptic('light');showToast('Проверяю сессию...','🔍');
+  try{
+    const data=await api('/profiles/'+id+'/check',{method:'POST'});
+    if(data.valid){showToast('Сессия активна!','✅')}
+    else{showToast('Сессия истекла'+(data.reason?': '+data.reason:''),'❌');haptic('error')}
+    loadAccounts(true);
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+async function toggleAccount(id,active){
+  haptic('medium');
+  try{
+    await api('/profiles/'+id+'/toggle',{method:'POST'});
+    showToast(active?'Аккаунт включён ✅':'Аккаунт отключён ⏸',active?'✅':'⏸');
+    loadAccounts(true);
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+async function deleteAccount(id,name){
+  haptic('medium');
+  openModal('🗑 Удалить аккаунт?',`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+      <p style="font-size:16px;color:var(--hint)">Вы уверены что хотите удалить<br><strong style="color:var(--text);font-size:18px">${name}</strong>?</p>
+      <p style="font-size:13px;color:var(--red);margin-top:8px">Это действие нельзя отменить!</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-danger" style="flex:1;margin:0" onclick="confirmDeleteAccount('${id}')">🗑 Удалить</button>
+    </div>
+  `);
+}
+
+async function confirmDeleteAccount(id){
+  closeModal();
+  try{await api('/profiles/'+id,{method:'DELETE'});showToast('Аккаунт удалён','✅');loadAccounts(true)}
+  catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+/* ── Add Account ── */
+function openAddAccount(){
+  _loginSessionId=null; _loginMode='qr';
+  openModal('➕ Добавить Steam аккаунт',`
+    <div class="tip mb-2">
+      <span class="tip-icon">ℹ️</span>
+      <span>Вход происходит через <b>браузер на сервере</b>. Ваши данные в безопасности и <b>не сохраняются</b>.</span>
+    </div>
+    <div class="form-group">
+      <label class="label">📝 Название аккаунта</label>
+      <input class="input" id="login-name" placeholder="Например: my_steam" style="font-size:16px" />
+    </div>
+    <div class="form-group">
+      <label class="label">🔐 Способ входа</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button type="button" class="chip selected" id="mode-qr" onclick="selectLoginMode('qr')" style="justify-content:center;padding:14px">📱 QR-код</button>
+        <button type="button" class="chip" id="mode-credentials" onclick="selectLoginMode('credentials')" style="justify-content:center;padding:14px">🔑 Логин/пароль</button>
+      </div>
+    </div>
+    <button class="btn" onclick="startLogin()" style="font-size:18px;padding:16px">Продолжить ➡️</button>
+  `);
+}
+
+function selectLoginMode(mode){
+  _loginMode=mode;
+  document.getElementById('mode-qr')?.classList.toggle('selected',mode==='qr');
+  document.getElementById('mode-credentials')?.classList.toggle('selected',mode==='credentials');
+}
+
+async function startLogin(){
+  const name=document.getElementById('login-name')?.value?.trim();
+  if(!name){showToast('Введите имя аккаунта','⚠️');haptic('error');return}
+  setModalBody('<div class="loading-center"><div class="spinner spinner-lg"></div><p style="color:var(--hint);font-size:16px">Запускаем браузер…</p></div>');
+  try{
+    const data=await api('/profiles/login/start',{method:'POST',body:{name,mode:_loginMode}});
+    _loginSessionId=data.sessionId;
+    startStatusPoll(_loginSessionId);
+    if(_loginMode==='qr'){startQRPoll(_loginSessionId)}
+    else{showCredentialsForm()}
+  }catch(e){setModalBody(`<div class="error-banner">❌ ${esc(e.message)}</div><button class="btn" onclick="openAddAccount()">Попробовать снова</button>`)}
+}
+
+function startStatusPoll(sid){
+  _loginPollTimer=setInterval(async()=>{
+    try{
+      const data=await api('/profiles/login/'+sid+'/status');
+      if(data.status==='done'){
+        clearInterval(_loginPollTimer);_loginPollTimer=null;
+        clearInterval(_qrPollTimer);_qrPollTimer=null;
+        _loginSessionId=null;
+        setModalBody(`<div class="loading-center"><div style="font-size:64px">🎉</div><p style="color:var(--green);font-weight:800;font-size:20px">Аккаунт добавлен!</p><p style="color:var(--hint);font-size:14px;margin-top:4px">Теперь создайте кампанию для постинга</p></div>`);
+        haptic('success');
+        setTimeout(()=>{closeModal();loadAccounts(true)},2000);
+      }else if(['expired','cancelled'].includes(data.status)){
+        clearInterval(_loginPollTimer);_loginPollTimer=null;
+        clearInterval(_qrPollTimer);_qrPollTimer=null;
+        setModalBody('<div class="error-banner">⏰ Сессия истекла</div><button class="btn" onclick="openAddAccount()">Попробовать снова</button>');
+      }else if(data.status==='error'){
+        clearInterval(_loginPollTimer);_loginPollTimer=null;
+        clearInterval(_qrPollTimer);_qrPollTimer=null;
+        setModalBody(`<div class="error-banner">❌ ${esc(data.error||'Ошибка при входе')}</div><button class="btn" onclick="openAddAccount()">Попробовать снова</button>`);
+      }else if(data.status==='waiting_guard'||data.status==='waiting_mobile_confirm'){
+        clearInterval(_qrPollTimer);_qrPollTimer=null;
+        showGuardForm();
+      }
+    }catch{}
+  },2500);
+}
+
+function startQRPoll(sid){
+  _qrPollTimer=setInterval(async()=>{
+    try{
+      const data=await api('/profiles/login/'+sid+'/qr');
+      if(data.qr){showQRCode(data.qr)}
+    }catch{}
+  },2200);
+}
+
+function showQRCode(qrBase64){
+  if(document.getElementById('qr-img')){
+    document.getElementById('qr-img').src='data:image/png;base64,'+qrBase64;
+    return;
+  }
+  setModalBody(`
+    <div style="text-align:center;margin-bottom:10px">
+      <p style="font-size:16px;font-weight:700;margin-bottom:6px">📱 Отсканируйте QR-код</p>
+      <p style="font-size:13px;color:var(--hint)">Откройте <b style="color:var(--text)">Steam</b> на телефоне →<br>Настройки → Войти через QR-код</p>
+    </div>
+    <div class="qr-box"><img id="qr-img" src="data:image/png;base64,${qrBase64}" alt="QR" /></div>
+    <p style="text-align:center;font-size:13px;color:var(--hint)"><span class="spinner" style="width:14px;height:14px;vertical-align:middle;margin-right:6px"></span>Ожидаем сканирования…</p>
+  `);
+}
+
+function showCredentialsForm(){
+  setModalBody(`
+    <div class="tip mb-2"><span class="tip-icon">🖥</span><span>Сервер готов. Введите данные вашего Steam аккаунта.</span></div>
+    <div class="form-group">
+      <label class="label">👤 Логин Steam</label>
+      <input class="input" id="cred-username" placeholder="username" autocomplete="username" style="font-size:16px" />
+    </div>
+    <div class="form-group">
+      <label class="label">🔑 Пароль</label>
+      <input class="input" id="cred-password" type="password" placeholder="••••••••" autocomplete="current-password" style="font-size:16px" />
+    </div>
+    <button class="btn" id="cred-submit-btn" onclick="submitCredentials()" style="font-size:18px;padding:16px">🔐 Войти</button>
+  `);
+}
+
+async function submitCredentials(){
+  const username=document.getElementById('cred-username')?.value?.trim();
+  const password=document.getElementById('cred-password')?.value;
+  if(!username||!password){showToast('Введите логин и пароль','⚠️');return}
+  const btn=document.getElementById('cred-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Входим...'}
+  try{
+    const data=await api('/profiles/login/'+_loginSessionId+'/credentials',{method:'POST',body:{username,password}});
+    if(data.needsGuard||data.needsMobileConfirm){showGuardForm()}
+  }catch(e){
+    showToast(e.message||'Ошибка входа','❌');
+    if(btn){btn.disabled=false;btn.textContent='🔐 Войти'}
+  }
+}
+
+function showGuardForm(){
+  if(document.getElementById('guard-input'))return;
+  setModalBody(`
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:56px;margin-bottom:8px">🛡</div>
+      <p style="font-weight:800;font-size:18px">Подтвердите вход</p>
+      <p style="font-size:14px;color:var(--hint);margin-top:6px">Введите код с <b style="color:var(--text)">почты</b> или из <b style="color:var(--text)">Steam Guard</b></p>
+    </div>
+    <input class="input" id="guard-input" placeholder="XXXXX" maxlength="8" style="text-align:center;font-size:28px;font-family:monospace;letter-spacing:6px;padding:16px" />
+    <button class="btn" id="guard-submit-btn" onclick="submitGuard()" style="margin-top:12px;font-size:18px;padding:16px">✅ Отправить код</button>
+    <p style="text-align:center;font-size:12px;color:var(--hint);margin-top:10px"><span class="spinner" style="width:12px;height:12px;vertical-align:middle;margin-right:4px"></span>или ожидаем подтверждения с телефона…</p>
+  `);
+  setTimeout(()=>{
+    const gi=document.getElementById('guard-input');
+    if(gi){gi.focus();gi.addEventListener('keydown',e=>{if(e.key==='Enter')submitGuard()})}
+  },100);
+}
+
+async function submitGuard(){
+  const code=document.getElementById('guard-input')?.value?.trim();
+  if(!code){showToast('Введите код','⚠️');return}
+  const btn=document.getElementById('guard-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Проверяю...'}
+  try{
+    await api('/profiles/login/'+_loginSessionId+'/guard',{method:'POST',body:{code}});
+  }catch(e){
+    showToast(e.message||'Неверный код','❌');
+    if(btn){btn.disabled=false;btn.textContent='✅ Отправить код'}
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   CAMPAIGNS
+   ═══════════════════════════════════════════════════ */
+async function loadCampaigns(silent=false){
+  if(!silent){show('campaigns-skeleton');hide('campaigns-content')}
+  try{
+    [_campaigns,_profiles]=await Promise.all([api('/campaigns'),api('/profiles')]);
+    renderCampaigns();
+    hide('campaigns-skeleton');show('campaigns-content');
+  }catch(e){showToast('Ошибка: '+e.message,'❌');hide('campaigns-skeleton')}
+}
+
+function renderCampaigns(){
+  const el=document.getElementById('campaigns-list');
+  if(!_campaigns.length){
+    el.innerHTML=`<div class="empty">
+      <div class="empty-icon">�</div>
+      <div class="empty-title">Нет задач</div>
+      <div class="empty-text">Задача — это расписание постов.<br>Создайте первую!</div>
+      <button class="btn" style="width:auto;margin:20px auto 0;display:block;padding:16px 32px;font-size:18px" onclick="openCampaignForm(null)">➕ Создать задачу</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML=_campaigns.map(c=>{
+    const times=parseTimes(c.schedule_times);
+    const schedLbl=times.length?times.join(', '):(c.schedule_minutes?`Каждые ${c.schedule_minutes} мин.`:'—');
+    const game=STEAM_GAMES.find(g=>g.forums.some(f=>f.url===c.target_url));
+    return `
+    <div class="list-item" style="flex-wrap:wrap">
+      <div class="list-avatar" style="background:${c.is_active?'rgba(74,222,128,.12)':'rgba(107,114,128,.12)'}">
+        ${c.is_active?'�':'⏸'}
+      </div>
+      <div class="list-info">
+        <div class="list-name">${esc(c.name)}</div>
+        <div class="list-sub">⏰ ${esc(schedLbl)}${game?' · '+game.emoji+' '+game.short:''}</div>
+      </div>
+      <span class="badge ${c.is_active?'badge-green':'badge-gray'}" style="margin-right:4px">${c.is_active?'Активна':'Пауза'}</span>
+      <div style="width:100%;display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
+        <button class="btn-icon" onclick="toggleCampaign('${c.id}',${!c.is_active})" title="${c.is_active?'Пауза':'Запустить'}">${c.is_active?'⏸':'▶️'}</button>
+        <button class="btn-icon" onclick="viewCampaign('${c.id}')" title="Подробнее">👁</button>
+        <button class="btn-icon" onclick="openCampaignForm('${c.id}')" title="Редактировать">✏️</button>
+        <button class="btn-icon danger" onclick="deleteCampaign('${c.id}','${esc(c.name)}')" title="Удалить">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleCampaign(id,active){
+  haptic('medium');
+  try{
+    await api('/campaigns/'+id,{method:'PATCH',body:{is_active:active}});
+    showToast(active?'Задача запущена ▶️':'Задача на паузе ⏸',active?'▶️':'⏸');
+    loadCampaigns(true);
+  }catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+function viewCampaign(id){
+  const c=_campaigns.find(x=>x.id===id);if(!c)return;
+  const times=parseTimes(c.schedule_times);
+  const schedLbl=times.length?times.join(', '):'—';
+  const game=STEAM_GAMES.find(g=>g.forums.some(f=>f.url===c.target_url));
+  const profNames=(c.profile_ids||[]).map(pid=>{const p=_profiles.find(x=>x.id===pid);return p?esc(p.name):pid}).join(', ')||'Не выбраны';
+
+  openModal('📋 '+esc(c.name),`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card"><div class="card-sub">СТАТУС</div><span class="badge ${c.is_active?'badge-green':'badge-gray'}" style="font-size:14px">${c.is_active?'🟢 Активна':'⏸ На паузе'}</span></div>
+      <div class="card"><div class="card-sub">ФОРУМ</div><div style="margin-top:4px;font-weight:600">${game?game.emoji+' '+esc(game.name):'🌐 Кастомный'}</div><div style="font-size:12px;color:var(--hint);word-break:break-all;margin-top:2px">${esc(c.target_url||'—')}</div></div>
+      <div class="card"><div class="card-sub">ЗАГОЛОВОК</div><div style="margin-top:4px;font-family:monospace;font-size:13px;word-break:break-word">${esc(c.title_template)}</div></div>
+      <div class="card"><div class="card-sub">ТЕЛО ПОСТА</div><div style="margin-top:4px;font-family:monospace;font-size:13px;white-space:pre-wrap;max-height:150px;overflow-y:auto;word-break:break-word">${esc(c.body_template||'—')}</div></div>
+      <div class="card"><div class="card-sub">РАСПИСАНИЕ</div><div style="margin-top:4px;font-weight:600">⏰ ${esc(schedLbl)}</div>${c.window_start&&c.window_end?`<div style="font-size:13px;color:var(--hint);margin-top:2px">Окно: ${esc(c.window_start)} – ${esc(c.window_end)}</div>`:''}</div>
+      <div class="card"><div class="card-sub">АККАУНТЫ</div><div style="margin-top:4px;font-weight:600">👤 ${profNames}</div></div>
+    </div>
+  `);
+}
+
+async function deleteCampaign(id,name){
+  haptic('medium');
+  openModal('🗑 Удалить задачу?',`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;margin-bottom:12px">⚠️</div>
+      <p style="font-size:16px;color:var(--hint)">Удалить задачу<br><strong style="color:var(--text);font-size:18px">${name}</strong>?</p>
+      <p style="font-size:13px;color:var(--red);margin-top:8px">Все ожидающие задачи тоже удалятся!</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-danger" style="flex:1;margin:0" onclick="confirmDeleteCampaign('${id}')">🗑 Удалить</button>
+    </div>
+  `);
+}
+async function confirmDeleteCampaign(id){
+  closeModal();
+  try{await api('/campaigns/'+id,{method:'DELETE'});showToast('Задача удалена','✅');loadCampaigns(true)}
+  catch(e){showToast('Ошибка: '+e.message,'❌')}
+}
+
+/* ── Campaign Form ── */
+let _editingCampaign=null, _formTimes=[], _formProfileId='';
+let _presetsOpen=false;
+
+function openCampaignForm(campaignId){
+  if(campaignId){_editingCampaign=_campaigns.find(c=>c.id===campaignId)||null}
+  else{_editingCampaign=null}
+  const c=_editingCampaign;
+  _formTimes=parseTimes(c?.schedule_times)||[];
+  _formProfileId=c?.profile_ids?.[0]||c?.profile_id||'';
+  _selectedVariant=0; _presetsOpen=false;
+  openModal(c?'✏️ Редактировать задачу':'✨ Новая задача',buildCampaignFormHtml(c));
+}
+
+function buildCampaignFormHtml(c){
+  const profileChips=_profiles.map(p=>{
+    const sel=_formProfileId===p.id;
+    return `<button type="button" class="chip ${sel?'selected':''}" data-profile-chip="${p.id}" onclick="selectFormProfile('${p.id}')" style="display:flex;align-items:center;gap:8px;padding:10px 16px">
+      ${p.avatar_url
+        ?`<img src="${esc(p.avatar_url)}" style="width:28px;height:28px;border-radius:8px;object-fit:cover" alt="">`
+        :`<span style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${(p.name||'?')[0].toUpperCase()}</span>`}
+      <span style="font-weight:600">${esc(p.name)}</span>
+      <span class="profile-check" style="color:var(--accent);${sel?'':'display:none'}">✓</span>
+    </button>`;
+  }).join('');
+
+  const variantBtns=POST_PRESETS.map((p,i)=>`
+    <button type="button" class="chip ${_selectedVariant===i?'selected':''}" data-variant-chip="${i}" onclick="selectVariant(${i})" style="text-align:left;padding:10px 14px;flex:1 1 calc(50% - 4px);min-width:130px">
+      <div style="font-weight:700;font-size:13px">${p.emoji} ${p.label.replace(/^.+? /,'')}</div>
+      <div style="font-size:11px;color:${_selectedVariant===i?'rgba(168,85,247,.8)':'var(--hint)'};margin-top:2px">${esc(p.desc)}</div>
+    </button>`).join('');
+
+  const timesHtml=_formTimes.map(t=>`<span class="time-chip">${t} <span class="time-chip-remove" onclick="removeFormTime('${t}')">✕</span></span>`).join('');
+
+  const presetBtns=POST_PRESETS.map((p,i)=>`
+    <button type="button" onclick="applyPreset(${i})" style="text-align:left;padding:10px 14px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:all .1s;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;color:#fff">${p.emoji} ${p.label.replace(/^.+? /,'')}</div>
+      <div style="font-size:11px;color:var(--hint);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px">${esc(p.title).slice(0,45)}…</div>
+    </button>`).join('');
+
+  return `
+    <form onsubmit="submitCampaignForm(event)">
+
+      <div class="form-group">
+        <label class="label" style="display:flex;align-items:center;gap:6px">👤 Аккаунт ${_formProfileId?'<span style="font-weight:400;color:rgba(138,130,166,.7);text-transform:none">(выбран)</span>':''}</label>
+        ${_profiles.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${profileChips}</div>`
+          :'<p style="font-size:14px;color:var(--hint)">⚠️ Сначала добавьте аккаунты</p>'}
+      </div>
+
+      <div class="form-group" style="background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(16,185,129,.02));border:1px solid rgba(16,185,129,.15);border-radius:var(--radius);padding:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,.15);display:flex;align-items:center;justify-content:center;font-size:20px">✨</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Сгенерировать из инвентаря</div>
+            <div style="font-size:12px;color:var(--hint);margin-top:2px">Бот прочитает инвентарь и составит готовый пост</div>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:6px">Стиль заголовка:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">${variantBtns}</div>
+          <div id="variant-preview" style="font-size:11px;color:var(--hint);font-family:monospace;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.7">${esc(POST_PRESETS[_selectedVariant]?.title||'')}</div>
+        </div>
+        <button type="button" class="btn" onclick="generateFromInventory()" id="gen-btn" style="background:linear-gradient(135deg,#10b981,#059669);margin:0;font-size:15px;padding:12px" ${!_formProfileId?'disabled':''}>
+          ✨ Сгенерировать пост
+        </button>
+        <div id="gen-meta" style="display:none;margin-top:8px;font-size:12px;color:var(--hint)"></div>
+        ${!_formProfileId?'<div id="gen-warning" style="font-size:12px;color:#f59e0b;margin-top:6px">⚠️ Сначала выберите аккаунт</div>':''}
+      </div>
+
+      <div class="form-group">
+        <button type="button" onclick="togglePresets()" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--radius-sm);border:1px dashed rgba(255,255,255,.12);background:none;color:var(--hint);cursor:pointer;font-size:13px;font-weight:600">
+          <span>📋 Вставить шаблон вручную (без генерации)</span>
+          <span id="presets-arrow">▼</span>
+        </button>
+        <div id="presets-list" style="display:none;margin-top:10px;grid-template-columns:1fr;gap:8px">${presetBtns}</div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">📝 Название задачи</label>
+        <input class="input" id="form-name" required value="${esc(c?.name||'')}" placeholder="Моя задача" style="font-size:16px" />
+      </div>
+      <div class="form-group">
+        <label class="label">📌 Шаблон заголовка</label>
+        <input class="input" id="form-title" required value="${esc(c?.title_template||'')}" placeholder="Напр.: Инвентарь {date} — {items_count} предметов" style="font-family:monospace;font-size:14px" />
+      </div>
+      <div class="form-group">
+        <label class="label">📄 Тело публикации</label>
+        <textarea class="input" id="form-body" rows="4" required placeholder="Привет! Мой инвентарь ({date}):\nЛучший предмет: {best_item}\n{trade_url}">${esc(c?.body_template||'')}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="label" style="display:flex;align-items:center;gap:6px">⏰ Время публикации <span class="label-hint">(мин. 65 мин. между)</span></label>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <input type="time" class="input" id="form-time-input" style="width:140px;font-size:16px" />
+          <button type="button" class="btn-sm btn" onclick="addFormTime()" style="font-size:16px">➕</button>
+        </div>
+        <div id="form-times-list" style="display:flex;flex-wrap:wrap;gap:6px">${timesHtml}</div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button type="button" class="btn-ghost" style="flex:1;padding:14px" onclick="closeModal()">Отмена</button>
+        <button type="submit" class="btn" style="flex:1;margin:0;font-size:16px" id="campaign-submit-btn">${c?'💾 Сохранить':'✨ Создать'}</button>
+      </div>
+    </form>
+  `;
+}
+
+function selectFormProfile(id){
+  haptic('light');
+  _formProfileId=id;
+  const container=document.getElementById('modal-body');
+  if(!container)return;
+  container.querySelectorAll('[data-profile-chip]').forEach(btn=>{
+    const chipId=btn.getAttribute('data-profile-chip');
+    btn.classList.toggle('selected',chipId===id);
+    const check=btn.querySelector('.profile-check');
+    if(check)check.style.display=chipId===id?'':'none';
+  });
+  const genBtn=document.getElementById('gen-btn');
+  if(genBtn)genBtn.disabled=false;
+  const warn=document.getElementById('gen-warning');
+  if(warn)warn.style.display='none';
+}
+
+function selectVariant(idx){
+  haptic('light');
+  _selectedVariant=idx;
+  const container=document.getElementById('modal-body');
+  if(!container)return;
+  container.querySelectorAll('[data-variant-chip]').forEach(btn=>{
+    const i=parseInt(btn.getAttribute('data-variant-chip'));
+    btn.classList.toggle('selected',i===idx);
+  });
+  const preview=document.getElementById('variant-preview');
+  if(preview)preview.textContent=POST_PRESETS[idx]?.title||'';
+}
+
+async function generateFromInventory(){
+  if(!_formProfileId){showToast('Выберите аккаунт','⚠️');return}
+  const btn=document.getElementById('gen-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner" style="width:16px;height:16px;vertical-align:middle;margin-right:6px"></span>Читаю инвентарь...'}
+  try{
+    const data=await api('/profiles/'+_formProfileId+'/inventory-post?variant='+_selectedVariant);
+    const titleEl=document.getElementById('form-title');
+    const bodyEl=document.getElementById('form-body');
+    if(titleEl)titleEl.value=data.title||'';
+    if(bodyEl)bodyEl.value=data.body||'';
+    if(data.meta){
+      const metaEl=document.getElementById('gen-meta');
+      if(metaEl){
+        let parts=['📦 '+data.meta.items_count+' скинов'];
+        if(data.meta.knives_count>0)parts.push('🔪 '+data.meta.knives_count+' ножей');
+        if(data.meta.stattrak_count>0)parts.push('📈 '+data.meta.stattrak_count+' StatTrak');
+        metaEl.innerHTML=parts.join(' · ');
+        metaEl.style.display='';
+      }
+    }
+    if(btn){btn.innerHTML='✅ Готово!';btn.disabled=false}
+    haptic('success');showToast('Пост сгенерирован! ✨','✅');
+  }catch(e){
+    showToast('Ошибка: '+e.message,'❌');
+    if(btn){btn.disabled=false;btn.innerHTML='✨ Сгенерировать пост'}
+  }
+}
+
+function applyPreset(idx){
+  const p=POST_PRESETS[idx];if(!p)return;
+  const titleEl=document.getElementById('form-title');
+  const bodyEl=document.getElementById('form-body');
+  if(titleEl)titleEl.value=p.title;
+  if(bodyEl)bodyEl.value=p.body;
+  togglePresets();
+  haptic('medium');showToast('Шаблон применён!','📋');
+}
+
+function togglePresets(){
+  const list=document.getElementById('presets-list');
+  const arrow=document.getElementById('presets-arrow');
+  if(!list)return;
+  _presetsOpen=!_presetsOpen;
+  list.style.display=_presetsOpen?'grid':'none';
+  if(arrow)arrow.textContent=_presetsOpen?'▲':'▼';
+}
+
+function addFormTime(){
+  const input=document.getElementById('form-time-input');
+  const t=input?.value;if(!t){showToast('Выберите время','⚠️');return}
+  if(_formTimes.includes(t)){showToast('Это время уже добавлено','⚠️');return}
+  const next=[..._formTimes,t].sort();
+  if(!validateTimes(next)){showToast('Мин. 65 минут между публикациями','⚠️');return}
+  _formTimes=next;input.value='';renderFormTimes();haptic('light');
+}
+function removeFormTime(t){_formTimes=_formTimes.filter(x=>x!==t);renderFormTimes()}
+function renderFormTimes(){
+  const el=document.getElementById('form-times-list');
+  if(el)el.innerHTML=_formTimes.map(t=>`<span class="time-chip">${t} <span class="time-chip-remove" onclick="removeFormTime('${t}')">✕</span></span>`).join('');
+}
+function validateTimes(times){
+  if(times.length<2)return true;
+  const mins=times.map(t=>{const[h,m]=t.split(':').map(Number);return h*60+m}).sort((a,b)=>a-b);
+  for(let i=1;i<mins.length;i++){if(mins[i]-mins[i-1]<65)return false}
+  return(1440-mins[mins.length-1]+mins[0])>=65;
+}
+
+/* ── Submit Form ── */
+async function submitCampaignForm(e){
+  e.preventDefault();
+  const name=document.getElementById('form-name')?.value?.trim();
+  const title_template=document.getElementById('form-title')?.value?.trim();
+  const body_template=document.getElementById('form-body')?.value?.trim();
+
+  if(!name||!title_template||!body_template){showToast('Заполните все обязательные поля','⚠️');haptic('error');return}
+  if(!_formProfileId){showToast('Выберите аккаунт','⚠️');haptic('error');return}
+  if(!_formTimes.length){showToast('Добавьте время публикации','⚠️');haptic('error');return}
+
+  const btn=document.getElementById('campaign-submit-btn');
+  if(btn){btn.disabled=true;btn.textContent='Сохраняю...'}
+
+  const payload={
+    name, title_template, body_template,
+    schedule_times:_formTimes,
+    window_start:_editingCampaign?.window_start||null,
+    window_end:_editingCampaign?.window_end||null,
+    profile_ids:[_formProfileId],
+    target_url:_editingCampaign?.target_url||null,
+    group_ids:[],
+  };
+
+  try{
+    if(_editingCampaign){
+      await api('/campaigns/'+_editingCampaign.id,{method:'PATCH',body:payload});
+      showToast('Задача обновлена! ✅','✅');
+    }else{
+      await api('/campaigns',{method:'POST',body:payload});
+      showToast('Задача создана! 🎉','✅');haptic('success');
+    }
+    closeModal();loadCampaigns(true);
+  }catch(e){
+    showToast('Ошибка: '+e.message,'❌');
+    if(btn){btn.disabled=false;btn.textContent=_editingCampaign?'💾 Сохранить':'✨ Создать'}
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   JOBS
+   ═══════════════════════════════════════════════════ */
+async function loadJobs(silent=false){
+  if(!silent){show('jobs-skeleton');hide('jobs-content')}
+  try{
+    const statusParam=_jobsFilter!=='all'?`&status=${_jobsFilter}`:'';
+    const {jobs,total}=await api(`/jobs?limit=${JOBS_LIMIT}&offset=${_jobsOffset}${statusParam}`);
+    const stats=await api('/jobs/stats').catch(()=>({pending:0,running:0,done:0,failed:0,today:0}));
+
+    setHtml('jobs-filter-bar',`
+      <div class="filter-bar">
+        ${[['all','Все'],['pending','🕒 Ожидают'],['running','⏳ В процессе'],['done','✅ Готово'],['failed','❌ Ошибки'],['cancelled','🚫 Отменены']].map(([v,l])=>
+          `<button class="filter-chip ${_jobsFilter===v?'active':''}" onclick="setJobsFilter('${v}')">${l}</button>`
+        ).join('')}
+      </div>`);
+
+    const tot=(stats.pending||0)+(stats.running||0)+(stats.done||0)+(stats.failed||0)+(stats.cancelled||0)||1;
+    setHtml('jobs-stats-bar',`
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 Статистика</span><span class="card-sub">Сегодня: ${stats.today||0}</span></div>
+        <div class="progress-bar">
+          <div class="progress-seg" style="width:${(stats.done||0)/tot*100}%;background:var(--green)"></div>
+          <div class="progress-seg" style="width:${(stats.running||0)/tot*100}%;background:var(--blue)"></div>
+          <div class="progress-seg" style="width:${(stats.pending||0)/tot*100}%;background:var(--yellow)"></div>
+          <div class="progress-seg" style="width:${(stats.failed||0)/tot*100}%;background:var(--red)"></div>
+        </div>
+        <div class="job-stats">
+          <div class="job-stat"><div class="job-dot" style="background:var(--green)"></div>✅ ${stats.done||0}</div>
+          <div class="job-stat"><div class="job-dot" style="background:var(--blue)"></div>🔄 ${stats.running||0}</div>
+          <div class="job-stat"><div class="job-dot" style="background:var(--yellow)"></div>⏳ ${stats.pending||0}</div>
+          <div class="job-stat"><div class="job-dot" style="background:var(--red)"></div>❌ ${stats.failed||0}</div>
+        </div>
+      </div>`);
+
+    if(!jobs?.length){
+      setHtml('jobs-list',`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">Пока нет активности</div><div class="empty-text">Запустите бота и создайте задачу</div></div>`);
+      setHtml('jobs-pagination','');
+    }else{
+      setHtml('jobs-list',jobs.map(jobRowFull).join(''));
+      const totalPages=Math.ceil(total/JOBS_LIMIT);
+      const currentPage=Math.floor(_jobsOffset/JOBS_LIMIT)+1;
+      setHtml('jobs-pagination',totalPages>1?`
+        <div class="pagination">
+          <button class="page-btn" onclick="jobsPage(${_jobsOffset-JOBS_LIMIT})" ${_jobsOffset<=0?'disabled':''}>← Назад</button>
+          <span style="font-size:14px;color:var(--hint);font-weight:700">${currentPage} / ${totalPages}</span>
+          <button class="page-btn" onclick="jobsPage(${_jobsOffset+JOBS_LIMIT})" ${_jobsOffset+JOBS_LIMIT>=total?'disabled':''}>Вперёд →</button>
+        </div>`:'');
+    }
+    hide('jobs-skeleton');show('jobs-content');
+  }catch(e){showToast('Ошибка: '+e.message,'❌');hide('jobs-skeleton')}
+}
+
+function setJobsFilter(filter){haptic('light');_jobsFilter=filter;_jobsOffset=0;loadJobs(true)}
+function jobsPage(offset){haptic('light');_jobsOffset=Math.max(0,offset);loadJobs(true)}
+
+function jobRowFull(j){
+  const cfg={done:{icon:'✅',badge:'badge-green'},failed:{icon:'❌',badge:'badge-red'},pending:{icon:'🕒',badge:'badge-yellow'},running:{icon:'⏳',badge:'badge-blue'},cancelled:{icon:'🚫',badge:'badge-gray'}};
+  const c=cfg[j.status]||{icon:'·',badge:'badge-gray'};
+  const time=fmtTime(j.scheduled_at||j.created_at);
+  const err=j.error_message||j.error||'';
+  const actions=[];
+  if(j.status==='pending')actions.push(`<button class="btn-icon" onclick="cancelJob('${j.id}')" title="Отменить">⛔</button>`);
+  if(['done','failed','cancelled'].includes(j.status))actions.push(`<button class="btn-icon danger" onclick="deleteJob('${j.id}')" title="Удалить">🗑</button>`);
+  return `
+    <div class="list-item" style="flex-wrap:wrap">
+      <div class="list-avatar" style="background:rgba(255,255,255,.04);font-size:20px">${c.icon}</div>
+      <div class="list-info">
+        <div class="list-name">${esc(j.campaign_name||'Задача')}</div>
+        <div class="list-sub">👤 ${esc(j.profile_name||'?')} · ${time}</div>
+        ${err?`<div style="font-size:12px;color:var(--red);margin-top:3px;word-break:break-word">⚠️ ${esc(err)}</div>`:''}
+      </div>
+      <div class="list-actions">${actions.join('')}</div>
+    </div>`;
+}
+
+function jobRowCompact(j){
+  const cfg={done:'✅',failed:'❌',pending:'🕒',running:'⏳',cancelled:'🚫'};
+  const icon=cfg[j.status]||'·';
+  const time=fmtTime(j.scheduled_at||j.created_at);
+  return `<div class="row"><div style="flex:1;min-width:0"><div style="font-weight:700">${icon} ${esc(j.campaign_name||'Задача')}</div><div style="font-size:12px;color:var(--hint);margin-top:2px">${esc(j.profile_name||'')} · ${time}</div></div></div>`;
+}
+
+async function cancelJob(id){haptic('medium');try{await api('/jobs/'+id+'/cancel',{method:'POST'});showToast('Отменено','🚫');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
+async function deleteJob(id){haptic('medium');try{await api('/jobs/'+id,{method:'DELETE'});showToast('Удалено','✅');loadJobs(true)}catch(e){showToast('Ошибка: '+e.message,'❌')}}
+
+/* ═══════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════ */
+function parseTimes(raw){
+  if(!raw)return[];
+  if(Array.isArray(raw))return raw;
+  try{const v=JSON.parse(raw);return Array.isArray(v)?v:[]}catch{return[]}
+}
+
+/* ═══════════════════════════════════════════════════
+   AUTO-REFRESH
+   ═══════════════════════════════════════════════════ */
+function startAutoRefresh(){
+  stopAutoRefresh();
+  _autoRefreshTimer=setInterval(()=>{
+    const ap=document.querySelector('.page.active')?.id?.replace('page-','');
+    if(ap&&token)loadPage(ap,true);
+  },AUTO_REFRESH_MS);
+}
+function stopAutoRefresh(){if(_autoRefreshTimer){clearInterval(_autoRefreshTimer);_autoRefreshTimer=null}}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){stopAutoRefresh()}
+  else if(token){
+    const ap=document.querySelector('.page.active')?.id?.replace('page-','');
+    if(ap)loadPage(ap,true);
+    startAutoRefresh();
+  }
+});
+
+/* ═══════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════ */
+(async()=>{
+  checkTips();
+  const ok=await authInit();
+  if(ok){await loadOverview();startAutoRefresh()}
+})();
+</script>
+</body>
+</html>

@@ -21,8 +21,10 @@ const morgan       = require('morgan');
 const rateLimit    = require('express-rate-limit');
 const crypto       = require('crypto');
 
+const compression = require('compression');
 const config   = require('./config');
 const db       = require('./db');
+const logger   = require('./logger');
 const SubscriptionService = require('./services/SubscriptionService');
 const SteamBotManager     = require('./services/SteamBotManager');
 const TelegramBotManager  = require('./services/TelegramBotManager');
@@ -48,6 +50,7 @@ const balanceRoutes       = require('./routes/balance');
 const steamInventoryRoutes = require('./routes/steamInventory');
 const steamItemsRoutes    = require('./routes/steamItems');
 const referralsRoutes     = require('./routes/referrals');
+const twofaRoutes         = require('./routes/twofa');
 
 // ════════════════════════════════════════════════════════════════════════════
 //  Express app
@@ -57,8 +60,22 @@ const app = express();
 
 // ── Security ─────────────────────────────────────────────────────────────────
 app.use(helmet({
-  contentSecurityPolicy: false,   // отключаем для SPA
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'"],
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      imgSrc:     ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", config.appUrl].filter(Boolean),
+      fontSrc:    ["'self'", 'data:'],
+      objectSrc:  ["'none'"],
+      frameAncestors: ["'self'"],
+    },
+  },
   crossOriginEmbedderPolicy: false,
+  hsts: config.nodeEnv === 'production'
+    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+    : false,
 }));
 
 app.set('trust proxy', 1); // за Nginx
@@ -68,23 +85,22 @@ app.set('trust proxy', 1); // за Nginx
 // запросы (браузер шлёт Origin: http://81.19.135.78 даже для same-origin DELETE).
 app.use(cors((req, callback) => {
   const origin = req.headers.origin || '';
-  const host   = req.headers.host   || ''; // "81.19.135.78" или "communityrig.ru"
 
   const allowed = [
-    'http://localhost:3000', 'http://localhost:5173', 'http://localhost:4000',
     config.appUrl,
-    `http://${host}`,
-    `https://${host}`,
+    ...(config.isDev
+      ? ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4000']
+      : []),
   ].filter(Boolean);
 
   const ok = !origin || allowed.some(a => origin === a || origin.startsWith(a.replace(/\/$/, '') + '/'));
-  if (!ok) console.error('[Error] CORS blocked:', origin);
+  if (!ok) logger.warn('CORS blocked', { origin });
 
   callback(null, {
     origin: ok,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Token', 'X-API-Key'],
   });
 }));
 
@@ -95,12 +111,22 @@ if (!config.isDev) {
   app.use(morgan('dev'));
 }
 
+// ── Compression ───────────────────────────────────────────────────────────────
+app.use(compression({ threshold: 1024, level: 6 }));
+
+// ── Request ID ────────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.id);
+  next();
+});
+
 // ── Stripe webhook — RAW body BEFORE express.json() ──────────────────────────
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 // ── Body parsers ──────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb', parameterLimit: 50 }));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const _isLocal = (req) => {
@@ -137,6 +163,14 @@ app.use('/api/', (req, res, next) => {
 app.use('/api/auth/login',          authLimiter);
 app.use('/api/auth/register',       authLimiter);
 app.use('/api/auth/password/forgot',authLimiter);
+app.use('/api/auth/refresh', rateLimit({
+  windowMs: 15 * 60 * 1000, max: 30, skip: _isLocal,
+  message: { error: 'Слишком много запросов обновления токена.' },
+}));
+app.use('/api/balance/yookassa/webhook', rateLimit({
+  windowMs: 60 * 1000, max: 60, skip: _isLocal,
+  message: { error: 'Too many requests' },
+}));
 
 // ════════════════════════════════════════════════════════════════════════════
 //  API Routes
@@ -162,11 +196,21 @@ app.use('/api/balance',       balanceRoutes);
 app.use('/api/steam-inventory', steamInventoryRoutes);
 app.use('/api/steam-items',     steamItemsRoutes);
 app.use('/api/referrals',       referralsRoutes);
+app.use('/api/auth/2fa',        twofaRoutes);
 
 // ── Health check ──────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
+app.get('/health', async (req, res) => {
+  const checks = {};
+  try {
+    await db.healthCheck();
+    checks.db = 'ok';
+  } catch {
+    checks.db = 'fail';
+  }
+  const allOk = Object.values(checks).every(v => v === 'ok');
+  res.status(allOk ? 200 : 503).json({
+    status: allOk ? 'ok' : 'degraded',
+    checks,
     version: '2.0.0',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
@@ -227,8 +271,8 @@ app.use('/api/', (req, res) => {
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error('[Error]', err.message);
-  if (config.isDev) console.error(err.stack);
+  logger.error('Unhandled error', { err: err.message, reqId: req.id, path: req.path });
+  if (config.isDev) logger.debug(err.stack);
 
   res.status(err.status || 500).json({
     error: config.isDev ? err.message : 'Внутренняя ошибка сервера',
@@ -240,42 +284,17 @@ app.use((err, req, res, next) => {
 // ════════════════════════════════════════════════════════════════════════════
 
 async function autoRestoreBots() {
-  // Находим пользователей с активными Telegram-ботами
-  const activeBots = await db.getActiveTelegramBotUsers();
-
-  console.log(`[Server] Восстановление ${activeBots.length} TG-ботов...`);
-
-  for (const botRecord of activeBots) {
-    const sub = await db.getActiveSubscription(botRecord.user_id);
-    if (!sub) continue;
-
-    const chatIds = typeof botRecord.authorized_chat_ids === 'string'
-      ? JSON.parse(botRecord.authorized_chat_ids || '[]')
-      : (botRecord.authorized_chat_ids || []);
-
-    const botConfig = {
-      token:    botRecord.bot_token,
-      chatIds,
-      notify: {
-        errors:   !!botRecord.notify_errors,
-        success:  !!botRecord.notify_success,
-        expired:  !!botRecord.notify_expired,
-        botState: !!botRecord.notify_bot_state,
-      },
-      webAppUrl: botRecord.mini_app_url,
-      userId:    botRecord.user_id,
-      getStatus:     () => SteamBotManager.getStatus(botRecord.user_id),
-      getAccounts:   () => db.getProfiles(botRecord.user_id),
-      getCampaigns:  () => db.getCampaigns(botRecord.user_id),
-      getRecentJobs: () => db.getRecentJobs(botRecord.user_id, 20),
-      startBot:      () => SteamBotManager.start(botRecord.user_id),
-      stopBot:       () => SteamBotManager.stop(botRecord.user_id),
-    };
-
-    // suppressNotify: true — не слать «бот запущен» при авторестарте пода
-    TelegramBotManager.start(botRecord.user_id, botConfig, { suppressNotify: true }).catch(err => {
-      console.error(`[Server] TG bot restore failed for ${botRecord.user_id}:`, err.message);
-    });
+  // Shared Telegram bot — start if token is configured
+  try {
+    const tgToken = await db.getServerSetting('TG_BOT_TOKEN');
+    if (tgToken) {
+      await TelegramBotManager.start();
+      console.log('[Server] Shared TG bot started');
+    } else {
+      console.log('[Server] TG_BOT_TOKEN not configured, skipping TG bot');
+    }
+  } catch (err) {
+    console.error('[Server] TG bot start failed:', err.message);
   }
 
   // Бот постинга работает ВСЕГДА для пользователей с активными кампаниями
@@ -300,6 +319,18 @@ async function autoRestoreBots() {
 //  Start
 // ════════════════════════════════════════════════════════════════════════════
 
+// ── Startup validation ────────────────────────────────────────────────────────
+if (!config.isDev) {
+  if (config.jwt.secret.includes('CHANGE_ME') || config.jwt.secret.length < 32) {
+    console.error('\n  FATAL: JWT_SECRET must be set (>= 32 chars) in production!\n');
+    process.exit(1);
+  }
+  if (config.admin.password === 'admin123') {
+    console.error('\n  FATAL: ADMIN_PASSWORD must be changed from default in production!\n');
+    process.exit(1);
+  }
+}
+
 const server = app.listen(config.port, () => {
   console.log('');
   console.log('╔════════════════════════════════════════════════╗');
@@ -321,6 +352,11 @@ const server = app.listen(config.port, () => {
     console.error('[Server] autoRestoreBots error:', err.message)
   );
 });
+
+// ── Server timeouts ───────────────────────────────────────────────────────────
+server.timeout = 120_000;         // hard kill after 2 min
+server.keepAliveTimeout = 65_000; // > Nginx (60s)
+server.headersTimeout = 66_000;
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 function shutdown(signal) {

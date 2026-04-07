@@ -14,6 +14,7 @@ const fs       = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const config   = require('../config');
 const createSchema = require('./schema');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 // ── Подключение ──────────────────────────────────────────────────────────────
 const dbDir = path.dirname(
@@ -124,6 +125,38 @@ function getUserByGoogleId(googleId) {
   return row ? parseUser(row) : null;
 }
 
+function getUserByTelegramChatId(chatId) {
+  const row = _db.prepare('SELECT * FROM users WHERE telegram_chat_id = ?').get(String(chatId));
+  return row ? parseUser(row) : null;
+}
+
+function getAllLinkedTelegramUsers() {
+  return _db.prepare(`SELECT id, telegram_chat_id, tg_notify_errors, tg_notify_success, tg_notify_expired
+    FROM users WHERE telegram_chat_id IS NOT NULL AND is_active = 1`).all();
+}
+
+// ── Telegram link codes ──
+function createTelegramLinkCode(userId) {
+  _db.prepare('DELETE FROM telegram_link_codes WHERE user_id = ?').run(userId);
+  const code = require('crypto').randomBytes(16).toString('hex');
+  const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+  _db.prepare('INSERT INTO telegram_link_codes (code, user_id, created_at, expires_at) VALUES (?,?,?,?)')
+    .run(code, userId, now(), expiresAt);
+  return code;
+}
+
+function consumeTelegramLinkCode(code) {
+  const row = _db.prepare('SELECT * FROM telegram_link_codes WHERE code = ?').get(code);
+  if (!row) return null;
+  _db.prepare('DELETE FROM telegram_link_codes WHERE code = ?').run(code);
+  if (new Date(row.expires_at) < new Date()) return null;
+  return row.user_id;
+}
+
+function cleanExpiredTelegramLinkCodes() {
+  _db.prepare('DELETE FROM telegram_link_codes WHERE expires_at < ?').run(now());
+}
+
 function getUserById(id) {
   const row = _db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   return row ? parseUser(row) : null;
@@ -148,7 +181,8 @@ function countUsers() {
 
 function updateUser(id, fields) {
   const allowed = ['name', 'email', 'role', 'is_active', 'email_verified', 'password_hash',
-    'steam_id', 'steam_username', 'steam_avatar', 'google_id', 'trade_url', 'balance'];
+    'steam_id', 'steam_username', 'steam_avatar', 'google_id', 'trade_url', 'balance',
+    'telegram_chat_id', 'tg_notify_errors', 'tg_notify_success', 'tg_notify_expired'];
   const updates = [], values = [];
   for (const [k, v] of Object.entries(fields)) {
     if (allowed.includes(k)) { updates.push(`${k} = ?`); values.push(v); }
@@ -235,12 +269,18 @@ function getUserByStripeCustomer(stripeCustomerId) {
 //  TELEGRAM BOTS
 // ═══════════════════════════════════════════════════════════════════════════
 
+function _decryptBotRow(row) {
+  if (!row) return row;
+  if (row.bot_token) row.bot_token = decrypt(row.bot_token);
+  return row;
+}
+
 function getTelegramBot(userId) {
-  return _db.prepare('SELECT * FROM user_telegram_bots WHERE user_id = ? ORDER BY created_at LIMIT 1').get(userId);
+  return _decryptBotRow(_db.prepare('SELECT * FROM user_telegram_bots WHERE user_id = ? ORDER BY created_at LIMIT 1').get(userId));
 }
 
 function getTelegramBots(userId) {
-  return _db.prepare('SELECT * FROM user_telegram_bots WHERE user_id = ? ORDER BY created_at').all(userId);
+  return _db.prepare('SELECT * FROM user_telegram_bots WHERE user_id = ? ORDER BY created_at').all(userId).map(_decryptBotRow);
 }
 
 function getTelegramBotByAuthorizedChatId(chatId) {
@@ -249,7 +289,7 @@ function getTelegramBotByAuthorizedChatId(chatId) {
   for (const bot of bots) {
     try {
       const ids = JSON.parse(bot.authorized_chat_ids || '[]');
-      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) return bot;
+      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) return _decryptBotRow(bot);
     } catch {}
   }
   return null;
@@ -262,7 +302,7 @@ function getAllTelegramBotsByAuthorizedChatId(chatId) {
   for (const bot of bots) {
     try {
       const ids = JSON.parse(bot.authorized_chat_ids || '[]');
-      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) result.push(bot);
+      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) result.push(_decryptBotRow(bot));
     } catch {}
   }
   return result;
@@ -278,7 +318,7 @@ function upsertTelegramBot(userId, data) {
         notify_bot_state=?,is_active=?
       WHERE id=?
     `).run(
-      data.label || existing.label, data.bot_token,
+      data.label || existing.label, encrypt(data.bot_token),
       data.bot_username || existing.bot_username,
       JSON.stringify(data.authorized_chat_ids || JSON.parse(existing.authorized_chat_ids)),
       data.mini_app_url || existing.mini_app_url,
@@ -298,7 +338,7 @@ function upsertTelegramBot(userId, data) {
          mini_app_url,notify_errors,notify_success,notify_expired,notify_bot_state,is_active,created_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
-      id, userId, data.label || 'Main Bot', data.bot_token,
+      id, userId, data.label || 'Main Bot', encrypt(data.bot_token),
       data.bot_username || null,
       JSON.stringify(data.authorized_chat_ids || []),
       data.mini_app_url || null,
@@ -322,7 +362,7 @@ function getActiveTelegramBotUsers() {
     FROM user_telegram_bots t
     JOIN users u ON u.id = t.user_id
     WHERE t.is_active = 1 AND u.is_active = 1
-  `).all();
+  `).all().map(_decryptBotRow);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -334,20 +374,20 @@ function addProfile(userId, { name, cookies, targetUrl }) {
   _db.prepare(`
     INSERT INTO profiles (id, user_id, name, cookies, target_url, is_active, created_at)
     VALUES (?, ?, ?, ?, ?, 1, ?)
-  `).run(id, userId, name, JSON.stringify(cookies),
+  `).run(id, userId, name, encrypt(JSON.stringify(cookies)),
     targetUrl || 'https://steamcommunity.com/app/730/tradingforum/', now());
   return id;
 }
 
 function getProfiles(userId) {
   return _db.prepare('SELECT * FROM profiles WHERE user_id = ? ORDER BY created_at DESC').all(userId)
-    .map(r => ({ ...r, cookies: JSON.parse(r.cookies), is_active: !!r.is_active }));
+    .map(r => ({ ...r, cookies: JSON.parse(decrypt(r.cookies)), is_active: !!r.is_active }));
 }
 
 function getProfile(id, userId) {
   const row = _db.prepare('SELECT * FROM profiles WHERE id = ? AND user_id = ?').get(id, userId);
   if (!row) return null;
-  return { ...row, cookies: JSON.parse(row.cookies), is_active: !!row.is_active };
+  return { ...row, cookies: JSON.parse(decrypt(row.cookies)), is_active: !!row.is_active };
 }
 
 function updateProfile(id, userId, fields) {
@@ -356,7 +396,7 @@ function updateProfile(id, userId, fields) {
   for (const [k, v] of Object.entries(fields)) {
     if (allowed.includes(k)) {
       updates.push(`${k} = ?`);
-      values.push(k === 'cookies' ? JSON.stringify(v) : v);
+      values.push(k === 'cookies' ? encrypt(JSON.stringify(v)) : v);
     }
   }
   if (!updates.length) return;
@@ -550,6 +590,20 @@ function getPendingJobForCampaignProfile(userId, campaignId, profileId, targetGr
     SELECT id FROM jobs
     WHERE user_id = ? AND campaign_id = ? AND profile_id = ? AND target_group_id IS NULL AND status = 'pending' LIMIT 1
   `).get(userId, campaignId, profileId);
+}
+
+// ─── Cooldown / ротация аккаунтов ────────────────────────────────────────────
+
+function getProfileLastPostTime(profileId, userId) {
+  const row = _db.prepare(`
+    SELECT MAX(executed_at) as last_posted_at
+    FROM jobs WHERE profile_id = ? AND user_id = ? AND status = 'done'
+  `).get(profileId, userId);
+  return row?.last_posted_at || null;
+}
+
+function updateJobProfile(jobId, userId, newProfileId) {
+  _db.prepare('UPDATE jobs SET profile_id = ? WHERE id = ? AND user_id = ?').run(newProfileId, jobId, userId);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -778,12 +832,19 @@ function getAdminUserList({ limit = 50, offset = 0, search = '' } = {}) {
     SELECT u.*,
       s.plan_id, s.status as sub_status, s.expires_at, s.trial_ends_at,
       p.name as plan_name,
-      (SELECT COUNT(*) FROM profiles pr WHERE pr.user_id = u.id)  as profiles_count,
-      (SELECT COUNT(*) FROM campaigns c WHERE c.user_id = u.id)   as campaigns_count,
-      (SELECT COUNT(*) FROM jobs j WHERE j.user_id = u.id AND j.status = 'done') as jobs_done
+      COALESCE(pr.cnt, 0) as profiles_count,
+      COALESCE(c.cnt, 0) as campaigns_count,
+      COALESCE(j.cnt, 0) as jobs_done
     FROM users u
-    LEFT JOIN user_subscriptions s ON s.user_id = u.id AND s.status IN ('trial','active')
+    LEFT JOIN user_subscriptions s ON s.id = (
+      SELECT id FROM user_subscriptions
+      WHERE user_id = u.id AND status IN ('trial','active')
+      ORDER BY created_at DESC LIMIT 1
+    )
     LEFT JOIN subscription_plans p ON p.id = s.plan_id
+    LEFT JOIN (SELECT user_id, COUNT(*) as cnt FROM profiles GROUP BY user_id) pr ON pr.user_id = u.id
+    LEFT JOIN (SELECT user_id, COUNT(*) as cnt FROM campaigns GROUP BY user_id) c ON c.user_id = u.id
+    LEFT JOIN (SELECT user_id, COUNT(*) as cnt FROM jobs WHERE status = 'done' GROUP BY user_id) j ON j.user_id = u.id
     WHERE u.name LIKE ? OR u.email LIKE ?
     ORDER BY u.created_at DESC LIMIT ? OFFSET ?
   `).all(like, like, limit, offset);
@@ -1027,6 +1088,14 @@ function updateUserBalance(userId, delta) {
   return _db.prepare('SELECT balance FROM users WHERE id = ?').get(userId)?.balance ?? 0;
 }
 
+function safeDeductBalance(userId, amountKopecks) {
+  const info = _db.prepare(
+    'UPDATE users SET balance = balance - ?, updated_at = ? WHERE id = ? AND balance >= ?'
+  ).run(amountKopecks, now(), userId, amountKopecks);
+  const balance = _db.prepare('SELECT balance FROM users WHERE id = ?').get(userId)?.balance ?? 0;
+  return { success: info.changes > 0, balance };
+}
+
 function getUserBalance(userId) {
   return _db.prepare('SELECT balance FROM users WHERE id = ?').get(userId)?.balance ?? 0;
 }
@@ -1064,13 +1133,72 @@ function updateWithdrawalRequest(id, fields) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  TWO-FACTOR AUTHENTICATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function get2FASettings(userId) {
+  return _db.prepare('SELECT * FROM two_factor_settings WHERE user_id = ?').get(userId) || null;
+}
+
+function upsert2FASettings(userId, method) {
+  const n = now();
+  _db.prepare(`
+    INSERT INTO two_factor_settings (user_id, method, is_enabled, created_at, updated_at)
+    VALUES (?, ?, 0, ?, ?)
+    ON CONFLICT (user_id) DO UPDATE SET method = excluded.method, updated_at = excluded.updated_at
+  `).run(userId, method, n, n);
+}
+
+function enable2FA(userId) {
+  _db.prepare('UPDATE two_factor_settings SET is_enabled = 1, updated_at = ? WHERE user_id = ?').run(now(), userId);
+}
+
+function disable2FA(userId) {
+  _db.prepare('DELETE FROM two_factor_settings WHERE user_id = ?').run(userId);
+  _db.prepare('DELETE FROM two_factor_codes WHERE user_id = ?').run(userId);
+}
+
+function create2FACode(userId, code, expiresAt) {
+  const id = uuidv4();
+  _db.prepare('DELETE FROM two_factor_codes WHERE user_id = ? AND used = 0').run(userId);
+  _db.prepare(`
+    INSERT INTO two_factor_codes (id, user_id, code, attempts, used, expires_at, created_at)
+    VALUES (?, ?, ?, 0, 0, ?, ?)
+  `).run(id, userId, code, expiresAt, now());
+  return id;
+}
+
+function verify2FACode(userId, code) {
+  const row = _db.prepare(
+    'SELECT * FROM two_factor_codes WHERE user_id = ? AND used = 0 ORDER BY created_at DESC LIMIT 1'
+  ).get(userId);
+  if (!row) return { valid: false, reason: 'no_code' };
+  if (new Date(row.expires_at) < new Date()) return { valid: false, reason: 'expired' };
+  if (row.attempts >= 5) return { valid: false, reason: 'too_many_attempts' };
+
+  if (row.code !== code) {
+    _db.prepare('UPDATE two_factor_codes SET attempts = attempts + 1 WHERE id = ?').run(row.id);
+    return { valid: false, reason: 'invalid_code' };
+  }
+
+  _db.prepare('UPDATE two_factor_codes SET used = 1 WHERE id = ?').run(row.id);
+  return { valid: true };
+}
+
+function cleanup2FACodes() {
+  _db.prepare('DELETE FROM two_factor_codes WHERE expires_at < ?').run(now());
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════
 
 module.exports = {
   getPlans, getPlan, upsertPlan,
-  createUser, getUserById, getUserByEmail, getUserBySteamId, getUserByGoogleId, getAllUsers, countUsers,
+  createUser, getUserById, getUserByEmail, getUserBySteamId, getUserByGoogleId, getUserByTelegramChatId, getAllUsers, countUsers,
   updateUser, updateLastLogin, deleteUser,
+  // Telegram link codes
+  createTelegramLinkCode, consumeTelegramLinkCode, cleanExpiredTelegramLinkCodes, getAllLinkedTelegramUsers,
   // Market
   createMarketListing, getMarketListings, countMarketListings, getMarketListing,
   getUserMarketListings, updateMarketListing, deleteMarketListing,
@@ -1078,7 +1206,7 @@ module.exports = {
   createTradeOffer, getTradeOffers, countTradeOffers, getTradeOffer,
   getUserTradeOffers, updateTradeOffer, bumpTradeOffer, deleteTradeOffer,
   // Balance
-  createBalanceTransaction, getBalanceTransactions, updateUserBalance, getUserBalance,
+  createBalanceTransaction, getBalanceTransactions, updateUserBalance, safeDeductBalance, getUserBalance,
   // Withdrawals
   createWithdrawalRequest, getWithdrawalRequests, getAllWithdrawalRequests, updateWithdrawalRequest,
   createSubscription, getActiveSubscription, getSubscriptionHistory,
@@ -1090,6 +1218,7 @@ module.exports = {
   addJob, getDueJobs, getRecentJobs, getJobsPaged, getJobStats, countJobsToday,
   updateJobStatus, resetRunningJobs, cancelOverduePendingJobs, deleteJob,
   deletePendingJobsByCampaign, getLastJobForCampaignProfile, getPendingJobForCampaignProfile,
+  getProfileLastPostTime, updateJobProfile,
   getSteamGroups, getSteamGroup, getSteamGroupsByIds,
   getSetting, setSetting, getAllSettings, bulkSetSettings,
   getServerSetting, setServerSetting, getAllServerSettings, bulkSetServerSettings,
@@ -1099,5 +1228,9 @@ module.exports = {
   createTransaction, getTransactions, updateTransactionStatus,
   getAdminTransactions, getTransactionById, getTransactionByExternalId, updateTransaction, getPaymentStats,
   getAdminStats, getAdminUserList, auditLog,
+  healthCheck: () => _db.prepare('SELECT 1').get(),
+  // 2FA
+  get2FASettings, upsert2FASettings, enable2FA, disable2FA,
+  create2FACode, verify2FACode, cleanup2FACodes,
   _db,
 };

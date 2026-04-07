@@ -11,8 +11,14 @@
 const crypto = require('crypto');
 const db     = require('../db');
 
+/**
+ * HMAC-SHA256 хеширование API-ключа.
+ * Использует серверный секрет (API_KEY_SECRET или JWT_SECRET как fallback),
+ * чтобы rainbow-table атаки были невозможны при утечке БД.
+ */
 function hashKey(key) {
-  return crypto.createHash('sha256').update(key).digest('hex');
+  const secret = process.env.API_KEY_SECRET || require('../config').jwt.secret;
+  return crypto.createHmac('sha256', secret).update(key).digest('hex');
 }
 
 async function apiKeyAuth(req, res, next) {

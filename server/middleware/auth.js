@@ -25,7 +25,7 @@ function requireAuth(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, config.jwt.secret);
+    const payload = jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] });
     req.userId = payload.sub;
     req.user   = { id: payload.sub, email: payload.email, role: payload.role };
     next();
@@ -60,10 +60,15 @@ function optionalAuth(req, res, next) {
   const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (token) {
     try {
-      const payload = jwt.verify(token, config.jwt.secret);
+      const payload = jwt.verify(token, config.jwt.secret, { algorithms: ['HS256'] });
       req.userId = payload.sub;
       req.user   = { id: payload.sub, email: payload.email, role: payload.role };
-    } catch (_) { /* игнорируем */ }
+    } catch (err) {
+      // Invalid/expired token is OK for optional auth — just skip
+      if (err.name !== 'JsonWebTokenError' && err.name !== 'TokenExpiredError') {
+        return next(err);
+      }
+    }
   }
   next();
 }

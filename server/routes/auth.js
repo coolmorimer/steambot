@@ -9,6 +9,7 @@ const db        = require('../db');
 const { requireAuth, requireActiveUser } = require('../middleware/auth');
 const { validate, schemas }              = require('../middleware/validate');
 const EmailService = require('../services/EmailService');
+const TelegramBotManager = require('../services/TelegramBotManager');
 const SbpPaymentService = require('../services/SbpPaymentService');
 const logger       = require('../logger');
 
@@ -17,7 +18,7 @@ const router = express.Router();
 function signAccessToken(user) {
   return jwt.sign(
     { sub: user.id, email: user.email, role: user.role },
-    config.jwt.secret, { expiresIn: config.jwt.expiresIn }
+    config.jwt.secret, { algorithm: 'HS256', expiresIn: config.jwt.expiresIn }
   );
 }
 function signRefreshToken()      { return crypto.randomBytes(40).toString('hex'); }
@@ -123,6 +124,35 @@ router.post('/login', validate(schemas.login), async (req, res) => {
     if (!ok) return res.status(401).json({ error: 'Неверный email или пароль' });
     if (!raw.is_active) return res.status(403).json({ error: 'Аккаунт заблокирован.' });
 
+    // ── 2FA check ──
+    const tfa = await db.get2FASettings(raw.id);
+    if (tfa && tfa.is_enabled) {
+      const code = String(crypto.randomInt(100000, 999999));
+      const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
+      await db.create2FACode(raw.id, code, expiresAt);
+
+      if (tfa.method === 'email') {
+        EmailService.send({
+          to: raw.email,
+          subject: 'Код входа — Steam Poster Bot',
+          html: `<p>Ваш код для входа: <b>${code}</b></p><p>Код действителен 5 минут.</p>`,
+          text: `Ваш код для входа: ${code}. Действителен 5 минут.`,
+        }).catch(err => logger.warn('2FA email send error', { err: err.message }));
+      } else {
+        TelegramBotManager.sendNotification(raw.id, `🔐 Код для входа: <b>${code}</b>\n\nДействителен 5 минут.`)
+          .catch(err => logger.warn('2FA telegram send error', { err: err.message }));
+      }
+
+      // Return a short-lived token for 2FA verification
+      const tfaToken = jwt.sign(
+        { sub: raw.id, purpose: '2fa' },
+        config.jwt.secret, { algorithm: 'HS256', expiresIn: '5m' }
+      );
+
+      logger.info('2FA код отправлен', { userId: raw.id, method: tfa.method });
+      return res.json({ requires_2fa: true, tfa_token: tfaToken, method: tfa.method });
+    }
+
     await db.updateLastLogin(raw.id);
 
     const accessToken  = signAccessToken(raw);
@@ -141,6 +171,57 @@ router.post('/login', validate(schemas.login), async (req, res) => {
     });
   } catch (err) {
     logger.error('login error', { err: err.message });
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// ── POST /auth/2fa/verify — подтвердить код 2FA при логине ──
+router.post('/2fa/verify', async (req, res) => {
+  try {
+    const { tfa_token, code } = req.body;
+    if (!tfa_token || !code) return res.status(400).json({ error: 'tfa_token и code обязательны' });
+
+    let payload;
+    try {
+      payload = jwt.verify(tfa_token, config.jwt.secret, { algorithms: ['HS256'] });
+    } catch (e) {
+      return res.status(401).json({ error: 'Токен 2FA недействителен или истёк' });
+    }
+    if (payload.purpose !== '2fa') return res.status(401).json({ error: 'Неверный тип токена' });
+
+    const userId = payload.sub;
+    const result = await db.verify2FACode(userId, code.trim());
+    if (!result.valid) {
+      const msgs = {
+        no_code: 'Код не найден. Войдите заново',
+        expired: 'Код истёк. Войдите заново',
+        too_many_attempts: 'Слишком много попыток. Войдите заново',
+        invalid_code: 'Неверный код',
+      };
+      return res.status(401).json({ error: msgs[result.reason] || 'Неверный код' });
+    }
+
+    const user = await db.getUserById(userId);
+    if (!user || !user.is_active) return res.status(403).json({ error: 'Аккаунт недоступен' });
+
+    await db.updateLastLogin(user.id);
+
+    const accessToken  = signAccessToken(user);
+    const refreshToken = signRefreshToken();
+    const { ip, ua }   = clientInfo(req);
+
+    await db.createRefreshToken(user.id, hashToken(refreshToken), refreshExpiresAt(), { ip, ua });
+    await db.auditLog(user.id, 'login_2fa', 'user', user.id, null, ip);
+    logger.info('Вход через 2FA', { userId: user.id });
+
+    const sub = await db.getActiveSubscription(user.id);
+    res.json({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      access_token: accessToken, refresh_token: refreshToken,
+      subscription: sub ? { plan_id: sub.plan_id, status: sub.status, expires_at: sub.expires_at, trial_ends_at: sub.trial_ends_at } : null,
+    });
+  } catch (err) {
+    logger.error('2FA verify error', { err: err.message });
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });

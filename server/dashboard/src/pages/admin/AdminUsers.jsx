@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { Search, UserX, UserCheck, Key, ShieldCheck, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/client';
@@ -55,8 +54,6 @@ export default function AdminUsers() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
-        <Link to="/admin" className="text-gray-500 hover:text-white text-sm">← Назад</Link>
-        <span className="text-gray-700">/</span>
         <h1 className="text-xl font-bold text-white">Пользователи</h1>
         <span className="badge-gray">{total}</span>
       </div>

@@ -3,19 +3,25 @@
 /**
  * server/services/TelegramBotManager.js
  *
- * Управляет пулом Telegram-ботов — по одному на пользователя.
+ * Shared Telegram bot — один бот на всю платформу.
+ * Токен хранится в server_settings (TG_BOT_TOKEN).
+ * Пользователи привязывают аккаунт через deep-link /start CODE.
  *
- * - 409 Conflict — уступаем, ретрай через 60 с
- * - suppressNotify — не слать «бот запущен» при авто-восстановлении
- * - Reply Keyboard + Inline-кнопки для управления
- * - Кнопка Mini App в сообщениях
+ * Notification flow:
+ *   userId → users.telegram_chat_id → бот шлёт в этот чат.
+ *
+ * Commands: /start, /menu, /help + Reply Keyboard.
  */
 
 const TelegramBot = require('node-telegram-bot-api');
 const db = require('../db');
 
-const _bots        = new Map(); // userId -> { bot, config, chatIds }
-const _retryTimers = new Map();
+let _bot      = null;   // TelegramBot instance
+let _botToken = null;
+let _webAppUrl = null;
+let _retryTimer = null;
+let _retryCount = 0;
+const MAX_RETRIES = 5;
 
 // ── Утилиты ──────────────────────────────────────────────────────────────────
 
@@ -24,38 +30,14 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function auth(cid, ids) { return ids.includes(String(cid)); }
-
-async function sendAll(bot, ids, text, opts = {}) {
-  for (const c of ids) {
-    try { await bot.sendMessage(c, text, opts); } catch (e) {
-      console.error(`[TG] send err cid=${c}: ${e.message}`);
-    }
-  }
-}
-
 function ib(text, data) { return { text, callback_data: data }; }
 function wa(text, url)  { return { text, web_app: { url } }; }
 
-async function _notifyBot(userId) {
-  const e = _bots.get(userId);
-  if (e) return e;
-  try {
-    const r = await db.getTelegramBot(userId);
-    if (!r?.bot_token || !r.is_active) return null;
-    const ids = typeof r.authorized_chat_ids === 'string'
-      ? JSON.parse(r.authorized_chat_ids || '[]') : (r.authorized_chat_ids || []);
-    if (!ids.length) return null;
-    return {
-      bot: new TelegramBot(r.bot_token, { polling: false }),
-      chatIds: ids.map(String),
-      config: {
-        notify: { errors: !!r.notify_errors, success: !!r.notify_success,
-                  expired: !!r.notify_expired, botState: !!r.notify_bot_state },
-        webAppUrl: r.mini_app_url,
-      },
-    };
-  } catch { return null; }
+async function send(chatId, text, opts = {}) {
+  if (!_bot) return;
+  try { await _bot.sendMessage(chatId, text, opts); } catch (e) {
+    console.error(`[TG] send err cid=${chatId}: ${e.message}`);
+  }
 }
 
 // ── Reply Keyboard ───────────────────────────────────────────────────────────
@@ -71,66 +53,128 @@ const RK = {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  ЗАПУСК / ОСТАНОВКА
+//  RESOLVE USER BY CHAT ID
 // ═════════════════════════════════════════════════════════════════════════════
 
-async function start(userId, config, { suppressNotify = false } = {}) {
-  stop(userId);
-  if (!config?.token) throw new Error('bot_token обязателен');
+async function resolveUser(chatId) {
+  return db.getUserByTelegramChatId(String(chatId));
+}
+
+function getUserCallbacks(userId) {
+  const SteamBotManager = require('./SteamBotManager');
+  return {
+    getStatus:     () => SteamBotManager.getStatus(userId),
+    getAccounts:   () => db.getProfiles(userId),
+    getCampaigns:  () => db.getCampaigns(userId),
+    getRecentJobs: () => db.getRecentJobs(userId, 20),
+    startBot:      () => SteamBotManager.start(userId),
+    stopBot:       () => SteamBotManager.stop(userId),
+  };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  START / STOP
+// ═════════════════════════════════════════════════════════════════════════════
+
+async function start(opts = {}) {
+  stop();
+
+  const token = opts.token || await db.getServerSetting('TG_BOT_TOKEN');
+  _webAppUrl  = opts.webAppUrl || await db.getServerSetting('TG_MINI_APP_URL') || null;
+
+  if (!token) throw new Error('TG_BOT_TOKEN не настроен');
+  _botToken = token;
 
   let tg;
-  try { tg = new TelegramBot(config.token, { polling: true }); }
-  catch (err) { throw new Error(`Не удалось запустить: ${err.message}`); }
+  try { tg = new TelegramBot(token, { polling: true }); }
+  catch (err) { throw new Error(`Не удалось запустить TG-бот: ${err.message}`); }
 
   let _409 = false;
   tg.on('polling_error', (e) => {
     if (e.message?.includes('409 Conflict')) {
       if (_409) return; _409 = true;
-      _bots.delete(userId);
+      _bot = null;
       try { tg.stopPolling(); } catch (_) {}
-      if (!_retryTimers.has(userId)) {
-        _retryTimers.set(userId, setTimeout(() => {
-          _retryTimers.delete(userId);
-          if (!_bots.has(userId))
-            start(userId, config, { suppressNotify: true }).catch(() => {});
-        }, 60_000));
+      if (_retryCount >= MAX_RETRIES) {
+        console.error(`[TG Shared] Max retries (${MAX_RETRIES}) exceeded, giving up`);
+        return;
       }
-    } else { console.error(`[TG ${userId}] poll:`, e.message); }
+      if (!_retryTimer) {
+        const delay = 60_000 * Math.pow(2, _retryCount);
+        _retryCount++;
+        console.warn(`[TG Shared] 409 Conflict, retry #${_retryCount} in ${delay / 1000}s`);
+        _retryTimer = setTimeout(() => {
+          _retryTimer = null;
+          if (!_bot) start(opts).catch(err =>
+            console.error('[TG Shared] Retry failed:', err.message)
+          );
+        }, delay);
+      }
+    } else { console.error(`[TG Shared] poll:`, e.message); }
   });
-
-  const ids = Array.isArray(config.chatIds)
-    ? config.chatIds.map(String) : [String(config.chatIds || '')].filter(Boolean);
 
   // ── Messages ──
   tg.on('message', async (msg) => {
-    const c = msg.chat.id, t = (msg.text || '').trim();
-    if (!auth(c, ids)) return;
+    const c = msg.chat.id;
+    const t = (msg.text || '').trim();
     try {
-      if (t.match(/^\/(start|menu)$/i))   return await cmdMenu(tg, c, config, userId);
-      if (t.match(/^\/help$/i))            return await cmdHelp(tg, c, config);
-      if (t === '📊 Статус')              return await cmdMenu(tg, c, config, userId);
-      if (t === '🔄 Обновить')             return await cmdMenu(tg, c, config, userId);
-      if (t === '👤 Аккаунты')             return await cmdAccounts(tg, c, config, userId);
-      if (t === '📋 Автопостинг')            return await cmdCampaigns(tg, c, config, userId);
-      if (t === '📜 Активность')               return await cmdJobs(tg, c, config, userId);
-      if (t === '📈 Статистика')           return await cmdStats(tg, c, config, userId);
+      // /start with link code
+      if (t.match(/^\/start\s+(.+)$/i)) {
+        const code = t.match(/^\/start\s+(.+)$/i)[1];
+        return await handleLink(tg, c, code, msg.from);
+      }
+
+      // Resolve user from chat_id
+      const user = await resolveUser(c);
+      if (!user) {
+        return await tg.sendMessage(c,
+          '⚠️ Ваш Telegram не привязан к аккаунту.\n\n' +
+          '📌 Войдите в личный кабинет, ' +
+          'откройте раздел «Уведомления» и нажмите «Привязать Telegram».',
+          { parse_mode: 'HTML', disable_web_page_preview: true });
+      }
+
+      const cb = getUserCallbacks(user.id);
+
+      if (t.match(/^\/(start|menu)$/i) || t === '📊 Статус' || t === '🔄 Обновить')
+        return await cmdMenu(tg, c, cb, user);
+      if (t.match(/^\/help$/i))
+        return await cmdHelp(tg, c);
+      if (t === '👤 Аккаунты')
+        return await cmdAccounts(tg, c, cb, user);
+      if (t === '📋 Автопостинг')
+        return await cmdCampaigns(tg, c, cb, user);
+      if (t === '📜 Активность')
+        return await cmdJobs(tg, c, cb);
+      if (t === '📈 Статистика')
+        return await cmdStats(tg, c, cb);
+
       if (!t.startsWith('/'))
         await tg.sendMessage(c, '👇 Нажмите кнопку внизу или /menu', { reply_markup: RK });
-    } catch (e) { console.error(`[TG ${userId}] msg:`, e.message); }
+    } catch (e) { console.error(`[TG Shared] msg:`, e.message); }
   });
 
   // ── Inline callbacks ──
   tg.on('callback_query', async (q) => {
     const c = q.message?.chat?.id || q.from.id;
-    if (!auth(c, ids)) return;
     try {
       await tg.answerCallbackQuery(q.id).catch(() => {});
-      await handleCb(tg, q.data, c, config, userId);
-    } catch (e) { console.error(`[TG ${userId}] cb:`, e.message); }
+      const user = await resolveUser(c);
+      if (!user) return;
+      const cb = getUserCallbacks(user.id);
+      await handleCb(tg, q.data, c, cb, user);
+    } catch (e) { console.error(`[TG Shared] cb:`, e.message); }
   });
 
-  _bots.set(userId, { bot: tg, config, chatIds: ids });
-  console.log(`[TG Bot] Started userId=${userId}`);
+  _bot = tg;
+  _retryCount = 0; // reset retry counter on success
+  console.log(`[TG Shared] Bot started`);
+
+  try {
+    const me = await tg.getMe();
+    await db.setServerSetting('TG_BOT_USERNAME', me.username || '');
+    console.log(`[TG Shared] Bot username: @${me.username}`);
+  } catch (_) {}
 
   try {
     await tg.setMyCommands([
@@ -138,41 +182,61 @@ async function start(userId, config, { suppressNotify = false } = {}) {
       { command: 'help', description: '📖 Справка' },
     ]);
   } catch (_) {}
+}
 
-  if (!suppressNotify) {
-    const txt = config.notify?.botState
-      ? '▶️ <b>Steam Poster Bot запущен!</b>\nНажмите /menu'
-      : '🎮 Бот готов. /menu — управление.';
-    await sendAll(tg, ids, txt, { parse_mode: 'HTML', reply_markup: RK }).catch(() => {});
+function stop() {
+  if (_retryTimer) { clearTimeout(_retryTimer); _retryTimer = null; }
+  if (_bot) { try { _bot.stopPolling(); } catch (_) {} _bot = null; }
+}
+
+function isRunning() { return !!_bot; }
+function getToken()  { return _botToken; }
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  DEEP LINK: /start CODE
+// ═════════════════════════════════════════════════════════════════════════════
+
+async function handleLink(bot, chatId, code, tgFrom) {
+  try {
+    const userId = await db.consumeTelegramLinkCode(code);
+    if (!userId) {
+      return await bot.sendMessage(chatId,
+        '❌ Код привязки недействителен или истёк.\n\n' +
+        '📌 Перейдите в личный кабинет → Уведомления → «Привязать Telegram» для получения нового кода.',
+        { parse_mode: 'HTML' });
+    }
+
+    // Check if this chatId is already linked to another user
+    const existing = await db.getUserByTelegramChatId(String(chatId));
+    if (existing && existing.id !== userId) {
+      await db.updateUser(existing.id, { telegram_chat_id: null });
+    }
+
+    await db.updateUser(userId, { telegram_chat_id: String(chatId) });
+
+    const user = await db.getUserById(userId);
+    const name = user?.name || user?.email || 'пользователь';
+
+    const kb = _webAppUrl ? [[ wa('🖥 Панель управления', _webAppUrl) ]] : [];
+    await bot.sendMessage(chatId,
+      `✅ <b>Telegram привязан!</b>\n\n👤 Аккаунт: <b>${esc(name)}</b>\n\n` +
+      'Теперь вы будете получать уведомления о публикациях. Нажмите /menu для управления.',
+      { parse_mode: 'HTML', reply_markup: { inline_keyboard: kb, ...RK } });
+  } catch (e) {
+    console.error('[TG Shared] link error:', e.message);
+    await bot.sendMessage(chatId, '❌ Ошибка привязки. Попробуйте ещё раз.');
   }
 }
 
-function stop(userId) {
-  const t = _retryTimers.get(userId);
-  if (t) { clearTimeout(t); _retryTimers.delete(userId); }
-  const e = _bots.get(userId);
-  if (e) { try { e.bot.stopPolling(); } catch (_) {} _bots.delete(userId); }
-}
-
-async function restart(userId, config) { await start(userId, config); }
-function isRunning(userId) { return _bots.has(userId); }
-
-async function isRunningAsync(userId) {
-  if (_bots.has(userId)) return true;
-  try { const b = await db.getTelegramBot(userId); return !!(b?.is_active); } catch { return false; }
-}
-
-function stopAll() { for (const [u] of _bots) stop(u); }
-
 // ═════════════════════════════════════════════════════════════════════════════
-//  КОМАНДЫ
+//  COMMANDS
 // ═════════════════════════════════════════════════════════════════════════════
 
-async function cmdMenu(bot, cid, cfg, userId) {
-  const st   = await Promise.resolve(cfg.getStatus?.()).catch(() => ({})) || {};
-  const accs = await Promise.resolve(cfg.getAccounts?.()).catch(() => []) || [];
-  const cmps = await Promise.resolve(cfg.getCampaigns?.()).catch(() => []) || [];
-  const jobs = await Promise.resolve(cfg.getRecentJobs?.()).catch(() => []) || [];
+async function cmdMenu(bot, cid, cb, user) {
+  const st   = await Promise.resolve(cb.getStatus?.()).catch(() => ({})) || {};
+  const accs = await Promise.resolve(cb.getAccounts?.()).catch(() => []) || [];
+  const cmps = await Promise.resolve(cb.getCampaigns?.()).catch(() => []) || [];
+  const jobs = await Promise.resolve(cb.getRecentJobs?.()).catch(() => []) || [];
 
   const on   = st.running === true;
   const act  = cmps.filter(c => c.is_active).length;
@@ -182,6 +246,7 @@ async function cmdMenu(bot, cid, cfg, userId) {
 
   const txt = [
     '🎮 <b>Steam Poster Bot</b>',
+    `👤 ${esc(user.name || user.email)}`,
     '',
     on ? '🟢 Бот <b>работает</b>' : '🔴 Бот <b>остановлен</b>',
     '',
@@ -200,8 +265,8 @@ async function cmdMenu(bot, cid, cfg, userId) {
       ib('📈 Статистика', 'go:stats') ],
   ];
 
-  if (cfg.webAppUrl) {
-    kb.push([ wa('🖥 Панель управления', cfg.webAppUrl) ]);
+  if (_webAppUrl) {
+    kb.push([ wa('🖥 Панель управления', _webAppUrl) ]);
   }
 
   await bot.sendMessage(cid, txt, {
@@ -209,7 +274,7 @@ async function cmdMenu(bot, cid, cfg, userId) {
   });
 }
 
-async function cmdHelp(bot, cid, cfg) {
+async function cmdHelp(bot, cid) {
   const txt = [
     '📖 <b>Справка</b>',
     '',
@@ -231,17 +296,17 @@ async function cmdHelp(bot, cid, cfg) {
     'аккаунтов используйте <b>Панель управления</b>',
   ].join('\n');
 
-  const kb = cfg.webAppUrl ? [[ wa('🖥 Панель управления', cfg.webAppUrl) ]] : [];
+  const kb = _webAppUrl ? [[ wa('🖥 Панель управления', _webAppUrl) ]] : [];
   await bot.sendMessage(cid, txt, {
     parse_mode: 'HTML', reply_markup: { inline_keyboard: kb, ...RK },
   });
 }
 
-async function cmdAccounts(bot, cid, cfg, userId) {
-  const accs = await Promise.resolve(cfg.getAccounts?.()).catch(() => []) || [];
+async function cmdAccounts(bot, cid, cb, user) {
+  const accs = await Promise.resolve(cb.getAccounts?.()).catch(() => []) || [];
 
   if (!accs.length) {
-    const kb = cfg.webAppUrl ? [[ wa('➕ Добавить', cfg.webAppUrl) ]] : [];
+    const kb = _webAppUrl ? [[ wa('➕ Добавить', _webAppUrl) ]] : [];
     kb.push([ ib('🏠 Меню', 'go:menu') ]);
     return bot.sendMessage(cid,
       '👤 <b>Аккаунты</b>\n\n📭 Пусто. Добавьте аккаунт через панель.',
@@ -255,7 +320,7 @@ async function cmdAccounts(bot, cid, cfg, userId) {
   const kb = accs.map(a => [
     ib(`${a.is_active ? '⏸ Выкл' : '▶️ Вкл'} ${a.name.slice(0, 24)}`, `acc:${a.id}`),
   ]);
-  if (cfg.webAppUrl) kb.push([ wa('➕ Добавить аккаунт', cfg.webAppUrl) ]);
+  if (_webAppUrl) kb.push([ wa('➕ Добавить аккаунт', _webAppUrl) ]);
   kb.push([ ib('🏠 Меню', 'go:menu') ]);
 
   await bot.sendMessage(cid, lines.join('\n'), {
@@ -263,11 +328,11 @@ async function cmdAccounts(bot, cid, cfg, userId) {
   });
 }
 
-async function cmdCampaigns(bot, cid, cfg, userId) {
-  const cmps = await Promise.resolve(cfg.getCampaigns?.()).catch(() => []) || [];
+async function cmdCampaigns(bot, cid, cb, user) {
+  const cmps = await Promise.resolve(cb.getCampaigns?.()).catch(() => []) || [];
 
   if (!cmps.length) {
-    const kb = cfg.webAppUrl ? [[ wa('➕ Создать', cfg.webAppUrl) ]] : [];
+    const kb = _webAppUrl ? [[ wa('➕ Создать', _webAppUrl) ]] : [];
     kb.push([ ib('🏠 Меню', 'go:menu') ]);
     return bot.sendMessage(cid,
       '📋 <b>Автопостинг</b>\n\n📭 Пусто. Создайте задачу через панель.',
@@ -285,7 +350,7 @@ async function cmdCampaigns(bot, cid, cfg, userId) {
   const kb = cmps.map(c => [
     ib(`${c.is_active ? '⏸ Пауза' : '▶️ Запуск'} ${c.name.slice(0, 22)}`, `camp:${c.id}`),
   ]);
-  if (cfg.webAppUrl) kb.push([ wa('✏️ Управление', cfg.webAppUrl) ]);
+  if (_webAppUrl) kb.push([ wa('✏️ Управление', _webAppUrl) ]);
   kb.push([ ib('🏠 Меню', 'go:menu') ]);
 
   await bot.sendMessage(cid, lines.join('\n'), {
@@ -293,8 +358,8 @@ async function cmdCampaigns(bot, cid, cfg, userId) {
   });
 }
 
-async function cmdJobs(bot, cid, cfg) {
-  const jobs = await Promise.resolve(cfg.getRecentJobs?.()).catch(() => []) || [];
+async function cmdJobs(bot, cid, cb) {
+  const jobs = await Promise.resolve(cb.getRecentJobs?.()).catch(() => []) || [];
   const list = jobs.slice(0, 10);
 
   if (!list.length) {
@@ -319,8 +384,8 @@ async function cmdJobs(bot, cid, cfg) {
   });
 }
 
-async function cmdStats(bot, cid, cfg) {
-  const jobs = await Promise.resolve(cfg.getRecentJobs?.()).catch(() => []) || [];
+async function cmdStats(bot, cid, cb) {
+  const jobs = await Promise.resolve(cb.getRecentJobs?.()).catch(() => []) || [];
   const s = { done: 0, failed: 0, pending: 0, running: 0, cancelled: 0 };
   for (const j of jobs) s[j.status] = (s[j.status] || 0) + 1;
   const tot = Object.values(s).reduce((a, b) => a + b, 0) || 1;
@@ -330,7 +395,7 @@ async function cmdStats(bot, cid, cfg) {
     '',
     `✅ Выполнено: <b>${s.done}</b>  (${(s.done / tot * 100).toFixed(0)}%)`,
     `❌ Ошибок: <b>${s.failed}</b>`,
-    `� Ожидают: <b>${s.pending}</b>`,
+    `🕒 Ожидают: <b>${s.pending}</b>`,
     `⏳ В процессе: <b>${s.running}</b>`,
     `🚫 Отменено: <b>${s.cancelled}</b>`,
   ].join('\n');
@@ -345,34 +410,30 @@ async function cmdStats(bot, cid, cfg) {
 //  INLINE CALLBACKS
 // ═════════════════════════════════════════════════════════════════════════════
 
-async function handleCb(bot, data, cid, cfg, userId) {
-  // Бот старт/стоп
+async function handleCb(bot, data, cid, cb, user) {
   if (data === 'bot:start') {
     try {
-      const SM = require('./SteamBotManager');
-      SM.start(userId);
+      cb.startBot();
       await bot.sendMessage(cid, '▶️ <b>Бот запущен!</b> Публикации по расписанию.', { parse_mode: 'HTML' });
     } catch (e) { await bot.sendMessage(cid, `❌ ${esc(e.message)}`, { parse_mode: 'HTML' }); }
     return;
   }
   if (data === 'bot:stop') {
     try {
-      const SM = require('./SteamBotManager');
-      SM.stop(userId);
+      cb.stopBot();
       await bot.sendMessage(cid, '⏹ <b>Бот остановлен.</b>', { parse_mode: 'HTML' });
     } catch (e) { await bot.sendMessage(cid, `❌ ${esc(e.message)}`, { parse_mode: 'HTML' }); }
     return;
   }
 
-  // Аккаунт вкл/выкл
   if (data.startsWith('acc:')) {
     const id = data.slice(4);
     try {
-      const all = await db.getProfiles(userId);
+      const all = await db.getProfiles(user.id);
       const a = all.find(x => x.id === id);
       if (!a) return bot.sendMessage(cid, '❌ Не найден');
       const on = !a.is_active;
-      await db.updateProfile(id, userId, { is_active: on });
+      await db.updateProfile(id, user.id, { is_active: on });
       await bot.sendMessage(cid,
         `${on ? '🟢' : '🔴'} <b>${esc(a.name)}</b> ${on ? 'включён' : 'отключён'}`,
         { parse_mode: 'HTML' });
@@ -380,15 +441,14 @@ async function handleCb(bot, data, cid, cfg, userId) {
     return;
   }
 
-  // Кампания вкл/выкл
   if (data.startsWith('camp:')) {
     const id = data.slice(5);
     try {
-      const all = await db.getCampaigns(userId);
+      const all = await db.getCampaigns(user.id);
       const c = all.find(x => x.id === id);
       if (!c) return bot.sendMessage(cid, '❌ Не найдена');
       const on = !c.is_active;
-      await db.updateCampaign(id, userId, { is_active: on });
+      await db.updateCampaign(id, user.id, { is_active: on });
       await bot.sendMessage(cid,
         `${on ? '▶️' : '⏸'} <b>${esc(c.name)}</b> ${on ? 'запущена' : 'на паузе'}`,
         { parse_mode: 'HTML' });
@@ -396,60 +456,63 @@ async function handleCb(bot, data, cid, cfg, userId) {
     return;
   }
 
-  // Навигация
-  if (data === 'go:menu')      return cmdMenu(bot, cid, cfg, userId);
-  if (data === 'go:accounts')  return cmdAccounts(bot, cid, cfg, userId);
-  if (data === 'go:campaigns') return cmdCampaigns(bot, cid, cfg, userId);
-  if (data === 'go:jobs')      return cmdJobs(bot, cid, cfg);
-  if (data === 'go:stats')     return cmdStats(bot, cid, cfg);
+  if (data === 'go:menu')      return cmdMenu(bot, cid, cb, user);
+  if (data === 'go:accounts')  return cmdAccounts(bot, cid, cb, user);
+  if (data === 'go:campaigns') return cmdCampaigns(bot, cid, cb, user);
+  if (data === 'go:jobs')      return cmdJobs(bot, cid, cb);
+  if (data === 'go:stats')     return cmdStats(bot, cid, cb);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  УВЕДОМЛЕНИЯ
+//  NOTIFICATIONS
 // ═════════════════════════════════════════════════════════════════════════════
 
 async function sendNotification(userId, text, options = {}) {
-  const e = await _notifyBot(userId);
-  if (!e) return;
-  await sendAll(e.bot, e.chatIds, text, options);
+  if (!_bot) return;
+  const user = await db.getUserById(userId);
+  if (!user?.telegram_chat_id) return;
+  await send(user.telegram_chat_id, text, options);
 }
 
 async function notifyJobResult(userId, { success, title, profileName, topicUrl, error } = {}) {
-  const e = await _notifyBot(userId);
-  if (!e) return;
-  const n = e.config.notify;
-  if (success && !n?.success) return;
-  if (!success && !n?.errors) return;
+  if (!_bot) return;
+  const user = await db.getUserById(userId);
+  if (!user?.telegram_chat_id) return;
+  if (success && !user.tg_notify_success) return;
+  if (!success && !user.tg_notify_errors) return;
 
   const kb = [];
   if (success && topicUrl)
     kb.push([{ text: '🔗 Открыть тему', url: topicUrl }]);
-  if (e.config.webAppUrl)
-    kb.push([ wa('� Активность', e.config.webAppUrl) ]);
+  if (_webAppUrl)
+    kb.push([ wa('📜 Активность', _webAppUrl) ]);
 
   const txt = success
     ? `✅ <b>Пост опубликован!</b>\n📌 ${esc(title)}\n👤 ${esc(profileName)}` +
       (topicUrl ? `\n🔗 <a href="${topicUrl}">Открыть тему</a>` : '')
     : `❌ <b>Ошибка!</b>\n📌 ${esc(title)}\n👤 ${esc(profileName)}\n⚠️ ${esc(error || '?')}`;
 
-  await sendAll(e.bot, e.chatIds, txt, {
+  await send(user.telegram_chat_id, txt, {
     parse_mode: 'HTML', disable_web_page_preview: true,
     reply_markup: kb.length ? { inline_keyboard: kb } : undefined,
   });
 }
 
 async function notifyExpiredAccount(userId, profileName) {
-  const e = await _notifyBot(userId);
-  if (!e || !e.config.notify?.expired) return;
-  const kb = e.config.webAppUrl ? [[ wa('🔄 Переавторизовать', e.config.webAppUrl) ]] : [];
-  await sendAll(e.bot, e.chatIds,
+  if (!_bot) return;
+  const user = await db.getUserById(userId);
+  if (!user?.telegram_chat_id || !user.tg_notify_expired) return;
+  const kb = _webAppUrl ? [[ wa('🔄 Переавторизовать', _webAppUrl) ]] : [];
+  await send(user.telegram_chat_id,
     `⚠️ <b>Аккаунт Steam вылетел!</b>\n👤 ${esc(profileName)}\n\n🔑 Нужно заново войти.`,
     { parse_mode: 'HTML', reply_markup: kb.length ? { inline_keyboard: kb } : undefined }
   );
 }
 
+// backward-compat aliases
+function stopAll() { stop(); }
+
 module.exports = {
-  start, stop, restart, isRunning, isRunningAsync,
+  start, stop, isRunning, getToken, stopAll,
   sendNotification, notifyJobResult, notifyExpiredAccount,
-  stopAll,
 };

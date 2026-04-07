@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#66d9ef"/>
+      <stop offset="100%" stop-color="#2196f3"/>
+    </linearGradient>
+    <linearGradient id="steam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#c0d6e4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="url(#bg)"/>
+
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="230" stroke="url(#accent)" stroke-width="6" fill="none" opacity="0.3"/>
+
+  <!-- Steam logo stylized -->
+  <g transform="translate(256, 220)">
+    <!-- Main circle (controller/joystick head) -->
+    <circle cx="0" cy="-20" r="72" stroke="url(#steam)" stroke-width="8" fill="none"/>
+    <!-- Inner circle -->
+    <circle cx="0" cy="-20" r="36" fill="url(#accent)" opacity="0.9"/>
+    <!-- Highlight dot -->
+    <circle cx="-10" cy="-30" r="10" fill="white" opacity="0.4"/>
+    <!-- Steam pipe/handle -->
+    <line x1="0" y1="52" x2="0" y2="110" stroke="url(#steam)" stroke-width="8" stroke-linecap="round"/>
+    <!-- Left arm -->
+    <line x1="-52" y1="30" x2="-85" y2="80" stroke="url(#steam)" stroke-width="7" stroke-linecap="round"/>
+    <!-- Right arm -->
+    <line x1="52" y1="30" x2="85" y2="80" stroke="url(#steam)" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <!-- Megaphone / poster icon overlay -->
+  <g transform="translate(340, 320)" opacity="0.95">
+    <rect x="-4" y="-28" width="40" height="56" rx="6" fill="url(#accent)"/>
+    <!-- Speaker lines -->
+    <path d="M 40 -18 Q 60 -10 60 0 Q 60 10 40 18" stroke="white" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M 44 -30 Q 72 -16 72 0 Q 72 16 44 30" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+  </g>
+
+  <!-- Bot badge -->
+  <g transform="translate(256, 440)">
+    <rect x="-45" y="-16" width="90" height="32" rx="16" fill="url(#accent)"/>
+    <text x="0" y="6" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#1a1a2e">BOT</text>
+  </g>
+</svg>

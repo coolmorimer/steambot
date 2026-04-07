@@ -10,6 +10,7 @@
 const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 const poolCfg = config.db.postgresql || {};
 const pool = new Pool({
@@ -19,11 +20,17 @@ const pool = new Pool({
   user:     process.env.DB_USER     || poolCfg.user     || 'steambot',
   password: process.env.DB_PASSWORD || poolCfg.password || '',
   ssl: (process.env.DB_SSL === 'true' || poolCfg.ssl)
-    ? { rejectUnauthorized: false }
+    ? {
+        rejectUnauthorized: process.env.NODE_ENV === 'production',
+        ca: process.env.DB_CA_CERT || undefined,
+      }
     : false,
-  max: Number(process.env.DB_POOL_MAX || poolCfg.max || 10),
+  max: Number(process.env.DB_POOL_MAX || poolCfg.max || 20),
+  min: 2,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 });
 
 pool.on('error', err => console.error('[pg] pool error', err.message));
@@ -131,6 +138,39 @@ async function getUserByGoogleId(googleId) {
   return row ? parseUser(row) : null;
 }
 
+async function getUserByTelegramChatId(chatId) {
+  const row = await getOne('SELECT * FROM users WHERE telegram_chat_id = $1', [String(chatId)]);
+  return row ? parseUser(row) : null;
+}
+
+async function getAllLinkedTelegramUsers() {
+  return getAll(`SELECT id, telegram_chat_id, tg_notify_errors, tg_notify_success, tg_notify_expired
+    FROM users WHERE telegram_chat_id IS NOT NULL AND is_active = TRUE`);
+}
+
+// ── Telegram link codes ──
+async function createTelegramLinkCode(userId) {
+  // Delete existing codes for this user
+  await query('DELETE FROM telegram_link_codes WHERE user_id = $1', [userId]);
+  const code = require('crypto').randomBytes(16).toString('hex');
+  const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString(); // 10 min
+  await query('INSERT INTO telegram_link_codes (code, user_id, created_at, expires_at) VALUES ($1,$2,$3,$4)',
+    [code, userId, now(), expiresAt]);
+  return code;
+}
+
+async function consumeTelegramLinkCode(code) {
+  const row = await getOne('SELECT * FROM telegram_link_codes WHERE code = $1', [code]);
+  if (!row) return null;
+  await query('DELETE FROM telegram_link_codes WHERE code = $1', [code]);
+  if (new Date(row.expires_at) < new Date()) return null; // expired
+  return row.user_id;
+}
+
+async function cleanExpiredTelegramLinkCodes() {
+  await query('DELETE FROM telegram_link_codes WHERE expires_at < $1', [now()]);
+}
+
 async function getUserById(id) {
   const row = await getOne('SELECT * FROM users WHERE id = $1', [id]);
   return row ? parseUser(row) : null;
@@ -157,7 +197,8 @@ async function countUsers() {
 
 async function updateUser(id, fields) {
   const allowed = ['name', 'email', 'role', 'is_active', 'email_verified', 'password_hash',
-    'steam_id', 'steam_username', 'steam_avatar', 'google_id', 'trade_url', 'balance'];
+    'steam_id', 'steam_username', 'steam_avatar', 'google_id', 'trade_url', 'balance',
+    'telegram_chat_id', 'tg_notify_errors', 'tg_notify_success', 'tg_notify_expired'];
   const updates = [], values = [];
   let i = 1;
   for (const [k, v] of Object.entries(fields)) {
@@ -245,12 +286,18 @@ async function getUserByStripeCustomer(stripeCustomerId) {
 //  TELEGRAM BOTS
 // ═══════════════════════════════════════════════════════════════════════════
 
+function _decryptBotRow(row) {
+  if (!row) return row;
+  if (row.bot_token) row.bot_token = decrypt(row.bot_token);
+  return row;
+}
+
 async function getTelegramBot(userId) {
-  return getOne('SELECT * FROM user_telegram_bots WHERE user_id = $1 ORDER BY created_at LIMIT 1', [userId]);
+  return _decryptBotRow(await getOne('SELECT * FROM user_telegram_bots WHERE user_id = $1 ORDER BY created_at LIMIT 1', [userId]));
 }
 
 async function getTelegramBots(userId) {
-  return getAll('SELECT * FROM user_telegram_bots WHERE user_id = $1 ORDER BY created_at', [userId]);
+  return (await getAll('SELECT * FROM user_telegram_bots WHERE user_id = $1 ORDER BY created_at', [userId])).map(_decryptBotRow);
 }
 
 async function getTelegramBotByAuthorizedChatId(chatId) {
@@ -261,7 +308,7 @@ async function getTelegramBotByAuthorizedChatId(chatId) {
       const ids = typeof bot.authorized_chat_ids === 'string'
         ? JSON.parse(bot.authorized_chat_ids)
         : (bot.authorized_chat_ids || []);
-      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) return bot;
+      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) return _decryptBotRow(bot);
     } catch {}
   }
   return null;
@@ -276,7 +323,7 @@ async function getAllTelegramBotsByAuthorizedChatId(chatId) {
       const ids = typeof bot.authorized_chat_ids === 'string'
         ? JSON.parse(bot.authorized_chat_ids)
         : (bot.authorized_chat_ids || []);
-      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) result.push(bot);
+      if (ids.length && (ids.includes(chatId) || ids.includes(cid))) result.push(_decryptBotRow(bot));
     } catch {}
   }
   return result;
@@ -292,7 +339,7 @@ async function upsertTelegramBot(userId, data) {
         notify_bot_state=$9,is_active=$10
       WHERE id=$11
     `, [
-      data.label || existing.label, data.bot_token,
+      data.label || existing.label, encrypt(data.bot_token),
       data.bot_username || existing.bot_username,
       JSON.stringify(data.authorized_chat_ids || (typeof existing.authorized_chat_ids === 'string'
         ? JSON.parse(existing.authorized_chat_ids) : existing.authorized_chat_ids)),
@@ -313,7 +360,7 @@ async function upsertTelegramBot(userId, data) {
          mini_app_url,notify_errors,notify_success,notify_expired,notify_bot_state,is_active,created_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
     `, [
-      id, userId, data.label || 'Main Bot', data.bot_token,
+      id, userId, data.label || 'Main Bot', encrypt(data.bot_token),
       data.bot_username || null,
       JSON.stringify(data.authorized_chat_ids || []),
       data.mini_app_url || null,
@@ -332,12 +379,13 @@ async function deleteTelegramBot(id, userId) {
 }
 
 async function getActiveTelegramBotUsers() {
-  return getAll(`
+  const rows = await getAll(`
     SELECT t.*, u.id as user_id
     FROM user_telegram_bots t
     JOIN users u ON u.id = t.user_id
     WHERE t.is_active = TRUE AND u.is_active = TRUE
   `);
+  return rows.map(_decryptBotRow);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -349,7 +397,7 @@ async function addProfile(userId, { name, cookies, targetUrl }) {
   await query(`
     INSERT INTO profiles (id, user_id, name, cookies, target_url, is_active, created_at)
     VALUES ($1,$2,$3,$4,$5,TRUE,$6)
-  `, [id, userId, name, JSON.stringify(cookies),
+  `, [id, userId, name, encrypt(JSON.stringify(cookies)),
     targetUrl || 'https://steamcommunity.com/app/730/tradingforum/', now()]);
   return id;
 }
@@ -358,14 +406,14 @@ async function getProfiles(userId) {
   const rows = await getAll('SELECT * FROM profiles WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
   return rows.map(r => ({
     ...r,
-    cookies: typeof r.cookies === 'string' ? JSON.parse(r.cookies) : (r.cookies || []),
+    cookies: typeof r.cookies === 'string' ? JSON.parse(decrypt(r.cookies)) : (r.cookies || []),
   }));
 }
 
 async function getProfile(id, userId) {
   const row = await getOne('SELECT * FROM profiles WHERE id = $1 AND user_id = $2', [id, userId]);
   if (!row) return null;
-  return { ...row, cookies: typeof row.cookies === 'string' ? JSON.parse(row.cookies) : (row.cookies || []) };
+  return { ...row, cookies: typeof row.cookies === 'string' ? JSON.parse(decrypt(row.cookies)) : (row.cookies || []) };
 }
 
 async function updateProfile(id, userId, fields) {
@@ -375,7 +423,7 @@ async function updateProfile(id, userId, fields) {
   for (const [k, v] of Object.entries(fields)) {
     if (allowed.includes(k)) {
       updates.push(`${k} = $${i++}`);
-      values.push(k === 'cookies' ? JSON.stringify(v) : v);
+      values.push(k === 'cookies' ? encrypt(JSON.stringify(v)) : v);
     }
   }
   if (!updates.length) return;
@@ -596,6 +644,20 @@ async function getPendingJobForCampaignProfile(userId, campaignId, profileId, ta
     SELECT id FROM jobs
     WHERE user_id = $1 AND campaign_id = $2 AND profile_id = $3 AND target_group_id IS NULL AND status = 'pending' LIMIT 1
   `, [userId, campaignId, profileId]);
+}
+
+// ─── Cooldown / ротация аккаунтов ────────────────────────────────────────────
+
+async function getProfileLastPostTime(profileId, userId) {
+  const row = await getOne(`
+    SELECT MAX(executed_at) as last_posted_at
+    FROM jobs WHERE profile_id = $1 AND user_id = $2 AND status = 'done'
+  `, [profileId, userId]);
+  return row?.last_posted_at || null;
+}
+
+async function updateJobProfile(jobId, userId, newProfileId) {
+  await query('UPDATE jobs SET profile_id = $1 WHERE id = $2 AND user_id = $3', [newProfileId, userId, jobId]);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -922,9 +984,9 @@ async function getAdminUserList({ limit = 50, offset = 0, search = '' } = {}) {
     SELECT u.*,
       s.plan_id, s.status as sub_status, s.expires_at, s.trial_ends_at,
       p.name as plan_name,
-      (SELECT COUNT(*) FROM profiles pr WHERE pr.user_id = u.id)  as profiles_count,
-      (SELECT COUNT(*) FROM campaigns c  WHERE c.user_id  = u.id) as campaigns_count,
-      (SELECT COUNT(*) FROM jobs j WHERE j.user_id = u.id AND j.status = 'done') as jobs_done
+      COALESCE(pr.cnt, 0) as profiles_count,
+      COALESCE(c.cnt, 0) as campaigns_count,
+      COALESCE(j.cnt, 0) as jobs_done
     FROM users u
     LEFT JOIN LATERAL (
       SELECT * FROM user_subscriptions
@@ -932,6 +994,9 @@ async function getAdminUserList({ limit = 50, offset = 0, search = '' } = {}) {
       ORDER BY created_at DESC LIMIT 1
     ) s ON true
     LEFT JOIN subscription_plans p ON p.id = s.plan_id
+    LEFT JOIN (SELECT user_id, COUNT(*) as cnt FROM profiles GROUP BY user_id) pr ON pr.user_id = u.id
+    LEFT JOIN (SELECT user_id, COUNT(*) as cnt FROM campaigns GROUP BY user_id) c ON c.user_id = u.id
+    LEFT JOIN (SELECT user_id, COUNT(*) as cnt FROM jobs WHERE status = 'done' GROUP BY user_id) j ON j.user_id = u.id
     WHERE u.name ILIKE $1 OR u.email ILIKE $2
     ORDER BY u.created_at DESC LIMIT $3 OFFSET $4
   `, [like, like, limit, offset]);
@@ -1443,6 +1508,21 @@ async function updateUserBalance(userId, delta) {
   return rows[0]?.balance ?? 0;
 }
 
+/**
+ * Safe balance deduction — only deducts if sufficient funds.
+ * Returns { success, balance }.
+ */
+async function safeDeductBalance(userId, amountKopecks) {
+  const { rows } = await query(
+    `UPDATE users SET balance = balance - $1, updated_at = $2
+     WHERE id = $3 AND balance >= $1
+     RETURNING balance`,
+    [amountKopecks, now(), userId]
+  );
+  if (!rows.length) return { success: false, balance: (await getUserBalance(userId)) };
+  return { success: true, balance: rows[0].balance };
+}
+
 async function getUserBalance(userId) {
   const row = await getOne('SELECT balance FROM users WHERE id = $1', [userId]);
   return row?.balance ?? 0;
@@ -1630,11 +1710,72 @@ async function resolveReferralCode(code) {
   return null;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  TWO-FACTOR AUTHENTICATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function get2FASettings(userId) {
+  return getOne('SELECT * FROM two_factor_settings WHERE user_id = $1', [userId]);
+}
+
+async function upsert2FASettings(userId, method) {
+  const n = now();
+  await query(`
+    INSERT INTO two_factor_settings (user_id, method, is_enabled, created_at, updated_at)
+    VALUES ($1, $2, 0, $3, $3)
+    ON CONFLICT (user_id) DO UPDATE SET method = EXCLUDED.method, updated_at = EXCLUDED.updated_at
+  `, [userId, method, n]);
+}
+
+async function enable2FA(userId) {
+  await query('UPDATE two_factor_settings SET is_enabled = 1, updated_at = $1 WHERE user_id = $2', [now(), userId]);
+}
+
+async function disable2FA(userId) {
+  await query('DELETE FROM two_factor_settings WHERE user_id = $1', [userId]);
+  await query('DELETE FROM two_factor_codes WHERE user_id = $1', [userId]);
+}
+
+async function create2FACode(userId, code, expiresAt) {
+  const id = uuidv4();
+  // Invalidate previous unused codes
+  await query('DELETE FROM two_factor_codes WHERE user_id = $1 AND used = 0', [userId]);
+  await query(`
+    INSERT INTO two_factor_codes (id, user_id, code, attempts, used, expires_at, created_at)
+    VALUES ($1, $2, $3, 0, 0, $4, $5)
+  `, [id, userId, code, expiresAt, now()]);
+  return id;
+}
+
+async function verify2FACode(userId, code) {
+  const row = await getOne(
+    'SELECT * FROM two_factor_codes WHERE user_id = $1 AND used = 0 ORDER BY created_at DESC LIMIT 1',
+    [userId]
+  );
+  if (!row) return { valid: false, reason: 'no_code' };
+  if (new Date(row.expires_at) < new Date()) return { valid: false, reason: 'expired' };
+  if (row.attempts >= 5) return { valid: false, reason: 'too_many_attempts' };
+
+  if (row.code !== code) {
+    await query('UPDATE two_factor_codes SET attempts = attempts + 1 WHERE id = $1', [row.id]);
+    return { valid: false, reason: 'invalid_code' };
+  }
+
+  await query('UPDATE two_factor_codes SET used = 1 WHERE id = $1', [row.id]);
+  return { valid: true };
+}
+
+async function cleanup2FACodes() {
+  await query('DELETE FROM two_factor_codes WHERE expires_at < $1', [now()]);
+}
+
 module.exports = {
   query, getOne,
   getPlans, getPlan, upsertPlan,
-  createUser, getUserById, getUserByEmail, getUserBySteamId, getUserByGoogleId, getAllUsers, countUsers,
+  createUser, getUserById, getUserByEmail, getUserBySteamId, getUserByGoogleId, getUserByTelegramChatId, getAllUsers, countUsers,
   updateUser, updateLastLogin, deleteUser,
+  // Telegram link codes
+  createTelegramLinkCode, consumeTelegramLinkCode, cleanExpiredTelegramLinkCodes, getAllLinkedTelegramUsers,
   // Market
   createMarketListing, getMarketListings, countMarketListings, getMarketListing,
   getUserMarketListings, updateMarketListing, deleteMarketListing,
@@ -1645,7 +1786,7 @@ module.exports = {
   createTradeProposal, getTradeProposals, getTradeProposal,
   getIncomingProposals, getOutgoingProposals, updateTradeProposal, countPendingProposals,
   // Balance
-  createBalanceTransaction, getBalanceTransactions, updateUserBalance, getUserBalance,
+  createBalanceTransaction, getBalanceTransactions, updateUserBalance, safeDeductBalance, getUserBalance,
   // Withdrawals
   createWithdrawalRequest, getWithdrawalRequests, getAllWithdrawalRequests, updateWithdrawalRequest,
   createSubscription, getActiveSubscription, getSubscriptionHistory,
@@ -1657,6 +1798,7 @@ module.exports = {
   addJob, getDueJobs, getRecentJobs, getJobsPaged, getJobStats, countJobsToday,
   updateJobStatus, resetRunningJobs, cancelOverduePendingJobs, deleteJob,
   deletePendingJobsByCampaign, getLastJobForCampaignProfile, getPendingJobForCampaignProfile,
+  getProfileLastPostTime, updateJobProfile,
   getSteamGroups, getSteamGroup, getSteamGroupsByIds,
   getSetting, setSetting, getAllSettings, bulkSetSettings,
   getServerSetting, setServerSetting, getAllServerSettings, bulkSetServerSettings,
@@ -1676,5 +1818,9 @@ module.exports = {
   createPartnerReferral, getPartnerReferrals, getPartnerReferral, getPartnerReferralByCode,
   getPartnerReferralByUserId, updatePartnerReferral, deletePartnerReferral,
   incrementPartnerReferralStats, createReferralEarning, getPartnerEarnings,
+  // 2FA
+  get2FASettings, upsert2FASettings, enable2FA, disable2FA,
+  create2FACode, verify2FACode, cleanup2FACodes,
+  healthCheck: () => query('SELECT 1'),
   pool, // expose for health-checks / migrations
 };

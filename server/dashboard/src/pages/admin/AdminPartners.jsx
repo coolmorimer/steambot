@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { Plus, Trash2, Edit3, Search, ExternalLink } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
@@ -84,8 +83,6 @@ export default function AdminPartners() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-2">
-        <Link to="/admin" className="text-gray-500 hover:text-white text-sm">← Назад</Link>
-        <span className="text-gray-700">/</span>
         <h1 className="text-xl font-bold text-white">Партнёры</h1>
         <span className="badge-gray">{partners.length}</span>
         <button onClick={openCreate} className="btn-primary text-sm ml-auto !py-1.5 !px-3 flex items-center gap-1.5">

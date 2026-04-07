@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
@@ -33,8 +32,6 @@ export default function AdminPlans() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <Link to="/admin" className="text-gray-500 hover:text-white text-sm">← Назад</Link>
-        <span className="text-gray-700">/</span>
         <h1 className="text-xl font-bold text-white">Тарифы</h1>
       </div>
 

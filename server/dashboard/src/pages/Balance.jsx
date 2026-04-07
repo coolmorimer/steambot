@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
-  Wallet, ArrowDownCircle, ArrowUpCircle, Loader2, History, CreditCard,
-  AlertCircle, CheckCircle, Clock, XCircle, Link2, Sparkles,
-  Shield, ExternalLink, ArrowRight,
+  Wallet, ArrowUpCircle, ArrowDownCircle, Loader2, History, CreditCard,
+  AlertCircle, CheckCircle, Clock, XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
@@ -33,8 +32,6 @@ export default function Balance() {
   const [withdrawals, setWithdrawals] = useState([]);
   const [loading, setLoading]     = useState(true);
 
-  const [depositAmount, setDepositAmount]   = useState('');
-  const [depositing, setDepositing]         = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod, setWithdrawMethod] = useState('card');
   const [withdrawCard, setWithdrawCard]     = useState('');
@@ -42,12 +39,7 @@ export default function Balance() {
 
   const [tab, setTab] = useState('overview');
 
-  // Trade URL
-  const [tradeUrl, setTradeUrl]   = useState(user?.trade_url || '');
-  const [savingUrl, setSavingUrl] = useState(false);
-
   useEffect(() => { load(); }, []);
-  useEffect(() => { setTradeUrl(user?.trade_url || ''); }, [user?.trade_url]);
 
   const load = async () => {
     setLoading(true);
@@ -62,28 +54,6 @@ export default function Balance() {
     } catch (err) {
       toast.error('Ошибка загрузки баланса');
     } finally { setLoading(false); }
-  };
-
-  const handleDeposit = async () => {
-    const amt = parseFloat(depositAmount);
-    if (!amt || amt < 100) return toast.error('Минимум 100₽');
-    setDepositing(true);
-    try {
-      const { data } = await api.post('/balance/deposit', { amount: amt });
-      if (data.paymentUrl) {
-        // ЮKassa: перенаправляем на страницу оплаты
-        toast.success('Перенаправляем на страницу оплаты...');
-        window.location.href = data.paymentUrl;
-        return;
-      }
-      toast.success(`Баланс пополнен на ${amt}₽`);
-      setBalance(data.balance);
-      setDepositAmount('');
-      load();
-      fetchMe();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Ошибка');
-    } finally { setDepositing(false); }
   };
 
   const handleWithdraw = async () => {
@@ -108,18 +78,6 @@ export default function Balance() {
     } finally { setWithdrawing(false); }
   };
 
-  const saveTradeUrl = async () => {
-    if (!tradeUrl.trim()) return toast.error('Вставьте Trade URL');
-    setSavingUrl(true);
-    try {
-      const { data } = await api.put('/balance/trade-url', { trade_url: tradeUrl });
-      toast.success('Trade URL сохранён, Steam привязан!');
-      fetchMe();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Ошибка');
-    } finally { setSavingUrl(false); }
-  };
-
   if (loading) return (
     <div className="flex justify-center py-20">
       <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
@@ -128,9 +86,7 @@ export default function Balance() {
 
   const tabs = [
     { id: 'overview', label: '📊 Обзор',   icon: History },
-    { id: 'deposit',  label: '💰 Пополнить', icon: ArrowDownCircle },
     { id: 'withdraw', label: '💸 Вывести',  icon: ArrowUpCircle },
-    { id: 'profile',  label: '🎮 Профиль',  icon: Link2 },
   ];
 
   return (
@@ -188,10 +144,7 @@ export default function Balance() {
             <div className="text-center py-10">
               <div className="text-4xl mb-3">📭</div>
               <p className="text-gray-400 font-medium">Нет операций</p>
-              <p className="text-xs text-gray-600 mt-1">Пополните баланс, чтобы начать</p>
-              <button onClick={() => setTab('deposit')} className="btn-primary text-sm mt-4">
-                💰 Пополнить баланс
-              </button>
+              <p className="text-xs text-gray-600 mt-1">Операции отобразятся здесь</p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -215,67 +168,6 @@ export default function Balance() {
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ══ Tab: Deposit ══ */}
-      {tab === 'deposit' && (
-        <div className="card space-y-5 max-w-lg mx-auto animate-scale-in">
-          <h2 className="section-title">
-            <ArrowDownCircle className="w-5 h-5 text-green-400" /> Пополнение баланса
-          </h2>
-
-          <div>
-            <label className="label">💰 Сумма (₽)</label>
-            <input className="input text-lg font-bold" type="number" min="100" step="100"
-              placeholder="1000"
-              value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
-            <p className="text-xs text-gray-600 mt-1.5">Минимум: 100 ₽</p>
-          </div>
-
-          {/* Quick amounts */}
-          <div className="grid grid-cols-4 gap-2">
-            {[500, 1000, 2500, 5000].map(a => (
-              <button key={a}
-                className={`rounded-xl py-2.5 text-sm font-bold transition-all border ${
-                  depositAmount === String(a)
-                    ? 'bg-brand-500/15 border-brand-500/30 text-brand-400'
-                    : 'bg-gray-800/50 border-gray-700/40 text-gray-400 hover:border-gray-600 hover:text-white'
-                }`}
-                onClick={() => setDepositAmount(String(a))}
-              >
-                {a} ₽
-              </button>
-            ))}
-          </div>
-
-          {/* Commission */}
-          {depositAmount && parseFloat(depositAmount) >= 100 && (() => {
-            const amt = parseFloat(depositAmount);
-            const fee = Math.ceil(amt * 100 * 0.01) / 100; // 1%
-            const credited = Math.max(0, amt - fee);
-            return (
-              <div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/30 space-y-2.5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Сумма</span>
-                  <span className="text-white font-semibold">{amt.toLocaleString('ru-RU')} ₽</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Комиссия сервиса (1%)</span>
-                  <span className="text-red-400/80">−{fee.toFixed(2)} ₽</span>
-                </div>
-                <div className="border-t border-gray-700/30 my-1" />
-                <div className="flex justify-between text-sm font-bold">
-                  <span className="text-gray-300">✅ На баланс</span>
-                  <span className="text-green-400 text-base">{credited.toFixed(2)} ₽</span>
-                </div>
-              </div>
-            );
-          })()}
-
-          <button className="btn-success w-full text-base py-3" onClick={handleDeposit} disabled={depositing}>
-            {depositing ? <Loader2 className="w-5 h-5 animate-spin" /> : '💰 Пополнить баланс'}
-          </button>
         </div>
       )}
 
@@ -347,79 +239,6 @@ export default function Balance() {
               })}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ══ Tab: Profile ══ */}
-      {tab === 'profile' && (
-        <div className="card space-y-5 max-w-lg mx-auto animate-scale-in">
-          <h2 className="section-title">
-            <Shield className="w-5 h-5 text-brand-400" /> Профиль и Steam
-          </h2>
-
-          {/* Steam linked */}
-          {user?.steam_id ? (
-            <div className="relative overflow-hidden rounded-xl border border-green-500/20 bg-green-500/5 p-4">
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-500/5 rounded-full blur-2xl" />
-              <div className="relative flex items-center gap-4">
-                {user.steam_avatar ? (
-                  <img src={user.steam_avatar} className="w-14 h-14 rounded-xl ring-2 ring-green-500/20 shadow-lg" alt="" />
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 text-xl">🎮</div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-base font-bold text-white">{user.steam_username}</p>
-                    <CheckCircle className="w-4 h-4 text-green-400" />
-                  </div>
-                  <p className="text-xs text-gray-500 font-mono mt-0.5">ID: {user.steam_id}</p>
-                </div>
-                <a href={`https://steamcommunity.com/profiles/${user.steam_id}`}
-                  target="_blank" rel="noopener"
-                  className="btn-ghost text-xs px-2.5 py-1.5">
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 text-center">
-              <div className="text-3xl mb-2">🎮</div>
-              <p className="text-sm text-amber-300 font-semibold">Steam не привязан</p>
-              <p className="text-xs text-gray-500 mt-1">Вставьте Trade URL ниже — система автоматически привяжет ваш Steam</p>
-            </div>
-          )}
-
-          {/* Trade URL */}
-          <div className="space-y-3">
-            <label className="label flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-gray-500" /> Steam Trade URL
-            </label>
-            <input className="input"
-              placeholder="https://steamcommunity.com/tradeoffer/new/?partner=...&token=..."
-              value={tradeUrl} onChange={e => setTradeUrl(e.target.value)} />
-
-            <div className="flex items-center justify-between">
-              <a href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url"
-                target="_blank" rel="noopener"
-                className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors">
-                🔍 Где найти Trade URL? <ArrowRight className="w-3 h-3" />
-              </a>
-            </div>
-
-            {!user?.steam_id && tradeUrl && (
-              <div className="flex items-center gap-2 text-xs text-green-400/80 bg-green-500/5 rounded-lg px-3 py-2 border border-green-500/10">
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                Steam привяжется автоматически при сохранении
-              </div>
-            )}
-
-            <button
-              className={`w-full text-sm py-3 ${user?.steam_id ? 'btn-secondary' : 'btn-success'}`}
-              onClick={saveTradeUrl} disabled={savingUrl}
-            >
-              {savingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : user?.steam_id ? '🔄 Обновить Trade URL' : '🎮 Привязать Steam'}
-            </button>
-          </div>
         </div>
       )}
     </div>

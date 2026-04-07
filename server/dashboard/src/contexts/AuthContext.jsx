@@ -26,6 +26,17 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
+    if (data.requires_2fa) {
+      return data; // { requires_2fa, tfa_token, method }
+    }
+    localStorage.setItem('access_token',  data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
+    await fetchMe();
+    return data;
+  };
+
+  const verify2FA = async (tfaToken, code) => {
+    const { data } = await api.post('/auth/2fa/verify', { tfa_token: tfaToken, code });
     localStorage.setItem('access_token',  data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token);
     await fetchMe();
@@ -55,7 +66,7 @@ export function AuthProvider({ children }) {
   const sub        = user?.subscription;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, fetchMe, isAdmin, isSysAdmin, isPartner, sub }}>
+    <AuthContext.Provider value={{ user, loading, login, verify2FA, register, logout, fetchMe, isAdmin, isSysAdmin, isPartner, sub }}>
       {children}
     </AuthContext.Provider>
   );

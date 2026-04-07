@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  ShieldCheck, MessageCircle, Bug, Send, ArrowLeft,
+  MessageCircle, Bug, Send, ArrowLeft,
   Clock, User, ChevronDown, Image, X, RefreshCw,
 } from 'lucide-react';
 import api from '../../api/client';
@@ -48,18 +47,6 @@ function fmtDate(iso) {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /*  Навигационные пилюли админки                                             */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-
-function AdminNav() {
-  return (
-    <div className="flex gap-2 flex-wrap">
-      <Link to="/admin"          className="badge-gray hover:bg-gray-600">Обзор</Link>
-      <Link to="/admin/users"    className="badge-gray hover:bg-gray-600">Пользователи</Link>
-      <Link to="/admin/plans"    className="badge-gray hover:bg-gray-600">Тарифы</Link>
-      <Link to="/admin/config"   className="badge-gray hover:bg-gray-600">Конфигурация</Link>
-      <Link to="/admin/support"  className="badge-blue">Поддержка</Link>
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /*  Список чатов                                                             */
@@ -451,12 +438,7 @@ export default function AdminSupport() {
   // Детальный вид чата
   if (selectedChat) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-6 h-6 text-brand-400" />
-          <h1 className="text-xl font-bold text-white">Администрация</h1>
-        </div>
-        <AdminNav />
+      <div className="space-y-4">
         <ChatConversation chat={selectedChat} onBack={() => { setSelectedChat(null); loadChats(); }} />
       </div>
     );
@@ -465,12 +447,7 @@ export default function AdminSupport() {
   // Детальный вид бага
   if (selectedBug) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-6 h-6 text-brand-400" />
-          <h1 className="text-xl font-bold text-white">Администрация</h1>
-        </div>
-        <AdminNav />
+      <div className="space-y-4">
         <BugDetail
           bug={selectedBug}
           onBack={() => { setSelectedBug(null); loadBugs(); }}
@@ -481,13 +458,8 @@ export default function AdminSupport() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="w-6 h-6 text-brand-400" />
-        <h1 className="text-xl font-bold text-white">Администрация</h1>
-      </div>
-
-      <AdminNav />
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold text-white">Поддержка</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-900 rounded-lg p-1 w-fit">

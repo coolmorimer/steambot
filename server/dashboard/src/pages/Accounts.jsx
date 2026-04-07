@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Trash2, RefreshCw, UploadCloud, Globe,
+  Trash2, RefreshCw, UploadCloud,
   AlertTriangle, QrCode, X, Loader2, CheckCircle2,
   LogIn, Shield, Smartphone,
 } from 'lucide-react';
@@ -221,7 +221,6 @@ const QR_MS   = 2200;
 function LoginModal({ onClose, onSuccess }) {
   // ── Форма ──
   const [name, setName]         = useState('');
-  const [targetUrl, setTargetUrl] = useState('');
   const [mode, setMode]         = useState('qr');          // 'qr' | 'credentials'
 
   // ── Сессия ──
@@ -325,7 +324,6 @@ function LoginModal({ onClose, onSuccess }) {
     try {
       const { data } = await api.post('/profiles/login/start', {
         name: name.trim(),
-        target_url: targetUrl.trim() || undefined,
         mode,
       });
       const sid = data.sessionId;
@@ -413,13 +411,6 @@ function LoginModal({ onClose, onSuccess }) {
                 <input className="input w-full" placeholder="my_steam_account"
                   value={name} onChange={e => setName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleStart()} autoFocus />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">
-                  URL форума <span className="text-gray-600">(необязательно)</span>
-                </label>
-                <input className="input w-full" placeholder="https://steamcommunity.com/games/…"
-                  value={targetUrl} onChange={e => setTargetUrl(e.target.value)} />
               </div>
 
               {/* Способ входа */}
@@ -630,12 +621,6 @@ function ProfileCard({ profile, onDelete, onRefresh }) {
           <p className="font-semibold text-white truncate">{profile.name}</p>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className={statusColor}>{statusLabels[status] || status}</span>
-            {profile.target_url && (
-              <a href={profile.target_url} target="_blank" rel="noreferrer"
-                className="text-xs text-gray-500 hover:text-brand-400 flex items-center gap-1 transition-colors">
-                <Globe className="w-3 h-3" /> Открыть
-              </a>
-            )}
           </div>
         </div>
       </div>

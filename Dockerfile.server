@@ -24,6 +24,9 @@ RUN npx playwright install chromium --with-deps
 # ── Production image ─────────────────────────────────────────────────────────
 FROM node:20-bookworm-slim
 
+# Создаём пользователя ПЕРВЫМ — до копирования файлов
+RUN groupadd -r steambot && useradd -r -g steambot -d /app steambot
+
 WORKDIR /app
 
 # Системные зависимости (runtime only)
@@ -36,24 +39,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
-# Копируем node_modules и браузеры из builder
-COPY --from=builder /app/server/node_modules ./server/node_modules
-COPY --from=builder /root/.cache/ms-playwright /app/.cache/ms-playwright
+# Создать папки для данных и логов
+RUN mkdir -p /app/data /app/logs && chown steambot:steambot /app/data /app/logs
+
+# Копируем node_modules и браузеры из builder (с правильным владельцем сразу)
+COPY --chown=steambot:steambot --from=builder /app/server/node_modules ./server/node_modules
+COPY --chown=steambot:steambot --from=builder /root/.cache/ms-playwright /app/.cache/ms-playwright
 
 # Копируем исходники сервера
-COPY server/ ./server/
+COPY --chown=steambot:steambot server/ ./server/
 
 # Копируем poster.js, db.js и остальные shared модули
-COPY poster.js    ./
-COPY db.js        ./
-COPY scheduler.js ./
-COPY logger.js    ./
-COPY bot.js       ./
-COPY openai.js    ./
-COPY inventory.js ./
-
-# Создать папки для данных и логов
-RUN mkdir -p /app/data /app/logs
+COPY --chown=steambot:steambot poster.js    ./
+COPY --chown=steambot:steambot db.js        ./
+COPY --chown=steambot:steambot scheduler.js ./
+COPY --chown=steambot:steambot logger.js    ./
+COPY --chown=steambot:steambot bot.js       ./
+COPY --chown=steambot:steambot openai.js    ./
+COPY --chown=steambot:steambot inventory.js ./
 
 # Симлинк: /app/node_modules → /app/server/node_modules
 # Нужен потому что inventory.js, poster.js и др. лежат в /app/ и делают
@@ -63,9 +66,6 @@ RUN ln -s /app/server/node_modules /app/node_modules
 # Playwright ищет браузеры по PLAYWRIGHT_BROWSERS_PATH
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.cache/ms-playwright
 
-# Не запускать от root
-RUN groupadd -r steambot && useradd -r -g steambot steambot
-RUN chown -R steambot:steambot /app
 USER steambot
 
 WORKDIR /app/server

@@ -258,6 +258,7 @@ function startExpirationChecker() {
       await db.expireTrialSubscriptions(now);
       await db.expireActiveSubscriptions(now);
       await db.cleanExpiredTokens();
+      await db.cleanup2FACodes();
     } catch (err) {
       // тихо логируем
       console.error('[ExpirationChecker]', err.message);

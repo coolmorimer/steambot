@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, CreditCard, Activity, TrendingUp, ShieldCheck, Banknote, Receipt, Clock } from 'lucide-react';
+import { Users, CreditCard, Activity, TrendingUp, Banknote, Receipt, Clock } from 'lucide-react';
 import api from '../../api/client';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
@@ -29,22 +29,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="w-6 h-6 text-brand-400" />
-        <h1 className="text-xl font-bold text-white">Администрация</h1>
-      </div>
-
-      {/* Nav pills */}
-      <div className="flex gap-2 flex-wrap">
-        <Link to="/admin"        className="badge-blue">Обзор</Link>
-        <Link to="/admin/users"  className="badge-gray hover:bg-gray-600">Пользователи</Link>
-        <Link to="/admin/plans"  className="badge-gray hover:bg-gray-600">Тарифы</Link>
-        <Link to="/admin/payments" className="badge-gray hover:bg-gray-600">Платежи</Link>
-        <Link to="/admin/withdrawals" className="badge-gray hover:bg-gray-600">Выводы</Link>
-        <Link to="/admin/partners" className="badge-gray hover:bg-gray-600">Партнёры</Link>
-        <Link to="/admin/config"   className="badge-gray hover:bg-gray-600">Конфигурация</Link>
-        <Link to="/admin/support" className="badge-gray hover:bg-gray-600">Поддержка</Link>
-      </div>
+      <h1 className="text-xl font-bold text-white">Обзор</h1>
 
       {/* Stats */}
       {loading ? (

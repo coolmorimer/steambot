@@ -1,0 +1,102 @@
+Found 3 pods, using pod/steambot-server-5bcffc54d6-bw9gt
+Defaulted container "steambot-server" out of: steambot-server, wait-for-postgres (init), run-migrations (init)
+[SteamBot 4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f] ╨Э╨╡╤В ╨░╨║╤В╨╕╨▓╨╜╤Л╤Е ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣ ╨╕╨╗╨╕ ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣ тАФ ╨┤╨╢╨╛╨▒╤Л ╨╜╨╡ ╤Б╨╛╨╖╨┤╨░╤С╨╝.
+[SteamBot 8b7c041f-8099-4854-8bfe-70d8ed1bdeff] generatePendingJobs: ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣=1, ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣=1
+[SteamBot 48237f30-819b-4104-bfc3-a916e084a47b] generatePendingJobs: ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣=0, ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣=1
+[SteamBot 48237f30-819b-4104-bfc3-a916e084a47b] ╨Э╨╡╤В ╨░╨║╤В╨╕╨▓╨╜╤Л╤Е ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣ ╨╕╨╗╨╕ ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣ тАФ ╨┤╨╢╨╛╨▒╤Л ╨╜╨╡ ╤Б╨╛╨╖╨┤╨░╤С╨╝.
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f
+[TG Bot] Started userId=490b4394-ac53-4518-9edd-f2c0919fb790
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:21 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:26 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:31 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:51 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:40:56 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:21 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:26 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:31 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=8b7c041f-8099-4854-8bfe-70d8ed1bdeff
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:41 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:41 +0000] "GET /health HTTP/1.1" 200 95 "-" "kube-probe/1.35"
+[TG Bot] Started userId=48237f30-819b-4104-bfc3-a916e084a47b
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:51 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f
+::ffff:85.239.63.217 - - [07/Apr/2026:06:41:56 +0000] "GET /health HTTP/1.1" 200 94 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:21 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:26 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=490b4394-ac53-4518-9edd-f2c0919fb790
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:31 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:41 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:51 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:42:56 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:21 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:26 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:31 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=490b4394-ac53-4518-9edd-f2c0919fb790
+[TG Bot] Started userId=8b7c041f-8099-4854-8bfe-70d8ed1bdeff
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=48237f30-819b-4104-bfc3-a916e084a47b
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:51 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:43:56 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:11 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:21 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:26 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:31 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:51 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:44:56 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+[SteamBot 4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f] generatePendingJobs: ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣=0, ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣=1
+[SteamBot 4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f] ╨Э╨╡╤В ╨░╨║╤В╨╕╨▓╨╜╤Л╤Е ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣ ╨╕╨╗╨╕ ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣ тАФ ╨┤╨╢╨╛╨▒╤Л ╨╜╨╡ ╤Б╨╛╨╖╨┤╨░╤С╨╝.
+[SteamBot 48237f30-819b-4104-bfc3-a916e084a47b] generatePendingJobs: ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣=0, ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣=1
+[SteamBot 48237f30-819b-4104-bfc3-a916e084a47b] ╨Э╨╡╤В ╨░╨║╤В╨╕╨▓╨╜╤Л╤Е ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣ ╨╕╨╗╨╕ ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣ тАФ ╨┤╨╢╨╛╨▒╤Л ╨╜╨╡ ╤Б╨╛╨╖╨┤╨░╤С╨╝.
+[SteamBot 8b7c041f-8099-4854-8bfe-70d8ed1bdeff] generatePendingJobs: ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣=1, ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣=1
+[SteamBot 490b4394-ac53-4518-9edd-f2c0919fb790] generatePendingJobs: ╨║╨░╨╝╨┐╨░╨╜╨╕╨╣=5, ╨┐╤А╨╛╤Д╨╕╨╗╨╡╨╣=5
+[SteamBot 490b4394-ac53-4518-9edd-f2c0919fb790] ╨б╨╛╨╖╨┤╨░╨╜ ╨┤╨╢╨╛╨▒ ad5d0c86-8d54-46ca-9ea5-858a8e3b15e9: ╨║╨░╨╝╨┐╨░╨╜╨╕╤П "5", ╨┐╤А╨╛╤Д╨╕╨╗╤М 9c6ee455-b4c7-4a58-9827-b50a1adfd677, ╨▓╤А╨╡╨╝╤П 2026-04-07T08:00:00.000Z
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:11 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:21 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:26 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:31 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:41 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+[TG Bot] Started userId=490b4394-ac53-4518-9edd-f2c0919fb790
+[TG Bot] Started userId=8b7c041f-8099-4854-8bfe-70d8ed1bdeff
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:51 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+[TG Bot] Started userId=48237f30-819b-4104-bfc3-a916e084a47b
+::ffff:85.239.63.217 - - [07/Apr/2026:06:45:56 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:21 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:26 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:31 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+[TG Bot] Started userId=4ee5c79c-49b5-4db5-a7a5-3cdbff97ae1f
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:41 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:41 +0000] "GET /health HTTP/1.1" 200 96 "-" "kube-probe/1.35"
+[TG Bot] Started userId=490b4394-ac53-4518-9edd-f2c0919fb790
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:51 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:46:56 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:47:01 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:47:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"
+::ffff:85.239.63.217 - - [07/Apr/2026:06:47:11 +0000] "GET /health HTTP/1.1" 200 97 "-" "kube-probe/1.35"

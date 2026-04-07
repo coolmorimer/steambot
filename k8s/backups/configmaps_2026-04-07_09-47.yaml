@@ -1,0 +1,66 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDADCCAeigAwIBAgIUTXCRd8YnuD+KUrL91eV8naa1Sd0wDQYJKoZIhvcNAQEL
+      BQAwGDEWMBQGA1UEAxMNa3ViZXJuZXRlcy1jYTAeFw0yNjAyMjUxMTI4MDBaFw0z
+      NjAyMjMxMTI4MDBaMBgxFjAUBgNVBAMTDWt1YmVybmV0ZXMtY2EwggEiMA0GCSqG
+      SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDLDOdXJiYMJxcYBCqNMnrGqrdMCWplJv2W
+      Zmxfb+whFwC/y/La7O9Xs3ZzcQZrULa/PDGNLINsQb7Woz1sqHFNnQeTidrHw06Z
+      a7mejgORbkoSdu63Y3UTu6UI99l7XFsCit6orw3D6asjFvdLsjEh5xgBczSd62f3
+      UIlJdXwuAT8tjCcwl9wMb2MYTullJWhZT2H/uH+5yGn9DM1Y1NzHHkTu6QsRVZBW
+      HOYz1tebnLekm8hOgVKlGj1zrN8Sa6+PmGdx6EK7zYG2XelRBceCxU+ej6EGNuDh
+      F7SCXKrburm36ONhRCB2LttfR/SRU0wxjNvtifqX/UZXEWz3rQGHAgMBAAGjQjBA
+      MA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBS3I2lA
+      x/j8BVyms0rWO9cd+miT1jANBgkqhkiG9w0BAQsFAAOCAQEAhEhfgq8OU3dWQSgb
+      wdL7RwIfhAmeWgMoFKWxjZIiKnIje8rGFdZnVQlwWJ5mxEd/pCAMDQO9ofbCJtAX
+      Etm2W+UR//eS+LSvUib550W6Lw4AC/STlGa2lY9w3uRhp+a2xvIC22+SmBrg/fw1
+      bgJcFKxy9ZfjfuZ2W/5qoXDvITqp559dRs2YhUJ68aCfFD06z6oeSoGzaMi7o4KA
+      41trZNqV0u79MVaRxTKzBvD2t8HGz+EPCpUPwgGSjE1Yqa4MG9AgBtZNJm4cODIm
+      Mse6trVc2j7h0uG+kVlnVZbYH9tseES+hy88MCLOs3EXV5RwHoaMPmflskU/pCPU
+      n7tjjQ==
+      -----END CERTIFICATE-----
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubernetes.io/description: Contains a CA bundle that can be used to verify the
+        kube-apiserver when using internal endpoints such as the internal service
+        IP or kubernetes.default.svc. No other usage is guaranteed across distributions
+        of Kubernetes clusters.
+    creationTimestamp: "2026-02-25T11:37:12Z"
+    name: kube-root-ca.crt
+    namespace: steambot
+    resourceVersion: "1855"
+    uid: 86db37aa-050f-4e5d-8524-0b6d161b6a2f
+- apiVersion: v1
+  data:
+    APP_URL: https://communityrig.ru
+    DB_HOST: steambot-postgres
+    DB_NAME: steambot
+    DB_POOL_MAX: "10"
+    DB_PORT: "5432"
+    DB_SSL: "false"
+    DB_TYPE: postgresql
+    DB_USER: steambot
+    EMAIL_FROM: steambot@communityrig.ru
+    NODE_ENV: production
+    PORT: "4000"
+    SMTP_PORT: "465"
+    STRIPE_ENABLED: "false"
+    TRIAL_DAYS: "3"
+    TZ: Europe/Moscow
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","data":{"APP_URL":"https://communityrig.ru","DB_HOST":"steambot-postgres","DB_NAME":"steambot","DB_POOL_MAX":"10","DB_PORT":"5432","DB_SSL":"false","DB_TYPE":"postgresql","DB_USER":"steambot","EMAIL_FROM":"steambot@communityrig.ru","NODE_ENV":"production","PORT":"4000","SMTP_PORT":"465","STRIPE_ENABLED":"false","TRIAL_DAYS":"14","TZ":"Europe/Moscow"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"steambot-config","namespace":"steambot"}}
+    creationTimestamp: "2026-02-25T11:37:12Z"
+    name: steambot-config
+    namespace: steambot
+    resourceVersion: "2597915"
+    uid: 3734004d-bac2-44e5-9c7c-3fb81b1cb53b
+kind: List
+metadata:
+  resourceVersion: ""

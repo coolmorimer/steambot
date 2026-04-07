@@ -1,0 +1,164 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "129"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"steambot-server"},"name":"steambot-server","namespace":"steambot"},"spec":{"replicas":2,"selector":{"matchLabels":{"app":"steambot-server"}},"strategy":{"rollingUpdate":{"maxSurge":1,"maxUnavailable":0},"type":"RollingUpdate"},"template":{"metadata":{"labels":{"app":"steambot-server"}},"spec":{"containers":[{"envFrom":[{"configMapRef":{"name":"steambot-config"}},{"secretRef":{"name":"steambot-secrets"}}],"image":"morcool02/steambot-server:latest","imagePullPolicy":"Always","lifecycle":{"preStop":{"exec":{"command":["sh","-c","sleep 5"]}}},"livenessProbe":{"failureThreshold":5,"httpGet":{"path":"/health","port":4000},"initialDelaySeconds":30,"periodSeconds":15},"name":"steambot-server","ports":[{"containerPort":4000,"name":"http"}],"readinessProbe":{"failureThreshold":3,"httpGet":{"path":"/health","port":4000},"initialDelaySeconds":15,"periodSeconds":10},"resources":{"limits":{"cpu":"1000m","memory":"1Gi"},"requests":{"cpu":"200m","memory":"256Mi"}},"volumeMounts":[{"mountPath":"/app/server/data","name":"data"},{"mountPath":"/app/server/logs","name":"logs"}]}],"initContainers":[{"command":["sh","-c","until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do\n  echo \"Waiting for postgres...\";\n  sleep 2;\ndone\n"],"envFrom":[{"configMapRef":{"name":"steambot-config"}},{"secretRef":{"name":"steambot-secrets"}}],"image":"postgres:16-alpine","name":"wait-for-postgres"},{"command":["node","db/migrate.js"],"envFrom":[{"configMapRef":{"name":"steambot-config"}},{"secretRef":{"name":"steambot-secrets"}}],"image":"morcool02/steambot-server:latest","name":"run-migrations","workingDir":"/app/server"}],"terminationGracePeriodSeconds":30,"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"steambot-data-pvc"}},{"emptyDir":{},"name":"logs"}]}}}}
+  creationTimestamp: "2026-02-25T11:51:09Z"
+  generation: 984
+  labels:
+    app: steambot-server
+  name: steambot-server
+  namespace: steambot
+  resourceVersion: "9972325"
+  uid: d8668768-1352-4c2f-8543-2b71609099f9
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: steambot-server
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2026-03-05T12:48:33+03:00"
+      labels:
+        app: steambot-server
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: steambot-config
+        - secretRef:
+            name: steambot-secrets
+        image: morcool02/steambot-server:latest
+        imagePullPolicy: Always
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sh
+              - -c
+              - sleep 5
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /health
+            port: 4000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: steambot-server
+        ports:
+        - containerPort: 4000
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 4000
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/server/data
+          name: data
+        - mountPath: /app/server/logs
+          name: logs
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - |
+          until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER; do
+            echo "Waiting for postgres...";
+            sleep 2;
+          done
+        envFrom:
+        - configMapRef:
+            name: steambot-config
+        - secretRef:
+            name: steambot-secrets
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+        name: wait-for-postgres
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      - command:
+        - node
+        - db/migrate.js
+        envFrom:
+        - configMapRef:
+            name: steambot-config
+        - secretRef:
+            name: steambot-secrets
+        image: morcool02/steambot-server:latest
+        imagePullPolicy: Always
+        name: run-migrations
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        workingDir: /app/server
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: steambot-data-pvc
+      - emptyDir: {}
+        name: logs
+status:
+  availableReplicas: 3
+  conditions:
+  - lastTransitionTime: "2026-02-27T10:39:48Z"
+    lastUpdateTime: "2026-03-05T09:50:00Z"
+    message: ReplicaSet "steambot-server-5bcffc54d6" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  - lastTransitionTime: "2026-04-07T05:01:27Z"
+    lastUpdateTime: "2026-04-07T05:01:27Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  observedGeneration: 984
+  readyReplicas: 3
+  replicas: 3
+  terminatingReplicas: 0
+  updatedReplicas: 3

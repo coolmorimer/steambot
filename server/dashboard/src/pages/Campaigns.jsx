@@ -97,7 +97,7 @@ const STEAM_GAMES = [
 
 // ─── ForumPicker — выбор раздела Steam-форума ──────────────────────────────────
 function ForumPicker({ value, onChange }) {
-  const [mode, setMode]         = useState(value ? 'selected' : 'pick');  // pick | custom | selected
+  const [mode, setMode]         = useState(value ? 'selected' : 'pick');  // pick | selected
   const [search, setSearch]     = useState('');
   const [selectedGame, setGame] = useState(null);
 
@@ -138,7 +138,7 @@ function ForumPicker({ value, onChange }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">
-              {game?.name || 'Кастомный URL'}
+              {game?.name || 'Форум'}
               {forum && <span className="text-brand-400 ml-1.5">→ {forum.name}</span>}
             </p>
             <p className="text-xs text-gray-400 truncate font-mono">{value}</p>
@@ -156,31 +156,6 @@ function ForumPicker({ value, onChange }) {
             </button>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // Кастомный URL
-  if (mode === 'custom') {
-    return (
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <input
-            className="input flex-1 font-mono text-sm"
-            placeholder="https://steamcommunity.com/app/730/tradingforum/"
-            value={value}
-            onChange={e => onChange(e.target.value)}
-          />
-          <button type="button" onClick={() => value && setMode('selected')}
-            disabled={!value}
-            className="btn-primary px-3 text-sm">
-            OK
-          </button>
-        </div>
-        <button type="button" onClick={() => setMode('pick')}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
-          ← Выбрать из списка
-        </button>
       </div>
     );
   }
@@ -237,13 +212,6 @@ function ForumPicker({ value, onChange }) {
           </button>
         ))}
       </div>
-
-      {/* Кнопка кастомного URL */}
-      <button type="button" onClick={() => setMode('custom')}
-        className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors pt-1">
-        <Globe className="w-3.5 h-3.5" />
-        Указать URL вручную
-      </button>
     </div>
   );
 }
@@ -684,7 +652,7 @@ function GeneratePanel({ profileIds, profiles, onApply }) {
         </button>
 
         {!activeProfile && (
-          <p className="text-xs text-amber-500/80">Выберите аккаунт ниже</p>
+          <p className="text-xs text-amber-500/80">Выберите аккаунт выше</p>
         )}
 
         {meta && done && (

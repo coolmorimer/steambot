@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Receipt, Search, ChevronLeft, ChevronRight,
   RefreshCw, CheckCircle2, XCircle, Clock, RotateCcw,
@@ -185,8 +185,6 @@ export default function AdminPayments() {
     <div className="space-y-5 animate-slide-up">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-2">
-        <Link to="/admin" className="text-gray-500 hover:text-white text-sm">← Назад</Link>
-        <span className="text-gray-700">/</span>
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Receipt className="w-5 h-5 text-brand-400" />
           Аналитика платежей

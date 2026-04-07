@@ -30,15 +30,15 @@ const logger = winston.createLogger({
     }),
     new winston.transports.File({
       filename: path.join(logsDir, 'server.log'),
-      maxsize:  10 * 1024 * 1024, // 10 MB
-      maxFiles: 5,
+      maxsize:  50 * 1024 * 1024, // 50 MB
+      maxFiles: 14,
       tailable: true,
     }),
     new winston.transports.File({
       filename: path.join(logsDir, 'error.log'),
       level:    'error',
-      maxsize:  5 * 1024 * 1024,
-      maxFiles: 3,
+      maxsize:  20 * 1024 * 1024,
+      maxFiles: 10,
     }),
   ],
 });

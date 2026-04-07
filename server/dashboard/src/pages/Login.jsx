@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, verify2FA } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
@@ -13,11 +13,21 @@ export default function Login() {
   const [form, setForm]     = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
 
+  // 2FA state
+  const [tfaToken, setTfaToken]   = useState(null);
+  const [tfaMethod, setTfaMethod] = useState(null);
+  const [tfaCode, setTfaCode]     = useState('');
+
   const submit = async e => {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      const data = await login(form.email, form.password);
+      if (data.requires_2fa) {
+        setTfaToken(data.tfa_token);
+        setTfaMethod(data.method);
+        return;
+      }
       navigate(from, { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.error || 'Ошибка входа');
@@ -26,8 +36,42 @@ export default function Login() {
     }
   };
 
+  const submit2FA = async e => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await verify2FA(tfaToken, tfaCode);
+      navigate(from, { replace: true });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Неверный код');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <AuthShell title="Вход в систему" subtitle="Добро пожаловать обратно!">
+    <AuthShell title={tfaToken ? 'Двухфакторная проверка' : 'Вход в систему'} subtitle={tfaToken ? `Код отправлен ${tfaMethod === 'email' ? 'на вашу почту' : 'в Telegram'}` : 'Добро пожаловать обратно!'}>
+      {tfaToken ? (
+        <>
+          <form onSubmit={submit2FA} className="space-y-4">
+            <div>
+              <label className="label">🔐 Код подтверждения</label>
+              <input className="input text-center text-lg tracking-widest font-mono" maxLength={6}
+                required autoFocus placeholder="000000" value={tfaCode}
+                onChange={e => setTfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))} />
+            </div>
+            <button type="submit" className="btn-primary w-full py-3 text-base" disabled={loading || tfaCode.length !== 6}>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : '✅ Подтвердить'}
+            </button>
+          </form>
+          <div className="mt-4 text-center">
+            <button onClick={() => { setTfaToken(null); setTfaCode(''); }} className="text-sm text-gray-500 hover:text-gray-300 transition-colors">
+              ← Назад к входу
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
       {/* Steam login */}
       <div className="mb-6">
         <a href="/api/oauth/steam"
@@ -70,6 +114,8 @@ export default function Login() {
           <Link to="/register" className="text-brand-400 hover:text-brand-300 font-semibold transition-colors">Зарегистрироваться</Link>
         </p>
       </div>
+        </>
+      )}
     </AuthShell>
   );
 }

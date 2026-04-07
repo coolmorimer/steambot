@@ -85,6 +85,19 @@ router.post('/yookassa/webhook', express.json(), async (req, res) => {
         return res.json({ ok: true });
       }
 
+      // Verify payment via YooKassa API (protect against forged webhooks)
+      let verifiedPayment;
+      try {
+        verifiedPayment = await YooKassaService.getPaymentStatus(payload.paymentId);
+        if (!verifiedPayment || verifiedPayment.status !== 'succeeded' || !verifiedPayment.paid) {
+          logger.warn('YooKassa webhook: payment not confirmed by API', { paymentId: payload.paymentId });
+          return res.json({ ok: true });
+        }
+      } catch (verifyErr) {
+        logger.error('YooKassa webhook: verification API call failed', { err: verifyErr.message, paymentId: payload.paymentId });
+        return res.status(500).json({ error: 'Verification failed' });
+      }
+
       // --- Подписка ---
       if (paymentType === 'subscription') {
         const planId        = payload.metadata.plan_id;
@@ -201,11 +214,12 @@ router.post('/withdraw', requireAuth, requireActiveUser, async (req, res) => {
     if (!amount || amount < 500) return res.status(400).json({ error: 'Минимальная сумма вывода: 500₽' });
 
     const amountKopecks = Math.round(amount * 100);
-    const balance = await db.getUserBalance(req.userId);
-    if (balance < amountKopecks) return res.status(400).json({ error: 'Недостаточно средств' });
 
-    // Freeze amount
-    const newBalance = await db.updateUserBalance(req.userId, -amountKopecks);
+    // Atomic deduction — prevents race condition (double-spend)
+    const result = await db.safeDeductBalance(req.userId, amountKopecks);
+    if (!result.success) return res.status(400).json({ error: 'Недостаточно средств' });
+
+    const newBalance = result.balance;
     await db.createBalanceTransaction({
       userId: req.userId, type: 'withdrawal', amount: -amountKopecks,
       balanceAfter: newBalance,

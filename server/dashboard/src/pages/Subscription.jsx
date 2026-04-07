@@ -121,7 +121,7 @@ export default function Subscription() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-brand-500/20 border border-purple-500/20 flex items-center justify-center">
-            <span className="text-lg">�</span>
+            <span className="text-lg">💎</span>
           </div>
           <h1 className="text-xl font-extrabold text-white tracking-tight">Тариф</h1>
         </div>
@@ -138,7 +138,7 @@ export default function Subscription() {
         },
         {
           icon: '🎁', heading: 'Пробный период',
-          text: 'При регистрации вы получаете 3 дня бесплатно с полным доступом к функциям Starter-тарифа.',
+          text: 'При регистрации вы получаете 3 дня бесплатно с полным доступом к выбранному тарифу.',          
         },
         {
           icon: '💳', heading: 'Как оплатить',
@@ -694,15 +694,13 @@ function buildFeatures(plan) {
   // Free plan — only P2P trades
   if (plan.id === 'free') {
     f.push('P2P обмен предметами');
-    f.push('Баланс и вывод средств');
     return f;
   }
   // Paid plans — all posting features + trades
   f.push('P2P обмен предметами');
   f.push(`${plan.max_steam_accounts === -1 ? 'Неограниченно' : plan.max_steam_accounts} Steam аккаунтов`);
-  f.push(`${plan.max_campaigns === -1 ? 'Неограничено' : plan.max_campaigns} задач`);
+  f.push(`${plan.max_campaigns === -1 ? 'Неограниченно' : 'до ' + plan.max_campaigns} задач`);
   f.push(`${plan.max_jobs_per_day === -1 ? 'Неограниченно' : plan.max_jobs_per_day} постов в день`);
-  if (plan.max_steam_groups > 0) f.push(`${plan.max_steam_groups} Steam-групп`);
   if (plan.max_telegram_bots > 0) f.push('Telegram бот');
   if (plan.has_mini_app)         f.push('Telegram Mini App');
   if (plan.has_ai_templates)     f.push('AI шаблоны');

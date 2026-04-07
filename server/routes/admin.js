@@ -5,6 +5,7 @@ const db      = require('../db');
 const config  = require('../config');
 const { requireAdmin } = require('../middleware/auth');
 const SbpPaymentService = require('../services/SbpPaymentService');
+const TelegramBotManager = require('../services/TelegramBotManager');
 
 const router = express.Router();
 
@@ -109,11 +110,11 @@ router.patch('/users/:id', requireAdmin, async (req, res, next) => {
     if (role      !== undefined) {
       if (!['user', 'admin'].includes(role)) return res.status(400).json({ error: 'Недопустимая роль' });
       // Only sysadmin (seed admin) can change roles
-      if (req.dbUser.email !== config.admin.email) {
+      if (req.dbUser.email.toLowerCase() !== config.admin.email.toLowerCase()) {
         return res.status(403).json({ error: 'Только системный администратор может изменять роли' });
       }
       // Can't change sysadmin's own role
-      if (user.email === config.admin.email) {
+      if (user.email.toLowerCase() === config.admin.email.toLowerCase()) {
         return res.status(400).json({ error: 'Нельзя изменить роль системного администратора' });
       }
       updates.role = role;
@@ -133,6 +134,14 @@ router.delete('/users/:id', requireAdmin, async (req, res, next) => {
 
     const user = await db.getUserById(req.params.id);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    // Protect admin accounts from non-sysadmin deletion
+    if (user.role === 'admin' && req.dbUser.email.toLowerCase() !== config.admin.email.toLowerCase()) {
+      return res.status(403).json({ error: 'Только sysadmin может удалять администраторов' });
+    }
+    if (user.email.toLowerCase() === config.admin.email.toLowerCase()) {
+      return res.status(400).json({ error: 'Нельзя удалить системного администратора' });
+    }
 
     await db.deleteUser(req.params.id);
     await db.auditLog(req.user.id, 'admin.user.delete', 'user', req.params.id, { email: user.email });
@@ -282,6 +291,14 @@ router.get('/config', requireAdmin, async (req, res, next) => {
           DB_NAME:     { value: config.db.postgresql.database, env: true, description: 'Имя БД' },
           DB_USER:     { value: config.db.postgresql.user, env: true, description: 'Пользователь' },
           DB_PASSWORD: { value: '••••••••', env: true, sensitive: true, description: 'Пароль' },
+        },
+      },
+      telegram: {
+        label: 'Telegram-бот',
+        items: {
+          TG_BOT_TOKEN:    { value: '', editable: true, sensitive: true, description: 'Токен бота от @BotFather' },
+          TG_BOT_USERNAME: { value: '', description: 'Username бота (заполняется автоматически)' },
+          TG_MINI_APP_URL: { value: '', editable: true, description: 'URL Mini App (необязательно)' },
         },
       },
     };
@@ -436,6 +453,53 @@ router.patch('/partners/:id', requireAdmin, async (req, res, next) => {
 router.delete('/partners/:id', requireAdmin, async (req, res, next) => {
   try {
     await db.deletePartnerReferral(req.params.id);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TELEGRAM BOT ADMIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/telegram', requireAdmin, async (req, res, next) => {
+  try {
+    const token    = await db.getServerSetting('TG_BOT_TOKEN');
+    const username = await db.getServerSetting('TG_BOT_USERNAME');
+    const miniApp  = await db.getServerSetting('TG_MINI_APP_URL');
+    res.json({
+      has_token:    !!token,
+      bot_username: username || null,
+      mini_app_url: miniApp || null,
+      is_running:   TelegramBotManager.isRunning(),
+    });
+  } catch (e) { next(e); }
+});
+
+router.post('/telegram/start', requireAdmin, async (req, res, next) => {
+  try {
+    await TelegramBotManager.start();
+    res.json({ ok: true, is_running: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/telegram/stop', requireAdmin, async (req, res, next) => {
+  try {
+    TelegramBotManager.stop();
+    res.json({ ok: true, is_running: false });
+  } catch (e) { next(e); }
+});
+
+router.post('/telegram/test', requireAdmin, async (req, res, next) => {
+  try {
+    if (!TelegramBotManager.isRunning())
+      return res.status(400).json({ error: 'Бот не запущен' });
+    // Отправляем тестовое сообщение администратору, если у него привязан TG
+    const admin = await db.getUserById(req.userId);
+    if (!admin?.telegram_chat_id)
+      return res.status(400).json({ error: 'Привяжите свой Telegram для тестирования' });
+    await TelegramBotManager.sendNotification(req.userId, '✅ Тестовое сообщение от администратора');
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

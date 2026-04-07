@@ -1,0 +1,68 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"postgres"},"name":"steambot-postgres","namespace":"steambot"},"spec":{"ports":[{"port":5432,"targetPort":5432}],"selector":{"app":"postgres"},"type":"ClusterIP"}}
+    creationTimestamp: "2026-02-25T11:37:28Z"
+    labels:
+      app: postgres
+    name: steambot-postgres
+    namespace: steambot
+    resourceVersion: "1929"
+    uid: b5623f93-a28c-45f6-b9e4-97d29bdd76c5
+  spec:
+    clusterIP: 10.109.215.55
+    clusterIPs:
+    - 10.109.215.55
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 5432
+      protocol: TCP
+      targetPort: 5432
+    selector:
+      app: postgres
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"steambot-server"},"name":"steambot-server","namespace":"steambot"},"spec":{"ports":[{"name":"http","port":80,"targetPort":4000}],"selector":{"app":"steambot-server"},"type":"ClusterIP"}}
+    creationTimestamp: "2026-02-25T11:38:10Z"
+    labels:
+      app: steambot-server
+    name: steambot-server
+    namespace: steambot
+    resourceVersion: "2123"
+    uid: 69f61d5d-0a4f-46c0-9970-0269471f3398
+  spec:
+    clusterIP: 10.107.32.142
+    clusterIPs:
+    - 10.107.32.142
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 4000
+    selector:
+      app: steambot-server
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+kind: List
+metadata:
+  resourceVersion: ""

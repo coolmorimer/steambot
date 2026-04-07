@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Settings, Save, RefreshCw, Database, Mail, CreditCard,
   Globe, Shield, Gauge, Monitor, ChevronDown, ChevronRight,
-  AlertTriangle, CheckCircle, Eye, EyeOff, Info,
+  AlertTriangle, CheckCircle, Eye, EyeOff, Info, Send,
 } from 'lucide-react';
 
 const api = (url, opts = {}) =>
@@ -27,6 +27,7 @@ const GROUP_ICONS = {
   playwright: Monitor,
   rateLimit:  Gauge,
   database:   Database,
+  telegram:   Send,
 };
 
 const GROUP_COLORS = {
@@ -36,6 +37,7 @@ const GROUP_COLORS = {
   playwright: 'from-orange-500/20 to-orange-600/10 border-orange-500/30',
   rateLimit:  'from-red-500/20 to-red-600/10 border-red-500/30',
   database:   'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30',
+  telegram:   'from-sky-500/20 to-sky-600/10 border-sky-500/30',
 };
 
 export default function AdminConfig() {
@@ -105,9 +107,6 @@ export default function AdminConfig() {
         </div>
 
         <div className="flex gap-2">
-          <Link to="/admin" className="px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm transition-colors">
-            ← Назад
-          </Link>
           <button onClick={load} disabled={loading}
             className="px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-sm transition-colors flex items-center gap-2 disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />

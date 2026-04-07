@@ -1,5 +1,7 @@
 node_modules
 server/node_modules
+server/dashboard/node_modules
+server/dashboard/src
 .venv
 .git
 dist
@@ -7,6 +9,8 @@ build
 release
 logs
 data
+k8s
+config/config.json
 *.log
 *.md
 .env*
