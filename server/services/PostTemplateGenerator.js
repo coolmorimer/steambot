@@ -19,11 +19,19 @@ const CATEGORIES = [
   { key: 'other',  label: 'OTHER',   prefix: '💵'   },
 ];
 
+// Префикс уже содержит ★ для этих категорий
+const STAR_PREFIX_CATS = new Set(['knife', 'gloves']);
+const WEAR_RE = /\s*\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)\s*/gi;
+
 // ─── Форматирование одного предмета ───────────────────────────────────────────
 function fmtItem(item, prefix) {
-  const baseName = (item.name || '')
-    .replace(/\s*\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)\s*/gi, ' ')
+  let baseName = (item.name || '')
+    .replace(WEAR_RE, '')
     .trim();
+  // Убрать ведущую ★ если она уже есть в префиксе категории (ножи, перчатки)
+  if (prefix.includes('★')) {
+    baseName = baseName.replace(/^★\s*/, '');
+  }
   const ext = item.exterior ? ` ${item.exterior}` : '';
   return `${prefix}${baseName}${ext}`;
 }
@@ -39,6 +47,18 @@ function groupItems(items) {
   return byKey;
 }
 
+// ─── Агрегация дубликатов: [{line, count}] ────────────────────────────────────
+function dedupeLines(items, prefix) {
+  const counts = {};
+  const order  = [];
+  for (const item of items) {
+    const line = fmtItem(item, prefix);
+    if (!counts[line]) { counts[line] = 0; order.push(line); }
+    counts[line]++;
+  }
+  return order.map(line => counts[line] > 1 ? `${line} x${counts[line]}` : line);
+}
+
 // ─── VARIANT 0 — Классика (💔 разделитель, [h1], торговая ссылка 3x) ─────────
 function buildVariant0(items, tradeUrl) {
   const D1 = `💔 ${tradeUrl} 💔`;
@@ -48,7 +68,8 @@ function buildVariant0(items, tradeUrl) {
   let idx = 0;
   for (const cat of CATEGORIES) {
     if (!g[cat.key].length) continue;
-    parts.push(`💎${cat.label}:\n\n${g[cat.key].map(i => fmtItem(i, cat.prefix)).join('\n')}`);
+    const lines = dedupeLines(g[cat.key], cat.prefix);
+    parts.push(`💎${cat.label}:\n\n${lines.join('\n')}`);
     idx++;
     if (idx % 2 === 0) parts.push(D1);
   }
@@ -63,7 +84,8 @@ function buildVariant1(items, tradeUrl) {
   const parts = [`${LINK}\n${LINK}\n${LINK}\n${SEP}`];
   for (const cat of CATEGORIES) {
     if (!g[cat.key].length) continue;
-    parts.push(`\n• ${cat.label} •\n${g[cat.key].map(i => fmtItem(i, cat.prefix)).join('\n')}`);
+    const lines = dedupeLines(g[cat.key], cat.prefix);
+    parts.push(`\n• ${cat.label} •\n${lines.join('\n')}`);
   }
   parts.push(`\n${SEP}\n${LINK}\n${LINK}\n${LINK}`);
   return parts.join('\n');
@@ -77,8 +99,8 @@ function buildVariant2(items, tradeUrl) {
   let n = 1;
   for (const cat of CATEGORIES) {
     if (!g[cat.key].length) continue;
-    const lines = g[cat.key].map(i => fmtItem(i, cat.prefix)).join('\n');
-    parts.push(`[${n++}] ── ${cat.label} ──\n${lines}`);
+    const lines = dedupeLines(g[cat.key], cat.prefix);
+    parts.push(`[${n++}] ── ${cat.label} ──\n${lines.join('\n')}`);
   }
   parts.push(`\n${LINK}\n${LINK}`);
   return `[h1]\n${parts.join('\n\n')}\n[/h1]`;
@@ -90,8 +112,8 @@ function buildVariant3(items, tradeUrl) {
   const parts = [];
   for (const cat of CATEGORIES) {
     if (!g[cat.key].length) continue;
-    const lines = g[cat.key].map(i => `  ${fmtItem(i, cat.prefix)}`).join('\n');
-    parts.push(`▸ ${cat.label}\n${lines}`);
+    const lines = dedupeLines(g[cat.key], cat.prefix).map(l => `  ${l}`);
+    parts.push(`▸ ${cat.label}\n${lines.join('\n')}`);
   }
   return `${parts.join('\n\n')}\n\n🔗 Trade link:\n${tradeUrl}`;
 }
@@ -105,8 +127,8 @@ function buildVariant4(items, tradeUrl) {
   let idx = 0;
   for (const cat of CATEGORIES) {
     if (!g[cat.key].length) continue;
-    const lines = g[cat.key].map(i => fmtItem(i, cat.prefix)).join('\n');
-    parts.push(`◆ ${cat.label} ◆\n${lines}`);
+    const lines = dedupeLines(g[cat.key], cat.prefix);
+    parts.push(`◆ ${cat.label} ◆\n${lines.join('\n')}`);
     idx++;
     if (idx % 3 === 0) parts.push(LINK);
   }
@@ -120,13 +142,21 @@ function buildVariant5(items, tradeUrl) {
   const stattrak = items.filter(i => i.stattrak).length;
   const gloves   = items.filter(i => i.category === 'gloves').length;
   const LINK     = `🧡 ${tradeUrl} 🧡`;
-  const STATS    = `┌─ INVENTORY STATS ─────────────────┐\n│  📦 Total: ${String(items.length).padEnd(4)} 🔪 Knives: ${String(knives).padEnd(4)} 🧤 Gloves: ${String(gloves).padEnd(3)}│\n│  📈 StatTrak: ${String(stattrak).padEnd(3)}                          │\n└────────────────────────────────────┘`;
+  const STATS    = [
+    `┌─ INVENTORY STATS ${'─'.repeat(17)}┐`,
+    `│  📦 Total: ${String(items.length).padEnd(4)} 🔪 Knives: ${String(knives).padEnd(4)} 🧤 Gloves: ${String(gloves).padEnd(3)}│`,
+    `│  📈 StatTrak: ${String(stattrak).padEnd(22)}        │`,
+    `└${'─'.repeat(36)}┘`,
+  ].join('\n');
   const g = groupItems(items);
   const parts = [`${LINK}\n${LINK}\n\n${STATS}`];
   for (const cat of CATEGORIES) {
     if (!g[cat.key].length) continue;
-    const lines = g[cat.key].map(i => `│ ${fmtItem(i, cat.prefix)}`).join('\n');
-    parts.push(`┌─ ${cat.label} ${'─'.repeat(Math.max(0, 30 - cat.label.length))}┐\n${lines}\n└${'─'.repeat(32)}┘`);
+    const lines = dedupeLines(g[cat.key], cat.prefix).map(l => `│ ${l}`);
+    const labelPad = Math.max(0, 30 - cat.label.length);
+    parts.push(
+      `┌─ ${cat.label} ${'─'.repeat(labelPad)}┐\n${lines.join('\n')}\n└${'─'.repeat(32)}┘`,
+    );
   }
   parts.push(`\n${LINK}\n${LINK}`);
   return `[h1]\n${parts.join('\n\n')}\n[/h1]`;
@@ -148,7 +178,8 @@ function buildCategorySection(items = [], categoryKey) {
   if (!cat) return '';
   const catItems = items.filter(i => (i.category || 'other') === categoryKey);
   if (!catItems.length) return '';
-  return `💎${cat.label}:\n\n${catItems.map(i => fmtItem(i, cat.prefix)).join('\n')}`;
+  const lines = dedupeLines(catItems, cat.prefix);
+  return `💎${cat.label}:\n\n${lines.join('\n')}`;
 }
 
 const TITLE_VARIANTS = [
@@ -161,3 +192,4 @@ const TITLE_VARIANTS = [
 ];
 
 module.exports = { buildFullPost, buildCategorySection, TITLE_VARIANTS, CATEGORIES, BUILDERS };
+
