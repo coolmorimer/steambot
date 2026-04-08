@@ -236,6 +236,20 @@ if (fs.existsSync(miniAppDir)) {
     setHeaders: (res) => {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
+      // Telegram WebView встраивает miniapp в iframe — разрешаем
+      res.removeHeader('X-Frame-Options');
+      res.setHeader('Content-Security-Policy',
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' https://telegram.org; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https:; " +
+        "connect-src 'self' https://communityrig.ru; " +
+        "font-src 'self' data:; " +
+        "object-src 'none'; " +
+        "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org tg:"
+      );
+      res.removeHeader('Cross-Origin-Opener-Policy');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     },
   }));
 }
