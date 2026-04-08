@@ -2,23 +2,175 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --steam-dark:    #1b2838;
+  --steam-darker:  #0e1a26;
+  --steam-mid:     #2a475e;
+  --steam-mid2:    #1e3448;
+  --steam-light:   #c7d5e0;
+  --steam-blue:    #66c0f4;
+  --steam-blue2:   #4fa3d6;
+  --steam-green:   #4db86e;
+  --steam-muted:   #8fa5b5;
+  --steam-subtle:  #4d7a8a;
+  --steam-border:  #3d6070;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #1b2838;
-  color: #c7d5e0;
+  background: var(--steam-dark);
+  color: var(--steam-light);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Тонкий скроллбар в стиле Steam */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1b2838; }
-::-webkit-scrollbar-thumb { background: #2a475e; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #66c0f4; }
+/* ── Тонкий скроллбар в стиле Steam ── */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--steam-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--steam-blue); }
 
-/* Убрать outline у кнопок (нарисуем свой focus) */
-button:focus-visible { outline: 2px solid #66c0f4; outline-offset: 2px; }
+/* ── Focus ring ── */
+button:focus-visible { outline: 2px solid var(--steam-blue); outline-offset: 2px; }
 
-/* Разрешить выделение и копирование текста в контентной области */
+/* ── Text selection ── */
 main, .selectable { -webkit-user-select: text; user-select: text; cursor: auto; }
 main input, main textarea { -webkit-user-select: text; user-select: text; }
+
+/* ── Gradient mesh background ── */
+.bg-mesh {
+  background-color: var(--steam-dark);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(102,192,244,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(77,184,110,.05) 0%, transparent 55%);
+}
+
+/* ── Glass card ── */
+.glass {
+  background: rgba(42, 71, 94, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(102,192,244,.12);
+}
+.glass-dark {
+  background: rgba(14, 26, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(61, 96, 112, 0.4);
+}
+
+/* ── Sidebar nav item ── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+  cursor: pointer;
+  user-select: none;
+  color: var(--steam-muted);
+  position: relative;
+}
+.nav-item:hover {
+  background: rgba(42,71,94,.6);
+  color: #fff;
+}
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(102,192,244,.2), rgba(102,192,244,.08));
+  color: var(--steam-blue);
+  box-shadow: inset 0 0 0 1px rgba(102,192,244,.2);
+}
+.nav-item.active .nav-icon { filter: drop-shadow(0 0 6px rgba(102,192,244,.5)); }
+
+/* ── Bot toggle button glow ── */
+.btn-start {
+  background: linear-gradient(135deg, #4db86e, #3da55c);
+  color: #0e1a26;
+  box-shadow: 0 0 12px rgba(77,184,110,.3);
+}
+.btn-start:hover { box-shadow: 0 0 20px rgba(77,184,110,.5); }
+.btn-stop {
+  background: linear-gradient(135deg, #c0392b, #a93226);
+  box-shadow: 0 0 12px rgba(192,57,43,.3);
+}
+.btn-stop:hover { box-shadow: 0 0 20px rgba(192,57,43,.5); }
+
+/* ── Pulse dot ── */
+.pulse-green {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--steam-green);
+  box-shadow: 0 0 0 0 rgba(77,184,110,.4);
+  animation: pulse-ring 1.5s ease infinite;
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0   rgba(77,184,110,.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(77,184,110,0);  }
+  100% { box-shadow: 0 0 0 0   rgba(77,184,110,0);  }
+}
+
+/* ── Slide-in animation ── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.25s ease forwards; }
+
+/* ── Fade-in animation ── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.2s ease forwards; }
+
+/* ── Card hover lift ── */
+.card-hover {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+
+/* ── Status badge ── */
+.badge-online  { background: rgba(77,184,110,.15); color: #4db86e; border: 1px solid rgba(77,184,110,.3); }
+.badge-offline { background: rgba(220,53,69,.12);  color: #e57373; border: 1px solid rgba(220,53,69,.25); }
+.badge-warn    { background: rgba(255,193,7,.10);   color: #ffd54f; border: 1px solid rgba(255,193,7,.2); }
+
+/* ── Gradient text ── */
+.text-gradient {
+  background: linear-gradient(135deg, var(--steam-blue), #a0d8ef);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Section header ── */
+.section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--steam-blue);
+}
+
+/* ── Input base ── */
+.input-base {
+  width: 100%;
+  background: rgba(14,26,38,.8);
+  color: #fff;
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--steam-border);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input-base:focus {
+  border-color: var(--steam-blue);
+  box-shadow: 0 0 0 3px rgba(102,192,244,.15);
+}
+.input-base::placeholder { color: var(--steam-subtle); }
