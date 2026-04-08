@@ -361,6 +361,10 @@ TEMPLATES.compact = function (grouped, url) {
 //  Helpers
 // ═══════════════════════════════════════════════════════════════════════════
 
+const WEAR_RE = /\s*\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)\s*/gi;
+// Categories that carry ★ in their market_name (knife/gloves) — prefix already has ★
+const STAR_CATS = new Set(['knife', 'gloves']);
+
 function groupItems(items) {
   const groups = {};
   for (const item of items) {
@@ -369,10 +373,16 @@ function groupItems(items) {
 
     // Формируем отображаемое имя
     let displayName = item.name;
-    // Убрать дублирование exterior из имени если уже в скобках
-    if (item.exterior && !displayName.includes(item.exterior)) {
-      displayName += ` ${item.exterior}`;
+
+    // Убрать ведущую звёздочку у ножей/перчаток — она уже есть в emoji-префиксе категории
+    if (STAR_CATS.has(cat)) {
+      displayName = displayName.replace(/^★\s*/, '');
     }
+
+    // Заменить полное название состояния на короткий код (FN/MW/FT/WW/BS)
+    // чтобы не получалось «AK-47 | Redline (Field-Tested) FT»
+    displayName = displayName.replace(WEAR_RE, '').trim();
+    if (item.exterior) displayName += ` ${item.exterior}`;
 
     groups[cat].push({ ...item, displayName });
   }

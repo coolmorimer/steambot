@@ -215,7 +215,32 @@ async function _doPost(profile, title, body, { headless, slowMo, postDelay, targ
       '[contenteditable="true"]',
     ].join(', ')).first();
     await bodyLocator.waitFor({ state: 'visible', timeout: 10_000 });
-    await bodyLocator.fill(body);
+
+    // Определяем тип элемента — textarea или contenteditable div
+    const tagName = await bodyLocator.evaluate(el => el.tagName.toLowerCase());
+    if (tagName === 'textarea' || tagName === 'input') {
+      // Стандартный ввод — fill работает корректно с переносами строк
+      await bodyLocator.fill(body);
+    } else {
+      // Contenteditable — вставляем через clipboard API чтобы переносы строк сохранялись
+      await bodyLocator.click();
+      await page.keyboard.press('Control+a');
+      await page.keyboard.press('Delete');
+      await page.evaluate((text) => {
+        const dt = new DataTransfer();
+        dt.setData('text/plain', text);
+        document.activeElement.dispatchEvent(
+          new ClipboardEvent('paste', { clipboardData: dt, bubbles: true }),
+        );
+      }, body);
+      // Если clipboard paste не сработал — fallback через fill
+      const curVal = await bodyLocator.evaluate(el =>
+        el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' ? el.value : el.innerText,
+      );
+      if (!curVal || curVal.trim().length < 10) {
+        await bodyLocator.fill(body);
+      }
+    }
 
     await sleep(...postDelay);
 
